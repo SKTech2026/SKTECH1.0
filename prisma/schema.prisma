@@ -1,0 +1,362 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  STAFF
+  OFFICIAL
+}
+
+enum UserStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  INACTIVE
+}
+
+enum OfficialRole {
+  CHAIRPERSON
+  SECRETARY
+  TREASURER
+  KAGAWAD
+  OTHER
+}
+
+enum OfficialStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum AdmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum Position {
+  SK_CHAIRPERSON
+  SK_SECRETARY
+  SK_TREASURER
+  SK_COUNCILOR
+}
+
+enum OfficialPosition {
+  SK_CHAIRPERSON
+  SK_SECRETARY
+  SK_TREASURER
+  SK_COUNCILOR
+}
+
+enum OfficialOtpPurpose {
+  LOGIN
+  REGISTER
+}
+
+model User {
+  id                      String     @id @default(cuid())
+  employeeId              String?    @unique
+  name                    String?
+  email                   String?    @unique
+  password                String?
+  emailVerified           DateTime?
+  role                    Role       @default(OFFICIAL)
+  status                  UserStatus @default(PENDING)
+  image                   String?
+  faceEmbedding           String?
+  faceRegistered          Boolean    @default(false)
+  municipalityPresidentId String?    @unique
+  municipalityOfficerId   String?
+  createdAt               DateTime   @default(now())
+  updatedAt               DateTime   @updatedAt
+
+  official                SKOfficial?
+  admissions              OfficialAdmission[]
+  skOfficialProfile       SKOfficialProfile?
+  auditLogs               AuditLog[]
+  municipalityAsPresident Municipality?       @relation("MunicipalPresident", fields: [municipalityPresidentId], references: [id], onDelete: SetNull)
+  municipalityAsOfficer   Municipality?       @relation("MunicipalOfficers", fields: [municipalityOfficerId], references: [id], onDelete: SetNull)
+
+  accounts Account[]
+  sessions Session[]
+
+  @@index([municipalityOfficerId])
+  @@index([faceRegistered])
+}
+
+model SKOfficialProfile {
+  id           String           @id @default(cuid())
+  userId       String           @unique
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastName     String
+  firstName    String
+  middleName   String?
+  birthDate    DateTime
+  province     String
+  municipality String
+  barangay     String
+  position     OfficialPosition
+  dateElected  DateTime
+  termStart    DateTime
+  termEnd      DateTime
+  status       AdmissionStatus  @default(PENDING)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([status])
+}
+
+model SKOfficial {
+  id                String            @id @default(uuid())
+  userId            String?           @unique
+  firstName         String
+  middleName        String?
+  lastName          String
+  birthDate         DateTime?
+  province          String?
+  municipality      String?
+  barangay          String?
+  municipalityId    String?
+  barangayId        String?
+  position          OfficialPosition?
+  dateElected       DateTime?
+  termStart         DateTime
+  termEnd           DateTime?
+  admissionStatus   AdmissionStatus   @default(PENDING)
+  rejectionReason   String?
+  approvedBy        String?
+  approvedAt        DateTime?
+  role              OfficialRole
+  status            OfficialStatus    @default(INACTIVE)
+  email             String?
+  contactNo         String?
+  address           String?
+  proofDocumentUrl  String?
+  proofDocumentName String?
+  proofDocumentType String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  attendances     OfficialAttendance[]
+  user            User?                @relation(fields: [userId], references: [id])
+  municipalityRef Municipality?        @relation("MunicipalityOfficialsRecords", fields: [municipalityId], references: [id], onDelete: SetNull)
+  barangayRef     Barangay?            @relation("BarangayOfficialsRecords", fields: [barangayId], references: [id], onDelete: SetNull)
+
+  @@index([admissionStatus])
+  @@index([municipalityId])
+  @@index([barangayId])
+  @@index([userId])
+}
+
+model OfficialAdmission {
+  id                   String          @id @default(cuid())
+  userId               String
+  version              Int
+  lastName             String
+  firstName            String
+  middleName           String?
+  birthDate            DateTime
+  provinceDistrict     String
+  municipalityDistrict String
+  municipality         String
+  barangay             String
+  municipalityId       String?
+  barangayId           String?
+  position             Position
+  dateElected          DateTime
+  termEndDate          DateTime
+  admissionStatus      AdmissionStatus @default(PENDING)
+  reviewedBy           String?
+  reviewedAt           DateTime?
+  createdAt            DateTime        @default(now())
+
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  municipalityRef Municipality? @relation(fields: [municipalityId], references: [id], onDelete: SetNull)
+  barangayRef     Barangay?     @relation(fields: [barangayId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, version])
+  @@index([userId])
+  @@index([admissionStatus])
+  @@index([municipalityId])
+  @@index([barangayId])
+}
+
+model Municipality {
+  id                 String              @id @default(cuid())
+  name               String              @unique
+  province           String              @default("Oriental Mindoro")
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  barangays          Barangay[]
+  admissions         OfficialAdmission[]
+  officialRecords    SKOfficial[]        @relation("MunicipalityOfficialsRecords")
+  municipalPresident User?               @relation("MunicipalPresident")
+  officers           User[]              @relation("MunicipalOfficers")
+}
+
+model Barangay {
+  id             String @id @default(cuid())
+  name           String
+  municipalityId String
+
+  municipality    Municipality        @relation(fields: [municipalityId], references: [id], onDelete: Cascade)
+  admissions      OfficialAdmission[]
+  officialRecords SKOfficial[]        @relation("BarangayOfficialsRecords")
+
+  @@unique([name, municipalityId])
+  @@index([municipalityId])
+}
+
+model OfficialAttendance {
+  id         String    @id @default(uuid())
+  officialId String
+  eventId    String?
+  timeIn     DateTime
+  timeOut    DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  official SKOfficial @relation(fields: [officialId], references: [id], onDelete: Cascade)
+  event    Event?     @relation(fields: [eventId], references: [id], onDelete: SetNull)
+}
+
+model YouthProfile {
+  id         String   @id @default(uuid())
+  firstName  String
+  lastName   String
+  birthDate  DateTime
+  gender     String
+  purok      String
+  school     String?
+  employment String?
+  contactNo  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  attendances Attendance[]
+}
+
+model Event {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  eventDate   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  attendances         Attendance[]
+  officialAttendances OfficialAttendance[]
+}
+
+model Attendance {
+  id        String   @id @default(uuid())
+  youthId   String
+  eventId   String
+  scannedAt DateTime @default(now())
+
+  youth YouthProfile @relation(fields: [youthId], references: [id])
+  event Event        @relation(fields: [eventId], references: [id])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String
+  model     String
+  recordId  String
+  userId    String
+  timestamp DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Dataset {
+  id         String          @id @default(cuid())
+  name       String
+  uploadedBy String
+  createdAt  DateTime        @default(now())
+  records    DatasetRecord[]
+
+  @@unique([name, uploadedBy])
+  @@index([createdAt])
+  @@index([uploadedBy])
+}
+
+model DatasetRecord {
+  id        String @id @default(cuid())
+  datasetId String
+  category  String
+  value     String
+
+  dataset Dataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+
+  @@index([datasetId])
+  @@index([category])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model VerificationCode {
+  id        String   @id @default(cuid())
+  email     String
+  code      String
+  role      Role
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([expiresAt])
+}
+
+model OfficialOTP {
+  id           String             @id @default(cuid())
+  email        String
+  code         String
+  purpose      OfficialOtpPurpose @default(LOGIN)
+  firstName    String?
+  lastName     String?
+  passwordHash String?
+  expiresAt    DateTime
+  createdAt    DateTime           @default(now())
+
+  @@index([email])
+  @@index([expiresAt])
+  @@index([purpose])
+}

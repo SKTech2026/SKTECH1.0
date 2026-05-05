@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">SKTech Logo</title>
+  <desc id="desc">SKTech logo wrapper that renders the existing SKTech brand image.</desc>
+  <rect width="512" height="512" fill="transparent"/>
+  <image href="/sk-tech-logo.png" x="0" y="0" width="512" height="512" preserveAspectRatio="xMidYMid meet"/>
+</svg>
