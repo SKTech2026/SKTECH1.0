@@ -7,7 +7,7 @@ export default async function StaffPage() {
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.id) {
-    redirect("/login?callbackUrl=%2Fdashboard%2Fstaff");
+    redirect("/login?role=STAFF&callbackUrl=%2Fdashboard%2Fstaff");
   }
 
   if (session.user.role === "STAFF") {
@@ -22,5 +22,5 @@ export default async function StaffPage() {
     redirect("/dashboard/official");
   }
 
-  redirect("/login?error=official_pending");
+  redirect("/login?role=STAFF&error=official_pending");
 }

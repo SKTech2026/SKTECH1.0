@@ -155,7 +155,7 @@ export default function HomePage() {
           </div>
 
           <div
-            className={`grid gap-3 transition-all duration-300 sm:grid-cols-3 ${
+            className={`grid gap-3 transition-all duration-300 ${
               showLoginActions
                 ? "mt-6 max-h-40 opacity-100"
                 : "pointer-events-none max-h-0 overflow-hidden opacity-0"
@@ -167,28 +167,6 @@ export default function HomePage() {
               className="inline-flex items-center justify-center rounded-xl bg-[#b03333] px-4 py-3 text-sm font-semibold text-white transition duration-300 hover:bg-[#9f2b2b] hover:shadow-[0_0_16px_rgba(176,51,51,0.45)]"
             >
               SK Official Login
-            </Link>
-            <Link
-              href="/login?role=ADMIN"
-              onClick={(event) => onLoginSelect(event, "/login?role=ADMIN")}
-              className={`inline-flex items-center justify-center rounded-xl border px-4 py-3 text-sm font-semibold transition ${
-                isDarkTheme
-                  ? "border-cyan-300/30 bg-slate-950/70 text-slate-100 hover:bg-slate-900"
-                  : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-              }`}
-            >
-              Admin Login
-            </Link>
-            <Link
-              href="/login?role=STAFF"
-              onClick={(event) => onLoginSelect(event, "/login?role=STAFF")}
-              className={`inline-flex items-center justify-center rounded-xl border px-4 py-3 text-sm font-semibold transition ${
-                isDarkTheme
-                  ? "border-cyan-300/30 bg-slate-950/70 text-slate-100 hover:bg-slate-900"
-                  : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-              }`}
-            >
-              Staff Login
             </Link>
           </div>
         </article>

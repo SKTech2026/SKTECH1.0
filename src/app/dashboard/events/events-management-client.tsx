@@ -11,6 +11,7 @@ export type EventManagementItem = {
   createdAt: string;
   updatedAt: string;
   totalAttendanceCount: number;
+  announcementStatus: "ACTIVE" | "ARCHIVED";
 };
 
 type EventsManagementClientProps = {
@@ -79,6 +80,7 @@ export default function EventsManagementClient({
           createdAt?: unknown;
           updatedAt?: unknown;
           totalAttendanceCount?: unknown;
+          announcementStatus?: unknown;
           _count?: { officialAttendances?: unknown };
         };
 
@@ -96,6 +98,8 @@ export default function EventsManagementClient({
               : typeof event._count?.officialAttendances === "number"
                 ? event._count.officialAttendances
                 : 0,
+          announcementStatus:
+            event.announcementStatus === "ARCHIVED" ? "ARCHIVED" : "ACTIVE",
         };
       });
 
@@ -207,7 +211,7 @@ export default function EventsManagementClient({
           <div>
             <h2 className="text-xl font-semibold text-foreground">Events</h2>
             <p className="text-sm text-muted">
-              Create and manage community event attendance tracking.
+              Active announcements appear first by nearest date; past dates are archived automatically.
             </p>
           </div>
           <button
@@ -235,6 +239,7 @@ export default function EventsManagementClient({
             <thead className="bg-surface-elevated">
               <tr className="text-left text-xs uppercase tracking-wide text-muted">
                 <th className="px-5 py-3 font-medium">Title</th>
+                <th className="px-5 py-3 font-medium">Status</th>
                 <th className="px-5 py-3 font-medium">Description</th>
                 <th className="px-5 py-3 font-medium">Event Date</th>
                 <th className="px-5 py-3 font-medium">Total Attendance Count</th>
@@ -245,13 +250,13 @@ export default function EventsManagementClient({
             <tbody className="divide-y divide-glass-border">
               {isLoadingEvents ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-10 text-center text-muted">
+                  <td colSpan={7} className="px-5 py-10 text-center text-muted">
                     Loading events...
                   </td>
                 </tr>
               ) : events.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-10 text-center text-muted">
+                  <td colSpan={7} className="px-5 py-10 text-center text-muted">
                     No events found.
                   </td>
                 </tr>
@@ -260,6 +265,17 @@ export default function EventsManagementClient({
                   <tr key={event.id} className="hover:bg-surface-elevated/60">
                     <td className="px-5 py-4 font-medium text-foreground">
                       {event.title}
+                    </td>
+                    <td className="px-5 py-4">
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          event.announcementStatus === "ACTIVE"
+                            ? "bg-emerald-500/15 text-emerald-300"
+                            : "bg-surface-elevated text-muted"
+                        }`}
+                      >
+                        {event.announcementStatus}
+                      </span>
                     </td>
                     <td className="px-5 py-4 text-muted">
                       {event.description || "No description"}

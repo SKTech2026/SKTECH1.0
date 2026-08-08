@@ -3,6 +3,7 @@ import { AdmissionStatus, OfficialStatus, Role } from "@prisma/client";
 import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
+import { getActiveAnnouncements } from "@/lib/announcements";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/roleGuard";
 
@@ -65,16 +66,7 @@ export default async function StaffDashboardHomePage() {
           },
         },
       }),
-      prisma.event.findMany({
-        orderBy: { eventDate: "desc" },
-        take: 3,
-        select: {
-          id: true,
-          title: true,
-          eventDate: true,
-          description: true,
-        },
-      }),
+      getActiveAnnouncements(3),
       prisma.municipality.findUnique({
         where: { id: staffMunicipalityId },
         select: {
@@ -141,7 +133,7 @@ export default async function StaffDashboardHomePage() {
         </article>
 
         <article className="rounded-2xl border border-glass-border bg-surface p-5 shadow-xl backdrop-blur-md">
-          <h3 className="text-lg font-semibold text-foreground">Public Announcement Feed</h3>
+          <h3 className="text-lg font-semibold text-foreground">Active Announcement Feed</h3>
           <ul className="mt-4 space-y-3">
             {bulletinItems.length === 0 ? (
               <li className="text-sm text-muted">No announcements available.</li>

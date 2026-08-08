@@ -2,7 +2,6 @@
 
 import type { FormEvent } from "react";
 import { Suspense, useMemo, useState } from "react";
-import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -52,12 +51,20 @@ function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  const rolePrefill = searchParams.get("role")?.toUpperCase();
+  const loginRole: CredentialRole = rolePrefill === "ADMIN" ? "ADMIN" : "STAFF";
+  const isAdminView = loginRole === "ADMIN";
+  const loginTitle = isAdminView ? "Admin Login" : "Staff Login";
+  const loginSubtitle = isAdminView
+    ? "Administrator access is restricted to approved admin accounts."
+    : "Municipal staff access is restricted to approved staff accounts.";
+
   const callbackUrl = useMemo(
-    () => searchParams.get("callbackUrl") ?? "/post-login",
-    [searchParams],
+    () =>
+      searchParams.get("callbackUrl") ??
+      (isAdminView ? "/dashboard/admin" : "/dashboard/staff"),
+    [searchParams, isAdminView],
   );
-  const rolePrefill = (searchParams.get("role") ?? "STAFF").toUpperCase();
-  const isAdminView = rolePrefill === "ADMIN";
 
   const [adminUserId, setAdminUserId] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
@@ -100,7 +107,7 @@ function LoginContent() {
         return;
       }
 
-      setFormError("Invalid user ID or password. Use admin001 with zeroes for the default admin account.");
+      setFormError("Invalid user ID or password for this access panel.");
       return;
     }
 
@@ -110,33 +117,15 @@ function LoginContent() {
 
   return (
     <AuthLayout
-      title={isAdminView ? "Admin Login" : "Staff Login"}
-      subtitle={
-        isAdminView
-          ? "Administrator access uses dedicated credential login."
-          : "Municipal staff must sign in with employee credentials."
-      }
+      title={loginTitle}
+      subtitle={loginSubtitle}
       illustrationTitle="SKTech Access Portal"
-      illustrationSubtitle="Role-based secure access for provincial governance operations."
+      illustrationSubtitle={
+        isAdminView
+          ? "Provincial administrator access for system governance."
+          : "Municipal staff access for daily operations."
+      }
     >
-      <div className="mb-4 flex items-center justify-end">
-        {isAdminView ? (
-          <Link
-            href="/login?role=STAFF"
-            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
-          >
-            Switch to Staff
-          </Link>
-        ) : (
-          <Link
-            href="/login?role=ADMIN"
-            className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-white transition hover:bg-slate-800"
-          >
-            ADMIN
-          </Link>
-        )}
-      </div>
-
       {formError ? (
         <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {formError}
@@ -145,7 +134,7 @@ function LoginContent() {
 
       <form
         onSubmit={(event) =>
-          submitCredentials(event, isAdminView ? "ADMIN" : "STAFF", userId, password)
+          submitCredentials(event, loginRole, userId, password)
         }
         className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4"
       >
@@ -181,13 +170,9 @@ function LoginContent() {
           disabled={submittingRole !== null}
           className="mt-4 w-full rounded-md bg-[#b03333] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#9f2b2b] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {submittingRole ? "Signing in..." : isAdminView ? "Login as Admin" : "Login as Staff"}
+          {submittingRole ? "Signing in..." : "Sign in"}
         </button>
       </form>
-
-      <Link href="/forgot-password" className="mt-4 inline-block text-xs text-slate-500 hover:text-slate-700">
-        Forgot password?
-      </Link>
     </AuthLayout>
   );
 }

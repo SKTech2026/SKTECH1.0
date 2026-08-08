@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 
 import { authOptions } from "@/lib/auth";
+import { getActiveAnnouncements } from "@/lib/announcements";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/roleGuard";
 
@@ -95,16 +96,7 @@ export default async function OfficialDashboardHomePage() {
           },
         })
       : Promise.resolve(0),
-    prisma.event.findMany({
-      orderBy: { eventDate: "desc" },
-      take: 3,
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        eventDate: true,
-      },
-    }),
+    getActiveAnnouncements(3),
   ]);
 
   return (
@@ -165,7 +157,7 @@ export default async function OfficialDashboardHomePage() {
         </article>
 
         <article className="rounded-2xl border border-glass-border bg-surface p-5 shadow-xl backdrop-blur-md">
-          <h3 className="text-lg font-semibold text-foreground">Latest Announcements</h3>
+          <h3 className="text-lg font-semibold text-foreground">Active Announcements</h3>
           <ul className="mt-4 space-y-3">
             {bulletinItems.length === 0 ? (
               <li className="text-sm text-muted">No announcements published yet.</li>

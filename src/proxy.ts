@@ -59,6 +59,12 @@ export async function proxy(request: NextRequest) {
 
   if (!token) {
     const signInUrl = new URL("/login", request.url);
+    if (
+      roleRule.allowed.length === 1 &&
+      (roleRule.allowed[0] === "ADMIN" || roleRule.allowed[0] === "STAFF")
+    ) {
+      signInUrl.searchParams.set("role", roleRule.allowed[0]);
+    }
     signInUrl.searchParams.set(
       "callbackUrl",
       `${request.nextUrl.pathname}${request.nextUrl.search}`,

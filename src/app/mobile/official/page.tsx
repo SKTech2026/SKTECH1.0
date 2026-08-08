@@ -5,6 +5,7 @@ import { CalendarDays, CheckCircle2, Clock3, IdCard, RefreshCcw } from "lucide-r
 
 import FlippablePortraitID from "@/components/id/FlippablePortraitID";
 import { authOptions } from "@/lib/auth";
+import { getActiveAnnouncements } from "@/lib/announcements";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/roleGuard";
 
@@ -46,16 +47,7 @@ export default async function MobileOfficialPage() {
     },
   });
 
-  const announcements = await prisma.event.findMany({
-    orderBy: { eventDate: "desc" },
-    take: 8,
-    select: {
-      id: true,
-      title: true,
-      description: true,
-      eventDate: true,
-    },
-  });
+  const announcements = await getActiveAnnouncements(5);
 
   if (!user?.official) {
     return (
@@ -150,7 +142,7 @@ export default async function MobileOfficialPage() {
       </section>
 
       <section className="rounded-2xl border border-cyan-300/20 bg-slate-900/80 p-4">
-        <h2 className="text-sm font-semibold text-slate-100">Announcements</h2>
+        <h2 className="text-sm font-semibold text-slate-100">Active Announcements</h2>
         <div className="mt-3 space-y-2">
           {announcements.length === 0 ? (
             <p className="rounded-xl border border-dashed border-white/15 px-3 py-3 text-xs text-slate-400">

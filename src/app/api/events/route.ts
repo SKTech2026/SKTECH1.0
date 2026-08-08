@@ -4,6 +4,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
 import { authOptions } from "@/lib/auth";
+import {
+  getActiveAnnouncementWhere,
+  getArchivedAnnouncementWhere,
+} from "@/lib/announcements";
 
 export const dynamic = "force-dynamic";
 
@@ -28,9 +32,32 @@ const requireAdminOrStaff = async () => {
 
 export async function GET() {
   try {
-    const events = await prisma.event.findMany({
-      orderBy: { eventDate: "desc" },
-    });
+    const now = new Date();
+    const [activeEvents, archivedEvents] = await Promise.all([
+      prisma.event.findMany({
+        where: getActiveAnnouncementWhere(now),
+        orderBy: { eventDate: "asc" },
+        include: {
+          _count: {
+            select: { officialAttendances: true },
+          },
+        },
+      }),
+      prisma.event.findMany({
+        where: getArchivedAnnouncementWhere(now),
+        orderBy: { eventDate: "desc" },
+        include: {
+          _count: {
+            select: { officialAttendances: true },
+          },
+        },
+      }),
+    ]);
+
+    const events = [
+      ...activeEvents.map((event) => ({ ...event, announcementStatus: "ACTIVE" })),
+      ...archivedEvents.map((event) => ({ ...event, announcementStatus: "ARCHIVED" })),
+    ];
 
     return NextResponse.json(events, { status: 200 });
   } catch (error) {

@@ -7,6 +7,7 @@ import io
 import logging
 import os
 import time
+from math import ceil
 from collections import defaultdict, deque
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -29,6 +30,8 @@ from pydantic import BaseModel, Field
 APP_TITLE = "SKTech AI Facial Recognition Service"
 APP_VERSION = "1.1.0"
 DEFAULT_THRESHOLD = 0.60
+DEFAULT_MATCH_MARGIN = 0.05
+DEFAULT_MIN_FACE_AREA_RATIO = 0.015
 RATE_LIMIT_WINDOW_SECONDS = 60
 MAX_FAILED_ATTEMPTS_PER_WINDOW = 3
 
@@ -39,6 +42,10 @@ load_dotenv(SERVICE_DIR / ".env", override=True)
 
 FACE_DETECTION_MODEL = os.getenv("AI_FACE_MODEL", "hog")
 FACE_SECRET = (os.getenv("FACE_SECRET") or "").strip()
+MATCH_MARGIN = float(os.getenv("AI_MATCH_MARGIN", str(DEFAULT_MATCH_MARGIN)))
+MIN_FACE_AREA_RATIO = float(
+    os.getenv("AI_MIN_FACE_AREA_RATIO", str(DEFAULT_MIN_FACE_AREA_RATIO))
+)
 
 
 class RegisterFaceRequest(BaseModel):
@@ -215,6 +222,12 @@ def _decode_base64_payload(payload: str) -> bytes:
 
 
 def _load_image_from_base64(payload: str) -> np.ndarray:
+    if face_recognition is None:
+        raise HTTPException(
+            status_code=503,
+            detail="face-recognition is not installed in the AI service environment.",
+        )
+
     image_bytes = _decode_base64_payload(payload)
     return face_recognition.load_image_file(io.BytesIO(image_bytes))
 
@@ -223,6 +236,17 @@ def _extract_face_embeddings(
     image: np.ndarray,
 ) -> Tuple[List[np.ndarray], List[Tuple[int, int, int, int]]]:
     locations = face_recognition.face_locations(image, model=FACE_DETECTION_MODEL)
+    if not locations:
+        return [], []
+
+    image_height, image_width = image.shape[:2]
+    image_area = max(1, image_height * image_width)
+    locations = [
+        location
+        for location in locations
+        if ((location[2] - location[0]) * (location[1] - location[3])) / image_area
+        >= MIN_FACE_AREA_RATIO
+    ]
     if not locations:
         return [], []
 
@@ -426,6 +450,33 @@ def _distance_to_confidence(distance: float, threshold: float) -> float:
     return round(float(np.clip(confidence, 0.0, 1.0)), 4)
 
 
+def _match_embedding_batch(
+    embeddings: List[np.ndarray],
+    registered_matrix: np.ndarray,
+    threshold: float,
+) -> Tuple[Optional[int], float, bool]:
+    if not embeddings:
+        return None, 1.0, False
+
+    distances = np.stack(
+        [np.linalg.norm(registered_matrix - embedding, axis=1) for embedding in embeddings]
+    )
+    mean_distances = distances.mean(axis=0)
+    best_index = int(np.argmin(mean_distances))
+    sorted_distances = np.sort(mean_distances)
+    best_distance = float(sorted_distances[0])
+    second_distance = float(sorted_distances[1]) if sorted_distances.size > 1 else 1.2
+    nearest_indices = np.argmin(distances, axis=1)
+    consensus_count = int(np.sum(nearest_indices == best_index))
+    required_consensus = max(1, ceil(len(embeddings) * 0.6))
+    is_clear_match = (
+        best_distance < threshold
+        and consensus_count >= required_consensus
+        and (second_distance - best_distance) >= MATCH_MARGIN
+    )
+    return best_index, best_distance, is_clear_match
+
+
 def _log_verification(ip: str, total_faces: int, match_count: int, status: str, reason: str) -> None:
     LOGGER.info(
         "verify_attempt ip=%s faces=%s matches=%s status=%s reason=%s",
@@ -459,6 +510,14 @@ def _build_unregistered_faces(
             )
         )
     return faces
+
+
+def _extract_largest_embedding_from_base64(payload: str) -> Optional[np.ndarray]:
+    image = _load_image_from_base64(payload)
+    embeddings, locations = _extract_face_embeddings(image)
+    if not embeddings:
+        return None
+    return embeddings[_largest_face_index(locations)]
 
 
 async def _verify_faces_core(
@@ -525,14 +584,31 @@ async def _verify_faces_core(
             )
         raise
 
+    consensus_embeddings: List[np.ndarray] = []
+    if len(frame_embeddings) == 1 and len(liveness_payloads) >= 2:
+        for frame_payload in liveness_payloads:
+            try:
+                frame_embedding = await asyncio.get_running_loop().run_in_executor(
+                    EXECUTOR, _extract_largest_embedding_from_base64, frame_payload
+                )
+                if frame_embedding is not None:
+                    consensus_embeddings.append(frame_embedding)
+            except (HTTPException, ValueError):
+                continue
+
     detections: List[DetectedFace] = []
     for embedding, (top, right, bottom, left) in zip(frame_embeddings, locations):
-        distances = np.linalg.norm(registered_matrix - embedding, axis=1)
-        best_index = int(np.argmin(distances))
-        best_distance = float(distances[best_index])
+        candidate_embeddings = consensus_embeddings if consensus_embeddings else [embedding]
+        best_index, best_distance, is_clear_match = _match_embedding_batch(
+            candidate_embeddings,
+            registered_matrix,
+            payload.threshold,
+        )
         confidence = _distance_to_confidence(best_distance, payload.threshold)
         matched_user_id = (
-            registered_user_ids[best_index] if best_distance < payload.threshold else None
+            registered_user_ids[best_index]
+            if best_index is not None and is_clear_match
+            else None
         )
 
         if matched_user_id:

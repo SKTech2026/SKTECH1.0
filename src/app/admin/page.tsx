@@ -7,7 +7,7 @@ export default async function AdminPage() {
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.id) {
-    redirect("/login?callbackUrl=%2Fdashboard%2Fadmin");
+    redirect("/login?role=ADMIN&callbackUrl=%2Fdashboard%2Fadmin");
   }
 
   if (session.user.role === "ADMIN") {
@@ -22,5 +22,5 @@ export default async function AdminPage() {
     redirect("/dashboard/official");
   }
 
-  redirect("/login?error=official_pending");
+  redirect("/login?role=ADMIN&error=official_pending");
 }
