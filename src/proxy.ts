@@ -2,6 +2,8 @@ import { getToken } from "next-auth/jwt";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import { createClient as createSupabaseMiddlewareClient } from "@/utils/supabase/middleware";
+
 type AppRole = "ADMIN" | "STAFF" | "OFFICIAL";
 type AppStatus = "PENDING" | "APPROVED" | "REJECTED" | "INACTIVE";
 type RoleRule = {
@@ -44,9 +46,12 @@ function matchRoleRule(pathname: string): RoleRule | undefined {
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const roleRule = matchRoleRule(pathname);
+  const { supabase, getResponse } = createSupabaseMiddlewareClient(request);
+
+  await supabase.auth.getUser();
 
   if (!roleRule) {
-    return NextResponse.next();
+    return getResponse();
   }
 
   const token = await getToken({
@@ -99,7 +104,7 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL("/dashboard/official", request.url));
     }
 
-    return NextResponse.next();
+    return getResponse();
   }
 
   if (roleRule.requiresApproved && status !== "APPROVED") {
@@ -107,7 +112,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(`/login?error=${errorCode}`, request.url));
   }
 
-  return NextResponse.next();
+  return getResponse();
 }
 
 export const config = {
