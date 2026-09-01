@@ -22,6 +22,7 @@ type UpgradeRequestBody = {
 };
 
 const UPGRADEABLE_ROLES = new Set<Role>([Role.ADMIN, Role.STAFF]);
+const EMAIL_TIMEOUT_MS = 15000;
 
 function parseRequestedRole(value: unknown): Role | null {
   if (value === Role.ADMIN || value === Role.STAFF) {
@@ -50,6 +51,9 @@ function getMailTransporter() {
     host,
     port: parsedPort,
     secure: parsedPort === 465,
+    connectionTimeout: EMAIL_TIMEOUT_MS,
+    greetingTimeout: EMAIL_TIMEOUT_MS,
+    socketTimeout: EMAIL_TIMEOUT_MS,
     auth: {
       user,
       pass: password,

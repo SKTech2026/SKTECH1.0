@@ -14,6 +14,17 @@ type SendOtpResponse = {
   cooldownSeconds?: number;
 };
 
+const OTP_REQUEST_TIMEOUT_MS = 15000;
+
+async function readOtpResponse(response: Response): Promise<SendOtpResponse> {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    return (await response.json()) as SendOtpResponse;
+  }
+
+  return { error: await response.text() };
+}
+
 export default function OfficialRegisterPage() {
   const router = useRouter();
   const [firstName, setFirstName] = useState("");
@@ -32,20 +43,29 @@ export default function OfficialRegisterPage() {
     setSuccess(null);
 
     try {
-      const response = await fetch("/api/official/send-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mode: "REGISTER",
-          firstName,
-          lastName,
-          email,
-          password,
-          confirmPassword,
-        }),
-      });
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), OTP_REQUEST_TIMEOUT_MS);
 
-      const payload = (await response.json()) as SendOtpResponse;
+      let response: Response;
+      try {
+        response = await fetch("/api/official/send-otp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mode: "REGISTER",
+            firstName,
+            lastName,
+            email,
+            password,
+            confirmPassword,
+          }),
+          signal: controller.signal,
+        });
+      } finally {
+        window.clearTimeout(timeout);
+      }
+
+      const payload = await readOtpResponse(response);
       if (!response.ok) {
         throw new Error(payload.error ?? "Failed to send OTP.");
       }
@@ -55,7 +75,13 @@ export default function OfficialRegisterPage() {
         `/official/auth/verify?mode=REGISTER&email=${encodeURIComponent(email.trim().toLowerCase())}&cooldown=${payload.cooldownSeconds ?? 60}`,
       );
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Failed to send OTP.");
+      setError(
+        submitError instanceof DOMException && submitError.name === "AbortError"
+          ? "Sending the code took too long. Check the email settings and try again."
+          : submitError instanceof Error
+            ? submitError.message
+            : "Failed to send OTP.",
+      );
     } finally {
       setLoading(false);
     }

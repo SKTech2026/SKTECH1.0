@@ -28,6 +28,7 @@ type SendOfficialOtpBody = {
 
 const GMAIL_PATTERN = /^[a-zA-Z0-9._%+-]+@gmail\.com$/i;
 const MIN_PASSWORD_LENGTH = 8;
+const EMAIL_TIMEOUT_MS = 15000;
 
 const isValidMode = (value: unknown): value is SendOtpMode =>
   value === "LOGIN" || value === "REGISTER";
@@ -53,6 +54,9 @@ function getMailTransporter() {
     host,
     port: parsedPort,
     secure: parsedPort === 465,
+    connectionTimeout: EMAIL_TIMEOUT_MS,
+    greetingTimeout: EMAIL_TIMEOUT_MS,
+    socketTimeout: EMAIL_TIMEOUT_MS,
     auth: {
       user,
       pass: password,
@@ -267,8 +271,21 @@ export async function POST(request: Request) {
         .catch(() => undefined);
 
       if (process.env.NODE_ENV !== "production") console.error("Failed to send official OTP email:", emailError);
+      const message = emailError instanceof Error ? emailError.message : "";
+      const isConfigError = message.includes("Missing email server environment variables");
+      const isTimeoutError =
+        message.toLowerCase().includes("timeout") ||
+        message.toLowerCase().includes("timed out") ||
+        message.toLowerCase().includes("etimedout");
+
       return NextResponse.json(
-        { error: "Failed to send OTP email. Please try again later." },
+        {
+          error: isConfigError
+            ? "Email service is not configured. Set EMAIL_SERVER_HOST, EMAIL_SERVER_PORT, EMAIL_SERVER_USER, EMAIL_SERVER_PASSWORD, and EMAIL_FROM in Railway."
+            : isTimeoutError
+              ? "Email service timed out while sending the OTP. Check the Railway email/SMTP settings."
+              : "Failed to send OTP email. Please try again later.",
+        },
         { status: 500 },
       );
     }
