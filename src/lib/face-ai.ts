@@ -90,9 +90,20 @@ async function postToAiService<T>(
       throw error;
     }
 
-    const body = (await response.json()) as { detail?: string; message?: string };
+    const contentType = response.headers.get("content-type") ?? "";
+    const body = contentType.includes("application/json")
+      ? ((await response.json()) as { detail?: string; message?: string })
+      : {
+          detail: await response.text(),
+        };
+
     if (!response.ok) {
-      throw new Error(body.detail ?? body.message ?? "AI service request failed.");
+      const detail = (body.detail ?? body.message ?? "").trim();
+      const notFoundMessage =
+        response.status === 404
+          ? "AI facial service endpoint was not found. Check AI_SERVICE_URL and make sure it points to the deployed FastAPI ai-service, not the Next.js website."
+          : null;
+      throw new Error(notFoundMessage ?? (detail || "AI service request failed."));
     }
 
     return body as T;
