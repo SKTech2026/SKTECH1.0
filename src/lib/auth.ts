@@ -6,6 +6,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 
 import { prisma } from "@/lib/db";
+import { verifyStoredOtpCode } from "@/lib/otp";
 
 const CREDENTIAL_ROLES = new Set<Role>([Role.ADMIN, Role.STAFF]);
 const OTP_PATTERN = /^\d{6}$/;
@@ -281,7 +282,7 @@ export const authOptions: NextAuthOptions = {
                 return null;
               }
 
-              const otpMatches = await compare(officialOtp, otpRecord.code);
+              const otpMatches = await verifyStoredOtpCode(officialOtp, otpRecord.code);
               if (!otpMatches) {
                 return null;
               }

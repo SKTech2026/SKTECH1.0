@@ -1,4 +1,5 @@
 import { createHash, randomInt, timingSafeEqual } from "crypto";
+import { compare as compareHash } from "bcryptjs";
 
 export const OTP_LENGTH = 6;
 export const OTP_EXPIRY_MINUTES = 5;
@@ -30,4 +31,15 @@ export function verifyOtpCode(inputCode: string, hashedCode: string): boolean {
   }
 
   return timingSafeEqual(inputBuffer, storedBuffer);
+}
+
+export async function verifyStoredOtpCode(
+  inputCode: string,
+  storedCode: string,
+): Promise<boolean> {
+  if (storedCode.startsWith("$2a$") || storedCode.startsWith("$2b$") || storedCode.startsWith("$2y$")) {
+    return compareHash(inputCode, storedCode);
+  }
+
+  return verifyOtpCode(inputCode, storedCode);
 }

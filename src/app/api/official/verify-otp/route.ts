@@ -1,9 +1,8 @@
 import { OfficialOtpPurpose, Role, UserStatus } from "@prisma/client";
-import { compare as compareHash } from "bcryptjs";
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/db";
-import { OTP_LENGTH } from "@/lib/otp";
+import { OTP_LENGTH, verifyStoredOtpCode } from "@/lib/otp";
 
 export const dynamic = "force-dynamic";
 
@@ -81,7 +80,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const otpMatches = await compareHash(code, otpRecord.code);
+    const otpMatches = await verifyStoredOtpCode(code, otpRecord.code);
     if (!otpMatches) {
       return NextResponse.json(
         { error: "OTP is invalid or expired." },

@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import {
   generateOtpCode,
   getOtpExpiryDate,
+  hashOtpCode,
   OTP_EXPIRY_MINUTES,
   OTP_REQUEST_COOLDOWN_MS,
   OTP_REQUEST_COOLDOWN_SECONDS,
@@ -244,7 +245,7 @@ export async function POST(request: Request) {
     const record = await prisma.officialOTP.create({
       data: {
         email,
-        code: await hashPassword(otpCode, 10),
+        code: hashOtpCode(otpCode),
         purpose: mode === "REGISTER" ? OfficialOtpPurpose.REGISTER : OfficialOtpPurpose.LOGIN,
         firstName: firstName || null,
         lastName: lastName || null,
