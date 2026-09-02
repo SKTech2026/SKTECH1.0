@@ -1,9 +1,9 @@
 import { OfficialOtpPurpose, Role } from "@prisma/client";
 import { hash as hashPassword } from "bcryptjs";
-import nodemailer from "nodemailer";
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/db";
+import { sendEmail } from "@/lib/email";
 import {
   generateOtpCode,
   getOtpExpiryDate,
@@ -29,56 +29,20 @@ type SendOfficialOtpBody = {
 
 const GMAIL_PATTERN = /^[a-zA-Z0-9._%+-]+@gmail\.com$/i;
 const MIN_PASSWORD_LENGTH = 8;
-const EMAIL_TIMEOUT_MS = 60000;
 
 const isValidMode = (value: unknown): value is SendOtpMode =>
   value === "LOGIN" || value === "REGISTER";
 
 const normalizeEmail = (value: string | undefined): string => value?.trim().toLowerCase() ?? "";
-
-function getMailTransporter() {
-  const host = process.env.EMAIL_SERVER_HOST ?? process.env.SMTP_HOST;
-  const port = process.env.EMAIL_SERVER_PORT ?? process.env.SMTP_PORT;
-  const user = process.env.EMAIL_SERVER_USER ?? process.env.EMAIL_USER;
-  const password = process.env.EMAIL_SERVER_PASSWORD ?? process.env.EMAIL_PASS;
-
-  if (!host || !port || !user || !password) {
-    throw new Error("Missing email server environment variables.");
-  }
-
-  const parsedPort = Number(port);
-  if (!Number.isInteger(parsedPort) || parsedPort <= 0) {
-    throw new Error("Email server port must be a valid positive integer.");
-  }
-
-  return nodemailer.createTransport({
-    host,
-    port: parsedPort,
-    secure: parsedPort === 465,
-    connectionTimeout: EMAIL_TIMEOUT_MS,
-    greetingTimeout: EMAIL_TIMEOUT_MS,
-    socketTimeout: EMAIL_TIMEOUT_MS,
-    auth: {
-      user,
-      pass: password,
-    },
-  });
-}
+const getSafeErrorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : "Unknown error";
 
 async function sendOfficialOtpEmail(params: {
   to: string;
   code: string;
   mode: SendOtpMode;
 }) {
-  const transporter = getMailTransporter();
-  const from =
-    process.env.EMAIL_FROM ??
-    process.env.EMAIL_SERVER_USER ??
-    process.env.EMAIL_USER ??
-    "";
-
-  await transporter.sendMail({
-    from,
+  await sendEmail({
     to: params.to,
     subject: "SKTech Official Verification Code",
     text: `Your SKTech ${params.mode.toLowerCase()} verification code is ${params.code}. This code expires in ${OTP_EXPIRY_MINUTES} minutes.`,
@@ -115,6 +79,8 @@ export async function POST(request: Request) {
 
     const mode = body.mode;
     const email = normalizeEmail(body.email);
+    console.info("[OTP] Official OTP request received", { mode, email });
+
     if (!GMAIL_PATTERN.test(email)) {
       return NextResponse.json(
         { error: "Only @gmail.com email addresses are allowed." },
@@ -246,6 +212,7 @@ export async function POST(request: Request) {
     });
 
     const otpCode = generateOtpCode();
+    console.info("[OTP] Official OTP generated", { mode, email });
     const record = await prisma.officialOTP.create({
       data: {
         email,
@@ -263,20 +230,23 @@ export async function POST(request: Request) {
         expiresAt: true,
       },
     });
+    console.info("[OTP] Official OTP stored", { mode, email, otpId: record.id });
 
     try {
+      console.info("[OTP] Attempting official OTP email delivery", { mode, email });
       await sendOfficialOtpEmail({
         to: email,
         code: otpCode,
         mode,
       });
+      console.info("[OTP] Official OTP email sent", { mode, email });
     } catch (emailError) {
       await prisma.officialOTP
         .delete({ where: { id: record.id } })
         .catch(() => undefined);
 
-      if (process.env.NODE_ENV !== "production") console.error("Failed to send official OTP email:", emailError);
-      const message = emailError instanceof Error ? emailError.message : "";
+      const message = getSafeErrorMessage(emailError);
+      console.error("[OTP] Email delivery failed:", message);
       const isConfigError = message.includes("Missing email server environment variables");
       const isTimeoutError =
         message.toLowerCase().includes("timeout") ||

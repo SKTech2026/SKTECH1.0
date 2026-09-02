@@ -41,6 +41,7 @@ export async function POST(request: Request) {
     const code = body.code?.trim() ?? "";
     const mode = body.mode;
     const purpose = mode === "REGISTER" ? OfficialOtpPurpose.REGISTER : OfficialOtpPurpose.LOGIN;
+    console.info("[OTP] Official OTP verification request received", { mode, email });
 
     if (!GMAIL_PATTERN.test(email)) {
       return NextResponse.json(
@@ -82,6 +83,7 @@ export async function POST(request: Request) {
 
     const otpMatches = await verifyStoredOtpCode(code, otpRecord.code);
     if (!otpMatches) {
+      console.info("[OTP] Official OTP verification rejected", { mode, email });
       return NextResponse.json(
         { error: "OTP is invalid or expired." },
         { status: 400 },
@@ -125,6 +127,7 @@ export async function POST(request: Request) {
         }),
       ]);
 
+      console.info("[OTP] Official registration verification successful", { mode, email });
       return NextResponse.json(
         {
           message:
@@ -151,6 +154,7 @@ export async function POST(request: Request) {
       where: { email, purpose },
     });
 
+    console.info("[OTP] Official login OTP verification successful", { mode, email });
     return NextResponse.json(
       {
         message: "Login OTP verified.",
