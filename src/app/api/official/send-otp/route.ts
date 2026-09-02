@@ -252,12 +252,18 @@ export async function POST(request: Request) {
         message.toLowerCase().includes("timeout") ||
         message.toLowerCase().includes("timed out") ||
         message.toLowerCase().includes("etimedout");
+      const isBrevoAuthorizedIpError =
+        message.toLowerCase().includes("unrecognised ip address") ||
+        message.toLowerCase().includes("authorized ip") ||
+        message.toLowerCase().includes("authorised ip");
 
       return NextResponse.json(
         {
           error: isConfigError
             ? "Email service is not configured. Set EMAIL_SERVER_HOST, EMAIL_SERVER_PORT, EMAIL_SERVER_USER, EMAIL_SERVER_PASSWORD, and EMAIL_FROM in Railway."
-            : isTimeoutError
+            : isBrevoAuthorizedIpError
+              ? "Brevo rejected this server IP. Add the Railway outbound IP to Brevo Authorized IPs or disable Brevo API IP restrictions."
+              : isTimeoutError
               ? "Email service timed out while sending the OTP. Try again in a moment or check the Railway email/SMTP settings."
               : "Failed to send OTP email. Please try again later.",
         },
