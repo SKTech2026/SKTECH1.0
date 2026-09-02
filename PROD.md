@@ -10,6 +10,8 @@ This project deploys as:
 Set these in the **Next.js app service** environment variables:
 
 - `DATABASE_URL` (PostgreSQL connection string)
+- `SUPABASE_URL` (Supabase project URL for server-side Storage uploads)
+- `SUPABASE_SERVICE_ROLE_KEY` (server-only key for private admission proof uploads)
 - `NEXTAUTH_URL` (your public app URL, e.g. `https://sktech10-production.up.railway.app`)
 - `NEXTAUTH_SECRET` (long random secret)
 - `GOOGLE_CLIENT_ID`

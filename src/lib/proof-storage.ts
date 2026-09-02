@@ -3,6 +3,12 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { AdmissionProofUploadPayload } from "@/lib/sk-official";
+import {
+  createSupabaseAdminClient,
+  hasSupabaseAdminConfig,
+} from "@/utils/supabase/admin";
+
+export const ADMISSION_PROOFS_BUCKET = "admission-proofs";
 
 const MIME_EXTENSION_MAP: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -34,6 +40,28 @@ function normalizePrefix(prefix: string): string {
   return prefix.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 50);
 }
 
+async function ensureAdmissionProofsBucket() {
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase.storage.getBucket(ADMISSION_PROOFS_BUCKET);
+
+  if (!error) {
+    return supabase;
+  }
+
+  const { error: createError } = await supabase.storage.createBucket(
+    ADMISSION_PROOFS_BUCKET,
+    {
+      public: false,
+    },
+  );
+
+  if (createError && !createError.message.toLowerCase().includes("already exists")) {
+    throw new Error(`Unable to prepare admission proof storage: ${createError.message}`);
+  }
+
+  return supabase;
+}
+
 export async function saveAdmissionProof(
   upload: AdmissionProofUploadPayload,
   prefix: string,
@@ -57,6 +85,31 @@ export async function saveAdmissionProof(
   const cleanPrefix = normalizePrefix(prefix);
   const sourceName = sanitizeFileName(upload.fileName);
   const fileName = `${cleanPrefix}-${Date.now()}-${randomUUID().slice(0, 8)}.${extension}`;
+
+  if (hasSupabaseAdminConfig()) {
+    const supabase = await ensureAdmissionProofsBucket();
+    const objectPath = `${cleanPrefix}/${fileName}`;
+    const { error } = await supabase.storage
+      .from(ADMISSION_PROOFS_BUCKET)
+      .upload(objectPath, buffer, {
+        contentType: mimeType,
+        upsert: false,
+      });
+
+    if (error) {
+      throw new Error(`Unable to upload proof of office: ${error.message}`);
+    }
+
+    return {
+      proofDocumentUrl: `/api/admission-proofs?path=${encodeURIComponent(objectPath)}`,
+      proofDocumentName: sourceName,
+      proofDocumentType: mimeType,
+    };
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("Supabase Storage is not configured for admission proof uploads.");
+  }
 
   const uploadDir = path.join(process.cwd(), "public", "uploads", "admission-proofs");
   await mkdir(uploadDir, { recursive: true });

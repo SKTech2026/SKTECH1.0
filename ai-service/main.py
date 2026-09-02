@@ -147,6 +147,7 @@ if not FERNET_KEY:
 
 FERNET = Fernet(FERNET_KEY.encode("utf-8"))
 DATABASE_URL = os.getenv("DATABASE_URL")
+LOGGER.info("[FACE] database configured: %s", "yes" if DATABASE_URL else "no")
 
 MAX_WORKERS = int(os.getenv("AI_MAX_WORKERS", "4"))
 EXECUTOR = ThreadPoolExecutor(max_workers=max(2, MAX_WORKERS))
@@ -172,11 +173,11 @@ app.add_middleware(
 async def on_startup() -> None:
     app.state.db_pool = None
     if not DATABASE_URL:
-        LOGGER.error("DATABASE_URL is not configured. Verification endpoints will fail.")
+        LOGGER.error("[FACE] database configured: no")
         return
 
     app.state.db_pool = await asyncpg.create_pool(DATABASE_URL, min_size=1, max_size=5)
-    LOGGER.info("AI service started with async PostgreSQL pool.")
+    LOGGER.info("[FACE] database configured: yes")
 
 
 @app.on_event("shutdown")
@@ -382,11 +383,13 @@ def _clear_failed_attempts(ip: str) -> None:
 async def _fetch_registered_embeddings() -> Tuple[List[str], np.ndarray, Dict[str, Dict[str, Optional[str]]]]:
     pool = getattr(app.state, "db_pool", None)
     if pool is None:
+        LOGGER.error("[FACE] database configured: no")
         raise HTTPException(
             status_code=500,
             detail="Database connection is not configured for facial verification.",
         )
 
+    LOGGER.info("[FACE] loading registered facial candidates")
     async with pool.acquire() as connection:
         rows = await connection.fetch(
             """
@@ -404,6 +407,7 @@ async def _fetch_registered_embeddings() -> Tuple[List[str], np.ndarray, Dict[st
             WHERE u."faceRegistered" = TRUE AND u."faceEmbedding" IS NOT NULL
             """
         )
+    LOGGER.info("[FACE] candidate records loaded: %s", len(rows))
 
     user_ids: List[str] = []
     vectors: List[np.ndarray] = []
@@ -523,9 +527,11 @@ def _extract_largest_embedding_from_base64(payload: str) -> Optional[np.ndarray]
 async def _verify_faces_core(
     payload: VerifyFacesRequest, ip_address: str
 ) -> VerifyFacesResponse:
+    LOGGER.info("[FACE] request received")
     _check_rate_limit(ip_address)
 
     image_payload = payload.resolve_image()
+    LOGGER.info("[FACE] image validated")
     liveness_payloads = payload.livenessFrames if payload.livenessFrames else [image_payload]
 
     liveness_ok, liveness_score, liveness_message = await asyncio.get_running_loop().run_in_executor(
@@ -644,6 +650,7 @@ async def _verify_faces_core(
             )
 
     matched_count = sum(1 for item in detections if item.isRegistered)
+    LOGGER.info("[FACE] recognition complete: faces=%s matches=%s", len(detections), matched_count)
     if matched_count > 0:
         _clear_failed_attempts(ip_address)
         _log_verification(
