@@ -14,7 +14,7 @@ type SendOtpResponse = {
   cooldownSeconds?: number;
 };
 
-const OTP_REQUEST_TIMEOUT_MS = 15000;
+const OTP_REQUEST_TIMEOUT_MS = 60000;
 
 async function readOtpResponse(response: Response): Promise<SendOtpResponse> {
   const contentType = response.headers.get("content-type") ?? "";
@@ -77,7 +77,7 @@ export default function OfficialRegisterPage() {
     } catch (submitError) {
       setError(
         submitError instanceof DOMException && submitError.name === "AbortError"
-          ? "Sending the code took too long. Check the email settings and try again."
+          ? "Sending the code took too long. Please try again in a moment."
           : submitError instanceof Error
             ? submitError.message
             : "Failed to send OTP.",

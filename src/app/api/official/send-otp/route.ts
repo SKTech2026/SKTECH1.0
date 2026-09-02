@@ -29,7 +29,7 @@ type SendOfficialOtpBody = {
 
 const GMAIL_PATTERN = /^[a-zA-Z0-9._%+-]+@gmail\.com$/i;
 const MIN_PASSWORD_LENGTH = 8;
-const EMAIL_TIMEOUT_MS = 15000;
+const EMAIL_TIMEOUT_MS = 60000;
 
 const isValidMode = (value: unknown): value is SendOtpMode =>
   value === "LOGIN" || value === "REGISTER";
@@ -37,10 +37,10 @@ const isValidMode = (value: unknown): value is SendOtpMode =>
 const normalizeEmail = (value: string | undefined): string => value?.trim().toLowerCase() ?? "";
 
 function getMailTransporter() {
-  const host = process.env.EMAIL_SERVER_HOST;
-  const port = process.env.EMAIL_SERVER_PORT;
-  const user = process.env.EMAIL_SERVER_USER;
-  const password = process.env.EMAIL_SERVER_PASSWORD;
+  const host = process.env.EMAIL_SERVER_HOST ?? process.env.SMTP_HOST;
+  const port = process.env.EMAIL_SERVER_PORT ?? process.env.SMTP_PORT;
+  const user = process.env.EMAIL_SERVER_USER ?? process.env.EMAIL_USER;
+  const password = process.env.EMAIL_SERVER_PASSWORD ?? process.env.EMAIL_PASS;
 
   if (!host || !port || !user || !password) {
     throw new Error("Missing email server environment variables.");
@@ -48,7 +48,7 @@ function getMailTransporter() {
 
   const parsedPort = Number(port);
   if (!Number.isInteger(parsedPort) || parsedPort <= 0) {
-    throw new Error("EMAIL_SERVER_PORT must be a valid positive integer.");
+    throw new Error("Email server port must be a valid positive integer.");
   }
 
   return nodemailer.createTransport({
@@ -71,7 +71,11 @@ async function sendOfficialOtpEmail(params: {
   mode: SendOtpMode;
 }) {
   const transporter = getMailTransporter();
-  const from = process.env.EMAIL_FROM ?? process.env.EMAIL_SERVER_USER ?? "";
+  const from =
+    process.env.EMAIL_FROM ??
+    process.env.EMAIL_SERVER_USER ??
+    process.env.EMAIL_USER ??
+    "";
 
   await transporter.sendMail({
     from,
@@ -284,7 +288,7 @@ export async function POST(request: Request) {
           error: isConfigError
             ? "Email service is not configured. Set EMAIL_SERVER_HOST, EMAIL_SERVER_PORT, EMAIL_SERVER_USER, EMAIL_SERVER_PASSWORD, and EMAIL_FROM in Railway."
             : isTimeoutError
-              ? "Email service timed out while sending the OTP. Check the Railway email/SMTP settings."
+              ? "Email service timed out while sending the OTP. Try again in a moment or check the Railway email/SMTP settings."
               : "Failed to send OTP email. Please try again later.",
         },
         { status: 500 },
