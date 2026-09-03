@@ -63,7 +63,10 @@ export async function proxy(request: NextRequest) {
   });
 
   if (!token) {
-    const signInUrl = new URL("/login", request.url);
+    const signInUrl = new URL(
+      roleRule.prefix === "/dashboard/official" ? "/official/auth" : "/login",
+      request.url,
+    );
     if (
       roleRule.allowed.length === 1 &&
       (roleRule.allowed[0] === "ADMIN" || roleRule.allowed[0] === "STAFF")

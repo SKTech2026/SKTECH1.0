@@ -12,6 +12,7 @@ export default async function OfficialSettingsPage() {
   return (
     <SettingsPanel
       roleLabel="Official"
+      logoutCallbackUrl="/official/auth"
       account={{
         name: authorizedSession.user.name,
         email: authorizedSession.user.email,

@@ -7,6 +7,7 @@ import ThemeSelector from "@/components/dashboard/theme-selector";
 
 type SettingsPanelProps = {
   roleLabel: string;
+  logoutCallbackUrl?: string;
   account: {
     name: string | null | undefined;
     email: string | null | undefined;
@@ -15,7 +16,11 @@ type SettingsPanelProps = {
   };
 };
 
-export default function SettingsPanel({ roleLabel, account }: SettingsPanelProps) {
+export default function SettingsPanel({
+  roleLabel,
+  logoutCallbackUrl = "/login",
+  account,
+}: SettingsPanelProps) {
   return (
     <div className="space-y-6">
       <section className="glass-card-elevated rounded-3xl p-6 sm:p-8">
@@ -114,7 +119,7 @@ export default function SettingsPanel({ roleLabel, account }: SettingsPanelProps
 
           <button
             type="button"
-            onClick={() => void signOut({ callbackUrl: "/login" })}
+            onClick={() => void signOut({ callbackUrl: logoutCallbackUrl })}
             className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-400/35 bg-red-500/15 px-4 py-2.5 text-sm font-semibold text-red-100 transition hover:bg-red-500/25"
           >
             <LogOut className="h-4 w-4" />

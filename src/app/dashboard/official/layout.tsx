@@ -64,6 +64,7 @@ export default function OfficialDashboardLayout({
       heading="Official Access Dashboard"
       subheading="Read-only portal for announcements, identity, attendance, and accomplishments."
       items={officialItems}
+      logoutCallbackUrl="/official/auth"
     >
       {children}
     </RoleShell>
