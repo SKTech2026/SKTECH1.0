@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import {
   buildOfficialPhotoUrl,
+  getSafePhotoErrorMessage,
   getOfficialPhotoContentType,
   isOfficialPhotoObjectPath,
   OFFICIAL_PROFILE_PHOTOS_BUCKET,
@@ -12,15 +13,20 @@ import { createSupabaseAdminClient } from "@/utils/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
-const unavailableResponse = () =>
-  NextResponse.json({ error: "Official photo is unavailable." }, { status: 404 });
+const unavailableResponse = (message: string) => {
+  console.error(`[PHOTO] photo serve failed: ${message}`);
+  return NextResponse.json({ error: "Official photo is unavailable." }, { status: 404 });
+};
 
 export async function GET(request: NextRequest) {
   try {
+    console.info("[PHOTO] serve request received");
     const objectPath = request.nextUrl.searchParams.get("path")?.trim() ?? "";
     if (!isOfficialPhotoObjectPath(objectPath)) {
+      console.error("[PHOTO] photo serve failed: Invalid official photo path.");
       return NextResponse.json({ error: "Invalid official photo path." }, { status: 400 });
     }
+    console.info("[PHOTO] requested object path valid");
 
     const photoUrl = buildOfficialPhotoUrl(objectPath);
     const official = await prisma.sKOfficial.findFirst({
@@ -34,24 +40,32 @@ export async function GET(request: NextRequest) {
     });
 
     if (!official) {
-      return unavailableResponse();
+      return unavailableResponse("No Official database reference found.");
     }
+    console.info("[PHOTO] database ownership/reference found");
 
     const contentType = getOfficialPhotoContentType(objectPath);
     if (!contentType) {
+      console.error("[PHOTO] photo serve failed: Invalid official photo type.");
       return NextResponse.json({ error: "Invalid official photo type." }, { status: 400 });
     }
 
+    console.info("[PHOTO] downloading from Supabase");
     const supabase = createSupabaseAdminClient();
     const { data, error } = await supabase.storage
       .from(OFFICIAL_PROFILE_PHOTOS_BUCKET)
       .download(objectPath);
 
     if (error || !data) {
-      return unavailableResponse();
+      return unavailableResponse(
+        error ? getSafePhotoErrorMessage(error) : "Supabase returned no photo data.",
+      );
     }
+    console.info("[PHOTO] download success");
 
-    return new NextResponse(await data.arrayBuffer(), {
+    const imageBytes = await data.arrayBuffer();
+    console.info("[PHOTO] response returning");
+    return new NextResponse(imageBytes, {
       status: 200,
       headers: {
         "Cache-Control": "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400",
@@ -60,10 +74,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    if (process.env.NODE_ENV !== "production") {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      console.error("GET /api/official/photo error:", message);
-    }
+    console.error(`[PHOTO] photo serve failed: ${getSafePhotoErrorMessage(error)}`);
     return NextResponse.json({ error: "Failed to load official photo." }, { status: 500 });
   }
 }

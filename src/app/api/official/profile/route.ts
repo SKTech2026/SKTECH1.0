@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import {
+  getSafePhotoErrorMessage,
   MAX_OFFICIAL_PHOTO_BYTES,
   OFFICIAL_PHOTO_MIME_TYPES,
   saveOfficialProfilePhoto,
@@ -46,6 +47,7 @@ export async function PATCH(request: Request) {
     const contactNoRaw = String(formData.get("contactNo") ?? "").trim();
     const addressRaw = String(formData.get("address") ?? "").trim();
     const photo = formData.get("photo");
+    console.info("[PHOTO] profile save received");
 
     if (!firstName || !lastName) {
       return NextResponse.json(
@@ -128,11 +130,12 @@ export async function PATCH(request: Request) {
         );
       }
 
+      console.info("[PHOTO] file validated");
       const savedPhoto = await saveOfficialProfilePhoto(photo, session.user.id);
       photoUrl = savedPhoto.photoUrl;
     }
 
-    const updated = await prisma.$transaction(async (tx) => {
+    const updateTransaction = prisma.$transaction(async (tx) => {
       const official = await tx.sKOfficial.update({
         where: { id: officialRecord.id },
         data: {
@@ -186,6 +189,19 @@ export async function PATCH(request: Request) {
         photoUrl: user.image,
       };
     });
+    const updated = await updateTransaction.catch((error) => {
+      console.error(`[PHOTO] database update failed: ${getSafePhotoErrorMessage(error)}`);
+      throw error;
+    });
+
+    if (photoUrl) {
+      const extension = OFFICIAL_PHOTO_MIME_TYPES[photo instanceof File ? photo.type : ""];
+      console.info("[PHOTO] User.image update success");
+      console.info(
+        `[PHOTO] saved image value: /api/official/photo?path=officials%2F<userId>%2F<uuid>.${extension ?? "<ext>"}`,
+      );
+    }
+    console.info("[PHOTO] profile response returning");
 
     return NextResponse.json(
       {
@@ -196,8 +212,7 @@ export async function PATCH(request: Request) {
     );
   } catch (error) {
     if (process.env.NODE_ENV !== "production") {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      console.error("PATCH /api/official/profile error:", message);
+      console.error("PATCH /api/official/profile error:", getSafePhotoErrorMessage(error));
     }
     return NextResponse.json({ error: "Failed to update profile." }, { status: 500 });
   }

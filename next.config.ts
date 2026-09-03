@@ -23,6 +23,12 @@ const withPWA = withPWAInit({
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  images: {
+    localPatterns: [
+      { pathname: "**", search: "" },
+      { pathname: "/api/official/photo" },
+    ],
+  },
   // Keep an explicit turbopack section to avoid Next 16 mismatch warnings
   // when a webpack-oriented plugin (next-pwa) is present.
   turbopack: {},

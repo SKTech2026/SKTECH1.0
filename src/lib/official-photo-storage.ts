@@ -23,6 +23,24 @@ const PHOTO_CONTENT_TYPES: Readonly<Record<string, string>> = {
 const OFFICIAL_PHOTO_PATH_PATTERN =
   /^officials\/[a-zA-Z0-9_-]{1,64}\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png|webp)$/i;
 
+export function getSafePhotoErrorMessage(error: unknown): string {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "object" &&
+          error !== null &&
+          "message" in error &&
+          typeof error.message === "string"
+        ? error.message
+        : "Unexpected photo operation error.";
+
+  return message
+    .replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g, "[redacted-token]")
+    .replace(/\b(?:sb_secret_|sbp_)[A-Za-z0-9_-]+\b/g, "[redacted-key]")
+    .replace(/(?:postgres(?:ql)?|https?):\/\/[^\s]+/gi, "[redacted-url]")
+    .slice(0, 300);
+}
+
 function normalizeUserId(userId: string): string {
   return userId.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 64);
 }
@@ -92,6 +110,32 @@ async function ensureOfficialPhotosBucket() {
   return supabase;
 }
 
+async function uploadOfficialPhotoObject(
+  objectPath: string,
+  photoBuffer: Buffer,
+  contentType: string,
+): Promise<void> {
+  console.info("[PHOTO] uploading to Supabase");
+  try {
+    const supabase = await ensureOfficialPhotosBucket();
+    const { error } = await supabase.storage
+      .from(OFFICIAL_PROFILE_PHOTOS_BUCKET)
+      .upload(objectPath, photoBuffer, {
+        cacheControl: "3600",
+        contentType,
+        upsert: false,
+      });
+
+    if (error) {
+      throw new Error(`Unable to upload official profile photo: ${error.message}`);
+    }
+  } catch (error) {
+    console.error(`[PHOTO] upload failed: ${getSafePhotoErrorMessage(error)}`);
+    throw error;
+  }
+  console.info("[PHOTO] Supabase upload success");
+}
+
 export async function saveOfficialProfilePhoto(
   photo: File,
   userId: string,
@@ -118,18 +162,7 @@ export async function saveOfficialProfilePhoto(
 
   const photoBuffer = Buffer.from(await photo.arrayBuffer());
   const objectPath = `officials/${cleanUserId}/${randomUUID()}.${extension}`;
-  const supabase = await ensureOfficialPhotosBucket();
-  const { error } = await supabase.storage
-    .from(OFFICIAL_PROFILE_PHOTOS_BUCKET)
-    .upload(objectPath, photoBuffer, {
-      cacheControl: "3600",
-      contentType: photo.type,
-      upsert: false,
-    });
-
-  if (error) {
-    throw new Error(`Unable to upload official profile photo: ${error.message}`);
-  }
+  await uploadOfficialPhotoObject(objectPath, photoBuffer, photo.type);
 
   return {
     objectPath,
