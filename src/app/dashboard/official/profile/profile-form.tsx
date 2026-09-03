@@ -50,7 +50,12 @@ const inputClass =
 type ApiResponse = {
   error?: string;
   message?: string;
+  data?: {
+    photoUrl?: string | null;
+  };
 };
+
+const DEFAULT_PHOTO_URL = "/images/default-official.svg";
 
 export default function OfficialProfileForm({ initial, municipalities }: ProfileFormProps) {
   const [firstName, setFirstName] = useState(initial.firstName);
@@ -64,6 +69,7 @@ export default function OfficialProfileForm({ initial, municipalities }: Profile
   const [contactNo, setContactNo] = useState(initial.contactNo);
   const [address, setAddress] = useState(initial.address);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [persistedPhotoUrl, setPersistedPhotoUrl] = useState(initial.photoUrl);
   const [photoPreview, setPhotoPreview] = useState(initial.photoUrl);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -92,7 +98,7 @@ export default function OfficialProfileForm({ initial, municipalities }: Profile
   const handlePhotoChange = (file: File | null) => {
     setPhotoFile(file);
     if (!file) {
-      setPhotoPreview(initial.photoUrl);
+      setPhotoPreview(persistedPhotoUrl);
       return;
     }
 
@@ -140,6 +146,11 @@ export default function OfficialProfileForm({ initial, municipalities }: Profile
         throw new Error(body.error ?? "Failed to update profile.");
       }
 
+      if (body.data?.photoUrl) {
+        setPersistedPhotoUrl(body.data.photoUrl);
+        setPhotoPreview(body.data.photoUrl);
+        setPhotoFile(null);
+      }
       setSuccess(body.message ?? "Profile updated.");
     } catch (submitError) {
       setError(
@@ -175,7 +186,14 @@ export default function OfficialProfileForm({ initial, municipalities }: Profile
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">ID Photo</p>
           <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-center">
             <div className="relative h-28 w-24 overflow-hidden rounded-lg border border-glass-border bg-surface-elevated/50">
-              <Image src={photoPreview} alt="Official photo preview" fill className="object-cover" sizes="96px" />
+              <Image
+                src={photoPreview}
+                alt="Official photo preview"
+                fill
+                className="object-cover"
+                sizes="96px"
+                onError={() => setPhotoPreview(DEFAULT_PHOTO_URL)}
+              />
             </div>
             <div className="space-y-2">
               <input

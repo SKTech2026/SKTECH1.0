@@ -1,24 +1,17 @@
-import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
-
 import { OfficialPosition, Role } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import {
+  MAX_OFFICIAL_PHOTO_BYTES,
+  OFFICIAL_PHOTO_MIME_TYPES,
+  saveOfficialProfilePhoto,
+} from "@/lib/official-photo-storage";
 import { positionToLegacyRole, toTermEndDate } from "@/lib/sk-official";
 
 export const dynamic = "force-dynamic";
-
-const PHOTO_MIME_TYPES: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-};
-
-const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 
 const parseDate = (value: string) => new Date(`${value}T00:00:00`);
 
@@ -121,28 +114,22 @@ export async function PATCH(request: Request) {
 
     let photoUrl: string | null = null;
     if (photo instanceof File && photo.size > 0) {
-      if (photo.size > MAX_PHOTO_BYTES) {
+      if (photo.size > MAX_OFFICIAL_PHOTO_BYTES) {
         return NextResponse.json(
           { error: "Photo is too large. Maximum size is 5MB." },
           { status: 400 },
         );
       }
 
-      const extension = PHOTO_MIME_TYPES[photo.type];
-      if (!extension) {
+      if (!OFFICIAL_PHOTO_MIME_TYPES[photo.type]) {
         return NextResponse.json(
           { error: "Unsupported photo format. Use JPG, PNG, or WEBP." },
           { status: 400 },
         );
       }
 
-      const uploadDir = path.join(process.cwd(), "public", "uploads", "official-photos");
-      await mkdir(uploadDir, { recursive: true });
-
-      const photoBuffer = Buffer.from(await photo.arrayBuffer());
-      const fileName = `${session.user.id}-${Date.now()}-${randomUUID().slice(0, 8)}.${extension}`;
-      await writeFile(path.join(uploadDir, fileName), photoBuffer);
-      photoUrl = `/uploads/official-photos/${fileName}`;
+      const savedPhoto = await saveOfficialProfilePhoto(photo, session.user.id);
+      photoUrl = savedPhoto.photoUrl;
     }
 
     const updated = await prisma.$transaction(async (tx) => {
@@ -209,7 +196,8 @@ export async function PATCH(request: Request) {
     );
   } catch (error) {
     if (process.env.NODE_ENV !== "production") {
-      console.error("PATCH /api/official/profile error:", error);
+      const message = error instanceof Error ? error.message : "Unknown error";
+      console.error("PATCH /api/official/profile error:", message);
     }
     return NextResponse.json({ error: "Failed to update profile." }, { status: 500 });
   }

@@ -26,6 +26,7 @@ type FlippablePortraitIDProps = {
 
 const MAX_TILT = 5;
 const TILT_EASING = 0.18;
+const DEFAULT_PHOTO_URL = "/images/default-official.svg";
 
 const compact = (value: string, maxLength: number) =>
   value.length > maxLength ? `${value.slice(0, maxLength - 1)}.` : value;
@@ -38,7 +39,7 @@ export default function FlippablePortraitID({
   termPeriod,
   idNumber,
   qrValue,
-  photoUrl = "/images/default-official.svg",
+  photoUrl = DEFAULT_PHOTO_URL,
   logoUrl,
   skfedLogoUrl,
   provincialSealUrl,
@@ -48,6 +49,7 @@ export default function FlippablePortraitID({
   className,
 }: FlippablePortraitIDProps) {
   const [isFlipped, setIsFlipped] = useState(false);
+  const [failedPhotoUrl, setFailedPhotoUrl] = useState<string | null>(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const cardRef = useRef<HTMLDivElement | null>(null);
   const rafRef = useRef<number | null>(null);
@@ -56,6 +58,7 @@ export default function FlippablePortraitID({
 
   const federationLogo = skfedLogoUrl ?? logoUrl ?? "/sk-tech-logo.png";
   const sealLogo = provincialSealUrl ?? "/images/sk-tech-logo.png";
+  const displayPhotoUrl = failedPhotoUrl === photoUrl ? DEFAULT_PHOTO_URL : photoUrl;
   const displayName = compact(fullName.toUpperCase(), 38);
   const documentId = compact(idNumber, 16);
   const issued = issuedDate ?? "Upon approval";
@@ -156,7 +159,15 @@ export default function FlippablePortraitID({
 
               <div className="mt-8 flex items-start gap-3">
                 <div className="relative h-[148px] w-[112px] shrink-0 overflow-hidden rounded-md border-2 border-white bg-slate-100 shadow-[0_14px_28px_-18px_rgba(2,6,23,0.6)]">
-                  <Image src={photoUrl} alt={`${fullName} official portrait`} fill className="object-cover" sizes="112px" priority />
+                  <Image
+                    src={displayPhotoUrl}
+                    alt={`${fullName} official portrait`}
+                    fill
+                    className="object-cover"
+                    sizes="112px"
+                    priority
+                    onError={() => setFailedPhotoUrl(photoUrl)}
+                  />
                 </div>
 
                 <div className="min-w-0 flex-1 pt-1">
