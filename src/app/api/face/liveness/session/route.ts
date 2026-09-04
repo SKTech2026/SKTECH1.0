@@ -16,6 +16,12 @@ type LivenessSessionRecord = {
 };
 
 const SESSION_TTL_MS = 10 * 60 * 1000;
+const FEDERATION_NAME_PREFIX = "skface";
+
+function createFederationName() {
+  const randomId = crypto.randomUUID().replace(/-/g, "").slice(0, 20);
+  return `${FEDERATION_NAME_PREFIX}-${randomId}`;
+}
 
 function getAwsRegion() {
   const region = process.env.AWS_REGION?.trim();
@@ -72,7 +78,7 @@ export async function POST() {
 
     const credentials = await sts.send(
       new GetFederationTokenCommand({
-        Name: `sktech-face-${authorized.user.id.replace(/[^a-zA-Z0-9+=,.@-]/g, "").slice(0, 32)}`,
+        Name: createFederationName(),
         DurationSeconds: 900,
         Policy: JSON.stringify({
           Version: "2012-10-17",
