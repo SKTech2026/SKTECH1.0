@@ -76,6 +76,7 @@ export default function AdminDashboardLayout({
       heading="Provincial Admin Dashboard"
       subheading="Operational command interface for governance, identity, and attendance oversight."
       items={adminItems}
+      variant="adminCn"
     >
       {children}
     </RoleShell>

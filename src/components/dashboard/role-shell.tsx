@@ -74,6 +74,7 @@ type RoleShellProps = {
   subheading: string;
   items: RoleShellItem[];
   logoutCallbackUrl?: string;
+  variant?: "default" | "adminCn";
   children: ReactNode;
 };
 
@@ -86,20 +87,48 @@ export default function RoleShell({
   subheading,
   items,
   logoutCallbackUrl = "/login",
+  variant = "default",
   children,
 }: RoleShellProps) {
   const pathname = usePathname();
+  const isAdminCn = variant === "adminCn";
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[linear-gradient(135deg,var(--color-gradient-start),var(--color-gradient-end))] text-foreground">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_color-mix(in_oklab,var(--color-accent)_24%,transparent),_transparent_45%)]" />
-      <div className="pointer-events-none absolute -left-24 top-12 h-72 w-72 rounded-full bg-accent/20 blur-3xl" />
-      <div className="pointer-events-none absolute -right-20 bottom-0 h-72 w-72 rounded-full bg-accent/15 blur-3xl" />
+    <div
+      className={`relative min-h-screen overflow-hidden bg-[linear-gradient(135deg,var(--color-gradient-start),var(--color-gradient-end))] text-foreground ${
+        isAdminCn ? "selection:bg-accent/30" : ""
+      }`}
+    >
+      <div
+        className={`pointer-events-none absolute inset-0 ${
+          isAdminCn
+            ? "bg-[linear-gradient(to_right,color-mix(in_oklab,var(--color-accent)_9%,transparent)_1px,transparent_1px),linear-gradient(to_bottom,color-mix(in_oklab,var(--color-accent)_7%,transparent)_1px,transparent_1px),radial-gradient(circle_at_top,_color-mix(in_oklab,var(--color-accent)_20%,transparent),_transparent_42%)] bg-[size:56px_56px,56px_56px,auto]"
+            : "bg-[radial-gradient(circle_at_top,_color-mix(in_oklab,var(--color-accent)_24%,transparent),_transparent_45%)]"
+        }`}
+      />
+      {!isAdminCn ? (
+        <>
+          <div className="pointer-events-none absolute -left-24 top-12 h-72 w-72 rounded-full bg-accent/20 blur-3xl" />
+          <div className="pointer-events-none absolute -right-20 bottom-0 h-72 w-72 rounded-full bg-accent/15 blur-3xl" />
+        </>
+      ) : null}
 
       <div className="relative mx-auto flex w-full max-w-[1600px] flex-col gap-6 px-4 py-6 lg:flex-row lg:px-8 lg:py-8">
-        <aside className="hidden w-[320px] shrink-0 rounded-3xl border border-glass-border bg-surface p-6 shadow-[0_24px_48px_-24px_var(--shadow-color)] backdrop-blur-md lg:flex lg:flex-col">
+        <aside
+          className={`hidden shrink-0 border border-glass-border bg-surface shadow-[0_24px_48px_-24px_var(--shadow-color)] backdrop-blur-md lg:flex lg:flex-col ${
+            isAdminCn
+              ? "sticky top-8 h-[calc(100vh-4rem)] w-[300px] rounded-[1.25rem] p-4"
+              : "w-[320px] rounded-3xl p-6"
+          }`}
+        >
           <div>
-            <div className="mb-5 flex items-center gap-3">
+            <div
+              className={`flex items-center gap-3 ${
+                isAdminCn
+                  ? "mb-5 rounded-2xl border border-glass-border bg-surface-elevated/45 p-3"
+                  : "mb-5"
+              }`}
+            >
               <Logo size="md" theme="dark" />
               <div>
                 <p className="text-sm font-semibold uppercase tracking-wide text-foreground">
@@ -111,17 +140,31 @@ export default function RoleShell({
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">
               SKTech Command
             </p>
-            <h1 className="mt-3 text-2xl font-bold leading-tight text-foreground">
+            <h1
+              className={`mt-3 font-bold leading-tight text-foreground ${
+                isAdminCn ? "text-xl" : "text-2xl"
+              }`}
+            >
               {heading}
             </h1>
             <p className="mt-2 text-sm text-muted">{subheading}</p>
           </div>
 
-          <div className="mt-6 inline-flex w-fit rounded-full border border-accent/40 bg-accent/15 px-3 py-1 text-xs font-semibold tracking-wide text-accent">
+          <div
+            className={`mt-6 inline-flex w-fit border border-accent/40 bg-accent/15 px-3 py-1 text-xs font-semibold tracking-wide text-accent ${
+              isAdminCn ? "rounded-lg" : "rounded-full"
+            }`}
+          >
             {roleLabel}
           </div>
 
-          <nav className="mt-6 space-y-2">
+          <nav
+            className={
+              isAdminCn
+                ? "mt-6 min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1"
+                : "mt-6 space-y-2"
+            }
+          >
             {items.map((item) => {
               const Icon = ICONS[item.icon];
               const active = isActivePath(pathname, item.href);
@@ -130,15 +173,19 @@ export default function RoleShell({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`group block rounded-2xl border px-4 py-3 transition ${
+                  className={`group block border transition ${
+                    isAdminCn ? "rounded-xl px-3 py-2.5" : "rounded-2xl px-4 py-3"
+                  } ${
                     active
                       ? "border-accent/40 bg-accent/15 shadow-lg shadow-[0_16px_32px_-18px_var(--color-ring)]"
-                      : "border-glass-border bg-surface/40 hover:border-glass-border hover:bg-surface-elevated/70"
+                      : isAdminCn
+                        ? "border-transparent bg-transparent hover:border-glass-border hover:bg-surface-elevated/70"
+                        : "border-glass-border bg-surface/40 hover:border-glass-border hover:bg-surface-elevated/70"
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <span
-                      className={`rounded-lg p-2 ${
+                      className={`rounded-lg p-2 transition ${
                         active
                           ? "bg-accent/20 text-accent"
                           : "bg-surface-elevated text-muted group-hover:text-foreground"
@@ -146,9 +193,15 @@ export default function RoleShell({
                     >
                       <Icon className="h-4 w-4" />
                     </span>
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-sm font-semibold text-foreground">{item.label}</p>
-                      <p className="text-xs text-muted">{item.description}</p>
+                      <p
+                        className={`text-xs text-muted ${
+                          isAdminCn ? "truncate" : ""
+                        }`}
+                      >
+                        {item.description}
+                      </p>
                     </div>
                   </div>
                 </Link>
@@ -159,7 +212,9 @@ export default function RoleShell({
           <button
             type="button"
             onClick={() => void signOut({ callbackUrl: logoutCallbackUrl })}
-            className="mt-auto inline-flex items-center justify-center gap-2 rounded-xl border border-glass-border bg-surface/45 px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-surface-elevated/70 hover:text-foreground"
+            className={`mt-auto inline-flex items-center justify-center gap-2 border border-glass-border bg-surface/45 px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-surface-elevated/70 hover:text-foreground ${
+              isAdminCn ? "rounded-lg" : "rounded-xl"
+            }`}
           >
             <LogOut className="h-4 w-4" />
             Sign out
@@ -167,7 +222,11 @@ export default function RoleShell({
         </aside>
 
         <div className="flex-1 space-y-6">
-          <div className="rounded-2xl border border-glass-border bg-surface p-4 shadow-xl backdrop-blur-md lg:hidden">
+          <div
+            className={`border border-glass-border bg-surface p-4 shadow-xl backdrop-blur-md lg:hidden ${
+              isAdminCn ? "rounded-[1.25rem]" : "rounded-2xl"
+            }`}
+          >
             <div className="mb-4 flex items-center justify-center">
               <Logo size="sm" theme="dark" className="logo-fade-in" />
             </div>
@@ -183,7 +242,7 @@ export default function RoleShell({
               <button
                 type="button"
                 onClick={() => void signOut({ callbackUrl: logoutCallbackUrl })}
-                className="inline-flex items-center gap-1 rounded-lg border border-glass-border bg-surface/45 px-3 py-1.5 text-xs font-semibold text-foreground"
+                className="inline-flex items-center gap-1 rounded-lg border border-glass-border bg-surface/45 px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-surface-elevated/70"
               >
                 <LogOut className="h-3.5 w-3.5" />
                 Logout
