@@ -1,7 +1,15 @@
 import Link from "next/link";
 import { Role } from "@prisma/client";
 import { getServerSession } from "next-auth";
-import { CalendarDays, CheckCircle2, Clock3, IdCard, RefreshCcw } from "lucide-react";
+import {
+  CalendarDays,
+  CheckCircle2,
+  Clock3,
+  IdCard,
+  Megaphone,
+  MessageSquare,
+  RefreshCcw,
+} from "lucide-react";
 
 import FlippablePortraitID from "@/components/id/FlippablePortraitID";
 import { authOptions } from "@/lib/auth";
@@ -20,6 +28,7 @@ export default async function MobileOfficialPage() {
     select: {
       id: true,
       name: true,
+      image: true,
       faceRegistered: true,
       official: {
         select: {
@@ -64,6 +73,8 @@ export default async function MobileOfficialPage() {
     user.official.termEnd?.toLocaleDateString() ?? "Active"
   }`;
   const qrValue = `/id/${user.official.id}`;
+  const photoUrl =
+    user.image && user.image.startsWith("/") ? user.image : "/images/default-official.svg";
 
   return (
     <div className="space-y-4">
@@ -75,6 +86,37 @@ export default async function MobileOfficialPage() {
         </p>
       </section>
 
+      <section className="grid grid-cols-2 gap-2">
+        <Link
+          href="/mobile/official"
+          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-slate-900/80 px-3 text-xs font-semibold text-slate-100"
+        >
+          <IdCard className="h-4 w-4 text-cyan-300" />
+          Mobile Home
+        </Link>
+        <Link
+          href="/mobile/official/chat"
+          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-slate-900/80 px-3 text-xs font-semibold text-slate-100"
+        >
+          <MessageSquare className="h-4 w-4 text-cyan-300" />
+          Chat
+        </Link>
+        <a
+          href="#announcements"
+          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-slate-900/80 px-3 text-xs font-semibold text-slate-100"
+        >
+          <Megaphone className="h-4 w-4 text-cyan-300" />
+          Announcements
+        </a>
+        <a
+          href="#attendance"
+          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-slate-900/80 px-3 text-xs font-semibold text-slate-100"
+        >
+          <Clock3 className="h-4 w-4 text-cyan-300" />
+          Attendance
+        </a>
+      </section>
+
       <section className="rounded-2xl border border-cyan-300/20 bg-slate-900/80 p-3">
         <FlippablePortraitID
           fullName={fullName}
@@ -84,10 +126,10 @@ export default async function MobileOfficialPage() {
           termPeriod={termPeriod}
           idNumber={user.official.id.slice(0, 12).toUpperCase()}
           qrValue={qrValue}
-          photoUrl="/images/default-official.svg"
+          photoUrl={photoUrl}
           skfedLogoUrl="/login-logo.png"
           provincialSealUrl="/images/provincial-seal-logo.png"
-          className="mx-auto"
+          className="mx-auto max-w-full"
         />
 
         <div className="mt-3 grid grid-cols-2 gap-2">
@@ -108,7 +150,7 @@ export default async function MobileOfficialPage() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-cyan-300/20 bg-slate-900/80 p-4">
+      <section id="attendance" className="scroll-mt-24 rounded-2xl border border-cyan-300/20 bg-slate-900/80 p-4">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-100">Attendance History</h2>
           <span className="text-xs text-slate-400">{user.official.attendances.length} recent records</span>
@@ -141,7 +183,7 @@ export default async function MobileOfficialPage() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-cyan-300/20 bg-slate-900/80 p-4">
+      <section id="announcements" className="scroll-mt-24 rounded-2xl border border-cyan-300/20 bg-slate-900/80 p-4">
         <h2 className="text-sm font-semibold text-slate-100">Active Announcements</h2>
         <div className="mt-3 space-y-2">
           {announcements.length === 0 ? (

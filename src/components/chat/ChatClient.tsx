@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { FileText, Loader2, Paperclip, SendHorizonal } from "lucide-react";
+import { ChevronLeft, FileText, Loader2, Paperclip, SendHorizonal } from "lucide-react";
 
 type ChatContact = {
   userId: string;
@@ -45,6 +45,7 @@ type ChatMessage = {
 
 type ChatClientProps = {
   title: string;
+  compact?: boolean;
 };
 
 const POLLING_INTERVAL_MS = 4000;
@@ -60,7 +61,7 @@ function roleLabel(contact: Pick<ChatContact, "role" | "officialRole">) {
   return contact.officialRole ? contact.officialRole.replaceAll("_", " ") : "SK Official";
 }
 
-export default function ChatClient({ title }: ChatClientProps) {
+export default function ChatClient({ title, compact = false }: ChatClientProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [contacts, setContacts] = useState<ChatContact[]>([]);
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
@@ -206,12 +207,12 @@ export default function ChatClient({ title }: ChatClientProps) {
   };
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-3xl border border-glass-border bg-surface p-6 shadow-[0_24px_48px_-24px_var(--shadow-color)] backdrop-blur-md sm:p-8">
+    <div className="space-y-4 sm:space-y-6">
+      <section className="rounded-2xl border border-glass-border bg-surface p-4 shadow-[0_24px_48px_-24px_var(--shadow-color)] backdrop-blur-md sm:rounded-3xl sm:p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
           Municipality Chat
         </p>
-        <h2 className="mt-3 text-3xl font-bold text-foreground">{title}</h2>
+        <h2 className="mt-2 text-2xl font-bold text-foreground sm:mt-3 sm:text-3xl">{title}</h2>
         <p className="mt-2 max-w-3xl text-sm text-muted">
           Direct messages are limited to eligible SKTech users in your assigned municipality.
         </p>
@@ -223,8 +224,12 @@ export default function ChatClient({ title }: ChatClientProps) {
         </div>
       ) : null}
 
-      <section className="grid min-h-[620px] gap-4 xl:grid-cols-[360px_1fr]">
-        <aside className="space-y-4 rounded-2xl border border-glass-border bg-surface p-4 shadow-xl backdrop-blur-md">
+      <section className="grid min-h-[70dvh] gap-4 xl:min-h-[620px] xl:grid-cols-[360px_1fr]">
+        <aside
+          className={`space-y-4 rounded-2xl border border-glass-border bg-surface p-4 shadow-xl backdrop-blur-md ${
+            compact && selectedConversationId ? "hidden xl:block" : ""
+          }`}
+        >
           <div>
             <h3 className="text-sm font-semibold text-foreground">Conversations</h3>
             <div className="mt-3 space-y-2">
@@ -290,19 +295,35 @@ export default function ChatClient({ title }: ChatClientProps) {
           </div>
         </aside>
 
-        <article className="flex min-h-[620px] flex-col rounded-2xl border border-glass-border bg-surface shadow-xl backdrop-blur-md">
-          <div className="border-b border-glass-border px-5 py-4">
-            <h3 className="text-base font-semibold text-foreground">
-              {selectedConversation?.otherParticipant?.name ?? "Select a conversation"}
-            </h3>
-            <p className="mt-1 text-xs text-muted">
-              {selectedConversation?.otherParticipant
-                ? roleLabel(selectedConversation.otherParticipant)
-                : "Choose a contact or existing conversation to begin."}
-            </p>
+        <article
+          className={`min-h-[70dvh] flex-col rounded-2xl border border-glass-border bg-surface shadow-xl backdrop-blur-md xl:flex xl:min-h-[620px] ${
+            compact && !selectedConversationId ? "hidden" : "flex"
+          }`}
+        >
+          <div className="flex items-center gap-3 border-b border-glass-border px-4 py-3 sm:px-5 sm:py-4">
+            {compact ? (
+              <button
+                type="button"
+                onClick={() => setSelectedConversationId(null)}
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-glass-border bg-surface-elevated text-foreground xl:hidden"
+                aria-label="Back to conversations"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+            ) : null}
+            <div className="min-w-0">
+              <h3 className="truncate text-base font-semibold text-foreground">
+                {selectedConversation?.otherParticipant?.name ?? "Select a conversation"}
+              </h3>
+              <p className="mt-1 truncate text-xs text-muted">
+                {selectedConversation?.otherParticipant
+                  ? roleLabel(selectedConversation.otherParticipant)
+                  : "Choose a contact or existing conversation to begin."}
+              </p>
+            </div>
           </div>
 
-          <div className="flex-1 space-y-3 overflow-y-auto p-5">
+          <div className="flex-1 space-y-3 overflow-y-auto p-3 sm:p-5">
             {!selectedConversationId ? (
               <div className="flex h-full items-center justify-center text-sm text-muted">
                 No conversation selected.
@@ -313,13 +334,13 @@ export default function ChatClient({ title }: ChatClientProps) {
               </div>
             ) : (
               messages.map((message) => (
-                <div key={message.id} className="rounded-xl border border-glass-border bg-surface-elevated/45 p-3">
+                <div key={message.id} className="overflow-hidden rounded-xl border border-glass-border bg-surface-elevated/45 p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-sm font-semibold text-foreground">{message.sender.name}</p>
                     <p className="text-xs text-muted">{formatTime(message.createdAt)}</p>
                   </div>
                   {message.content ? (
-                    <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{message.content}</p>
+                    <p className="mt-2 whitespace-pre-wrap break-words text-sm text-foreground">{message.content}</p>
                   ) : null}
                   {message.attachments.length > 0 ? (
                     <div className="mt-3 space-y-2">
@@ -340,7 +361,7 @@ export default function ChatClient({ title }: ChatClientProps) {
             )}
           </div>
 
-          <form onSubmit={sendMessage} className="border-t border-glass-border p-4">
+          <form onSubmit={sendMessage} className="border-t border-glass-border p-3 sm:p-4">
             {attachment ? (
               <div className="mb-2 flex items-center justify-between gap-3 rounded-lg border border-glass-border bg-surface-elevated/50 px-3 py-2 text-xs text-foreground">
                 <span className="truncate">{attachment.name}</span>
@@ -380,7 +401,7 @@ export default function ChatClient({ title }: ChatClientProps) {
                 disabled={!selectedConversationId || isSending}
                 rows={2}
                 placeholder="Write a message..."
-                className="min-h-11 flex-1 resize-none rounded-lg border border-glass-border bg-surface-elevated/60 px-3 py-2 text-sm text-foreground outline-none transition focus:border-accent/40 disabled:cursor-not-allowed disabled:opacity-60"
+                className="min-h-11 min-w-0 flex-1 resize-none rounded-lg border border-glass-border bg-surface-elevated/60 px-3 py-2 text-sm text-foreground outline-none transition focus:border-accent/40 disabled:cursor-not-allowed disabled:opacity-60"
               />
               <button
                 type="submit"
