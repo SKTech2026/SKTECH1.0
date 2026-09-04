@@ -1,6 +1,7 @@
-import { Role } from "@prisma/client";
+import { Role, UserStatus } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
+import { requireApiRole } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import {
   buildOfficialPhotoUrl,
@@ -21,6 +22,27 @@ const unavailableResponse = (message: string) => {
 export async function GET(request: NextRequest) {
   try {
     console.info("[PHOTO] serve request received");
+    const guard = await requireApiRole([Role.ADMIN, Role.STAFF, Role.OFFICIAL], {
+      requireApproved: false,
+    });
+    if (guard.error) {
+      return guard.error;
+    }
+
+    if (
+      (guard.session.user.role === Role.ADMIN || guard.session.user.role === Role.STAFF) &&
+      guard.session.user.status !== UserStatus.APPROVED
+    ) {
+      return NextResponse.json({ error: "Account is not approved." }, { status: 403 });
+    }
+
+    if (guard.session.user.role === Role.STAFF && !guard.session.user.municipalityPresidentId) {
+      return NextResponse.json(
+        { error: "Staff account is not assigned to a municipality." },
+        { status: 403 },
+      );
+    }
+
     const objectPath = request.nextUrl.searchParams.get("path")?.trim() ?? "";
     if (!isOfficialPhotoObjectPath(objectPath)) {
       console.error("[PHOTO] photo serve failed: Invalid official photo path.");
@@ -36,12 +58,28 @@ export async function GET(request: NextRequest) {
           role: Role.OFFICIAL,
         },
       },
-      select: { id: true },
+      select: {
+        id: true,
+        userId: true,
+        municipalityId: true,
+      },
     });
 
     if (!official) {
       return unavailableResponse("No Official database reference found.");
     }
+
+    if (guard.session.user.role === Role.OFFICIAL && official.userId !== guard.session.user.id) {
+      return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+    }
+
+    if (
+      guard.session.user.role === Role.STAFF &&
+      official.municipalityId !== guard.session.user.municipalityPresidentId
+    ) {
+      return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+    }
+
     console.info("[PHOTO] database ownership/reference found");
 
     const contentType = getOfficialPhotoContentType(objectPath);

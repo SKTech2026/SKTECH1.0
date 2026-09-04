@@ -1,11 +1,9 @@
 import { Role } from "@prisma/client";
 import { CreateFaceLivenessSessionCommand, RekognitionClient } from "@aws-sdk/client-rekognition";
 import { GetFederationTokenCommand, STSClient } from "@aws-sdk/client-sts";
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
-import { authOptions } from "@/lib/auth";
-import { requireRole } from "@/lib/roleGuard";
+import { requireApiRole } from "@/lib/api-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -52,8 +50,11 @@ function getLivenessStore() {
 
 export async function POST() {
   try {
-    const session = await getServerSession(authOptions);
-    const authorized = requireRole(session, [Role.OFFICIAL]);
+    const guard = await requireApiRole([Role.OFFICIAL]);
+    if (guard.error) {
+      return guard.error;
+    }
+
     const region = getAwsRegion();
     const rekognition = new RekognitionClient({ region });
     const sts = new STSClient({ region });
@@ -71,7 +72,7 @@ export async function POST() {
     }
 
     getLivenessStore().set(livenessSession.SessionId, {
-      userId: authorized.user.id,
+      userId: guard.session.user.id,
       expiresAt: Date.now() + SESSION_TTL_MS,
       consumed: false,
     });

@@ -1,12 +1,10 @@
 import { Role } from "@prisma/client";
 import { GetFaceLivenessSessionResultsCommand, RekognitionClient } from "@aws-sdk/client-rekognition";
-import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 
-import { authOptions } from "@/lib/auth";
+import { requireApiRole } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { registerFaceEmbeddingFromReferenceImage } from "@/lib/face-ai";
-import { requireRole } from "@/lib/roleGuard";
 
 export const dynamic = "force-dynamic";
 
@@ -74,8 +72,11 @@ function imageBase64FromBytes(bytes: Uint8Array | undefined) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    const authorized = requireRole(session, [Role.OFFICIAL]);
+    const guard = await requireApiRole([Role.OFFICIAL]);
+    if (guard.error) {
+      return guard.error;
+    }
+
     const body = (await request.json().catch(() => ({}))) as ResultsRequestBody;
     const sessionId = body.sessionId?.trim();
 
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest) {
 
     if (
       !sessionRecord ||
-      sessionRecord.userId !== authorized.user.id ||
+      sessionRecord.userId !== guard.session.user.id ||
       sessionRecord.expiresAt <= Date.now() ||
       sessionRecord.consumed
     ) {
@@ -120,12 +121,12 @@ export async function POST(request: NextRequest) {
 
     const imageBase64 = imageBase64FromBytes(livenessResult.ReferenceImage?.Bytes);
     const aiResponse = await registerFaceEmbeddingFromReferenceImage({
-      userId: authorized.user.id,
+      userId: guard.session.user.id,
       imageBase64,
     });
 
     await prisma.user.update({
-      where: { id: authorized.user.id },
+      where: { id: guard.session.user.id },
       data: {
         faceEmbedding: aiResponse.encryptedEmbedding,
         faceRegistered: true,
@@ -136,8 +137,8 @@ export async function POST(request: NextRequest) {
       data: {
         action: "FACE_REGISTERED",
         model: "User",
-        recordId: authorized.user.id,
-        userId: authorized.user.id,
+        recordId: guard.session.user.id,
+        userId: guard.session.user.id,
       },
     });
 

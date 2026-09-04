@@ -1,11 +1,9 @@
 import { Role } from "@prisma/client";
-import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 
-import { authOptions } from "@/lib/auth";
+import { requireApiRole } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { registerFaceEmbedding } from "@/lib/face-ai";
-import { requireRole } from "@/lib/roleGuard";
 
 export const dynamic = "force-dynamic";
 
@@ -18,8 +16,10 @@ interface RegisterFaceRequestBody {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    const authorized = requireRole(session, [Role.OFFICIAL], false);
+    const guard = await requireApiRole([Role.OFFICIAL], { requireApproved: false });
+    if (guard.error) {
+      return guard.error;
+    }
 
     const body = (await request.json()) as RegisterFaceRequestBody;
     if (!body.imageBase64 || typeof body.imageBase64 !== "string") {
@@ -31,13 +31,13 @@ export async function POST(request: NextRequest) {
       : [];
 
     const aiResponse = await registerFaceEmbedding({
-      userId: authorized.user.id,
+      userId: guard.session.user.id,
       imageBase64: body.imageBase64,
       livenessFrames,
     });
 
     await prisma.user.update({
-      where: { id: authorized.user.id },
+      where: { id: guard.session.user.id },
       data: {
         faceEmbedding: aiResponse.encryptedEmbedding,
         faceRegistered: true,
@@ -48,8 +48,8 @@ export async function POST(request: NextRequest) {
       data: {
         action: "FACE_REGISTERED",
         model: "User",
-        recordId: authorized.user.id,
-        userId: authorized.user.id,
+        recordId: guard.session.user.id,
+        userId: guard.session.user.id,
       },
     });
 

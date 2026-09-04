@@ -1,5 +1,9 @@
+import { Role } from "@prisma/client";
+import { getServerSession } from "next-auth";
 import type { ReactNode } from "react";
 
+import { authOptions } from "@/lib/auth";
+import { requireDashboardRole } from "@/lib/roleGuard";
 import RoleShell, { RoleShellItem } from "@/components/dashboard/role-shell";
 
 const adminItems: RoleShellItem[] = [
@@ -65,11 +69,16 @@ const adminItems: RoleShellItem[] = [
   },
 ];
 
-export default function AdminDashboardLayout({
+export default async function AdminDashboardLayout({
   children,
 }: {
   children: ReactNode;
 }) {
+  const session = await getServerSession(authOptions);
+  requireDashboardRole(session, [Role.ADMIN], {
+    unauthenticatedRedirect: "/login?role=ADMIN",
+  });
+
   return (
     <RoleShell
       roleLabel="Administrator"

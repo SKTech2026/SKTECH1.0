@@ -1,9 +1,8 @@
-import { Role, UserStatus } from "@prisma/client";
-import { getServerSession } from "next-auth";
+import { Role } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
-import { authOptions } from "@/lib/auth";
+import { requireApiRole } from "@/lib/api-auth";
 import {
   getActiveAnnouncementIds,
   getActiveAnnouncementWhere,
@@ -15,24 +14,17 @@ export const dynamic = "force-dynamic";
 
 
 const requireAdminOrStaff = async () => {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-  }
-
-  if (session.user.status !== UserStatus.APPROVED) {
-    return NextResponse.json({ error: "Account is not approved." }, { status: 403 });
-  }
-
-  if (session.user.role !== Role.ADMIN && session.user.role !== Role.STAFF) {
-    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
-  }
-
-  return null;
+  const guard = await requireApiRole([Role.ADMIN, Role.STAFF]);
+  return guard.error ?? null;
 };
 
 export async function GET() {
   try {
+    const authError = await requireAdminOrStaff();
+    if (authError) {
+      return authError;
+    }
+
     const now = new Date();
     const activeAnnouncementIds = await getActiveAnnouncementIds(now);
     const [activeEvents, archivedEvents] = await Promise.all([

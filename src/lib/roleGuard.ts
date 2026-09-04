@@ -28,3 +28,37 @@ export function requireRole(
 
   return session;
 }
+
+const dashboardPathByRole: Record<Role, string> = {
+  [Role.ADMIN]: "/dashboard/admin",
+  [Role.STAFF]: "/dashboard/staff",
+  [Role.OFFICIAL]: "/dashboard/official",
+};
+
+type DashboardRoleOptions = {
+  unauthenticatedRedirect: string;
+  requireApproved?: boolean;
+};
+
+export function requireDashboardRole(
+  session: Session | null,
+  allowedRoles: Role[],
+  {
+    unauthenticatedRedirect,
+    requireApproved = true,
+  }: DashboardRoleOptions,
+): Session {
+  if (!session?.user) {
+    redirect(unauthenticatedRedirect);
+  }
+
+  if (!isRoleAllowed(session.user.role, allowedRoles)) {
+    redirect(dashboardPathByRole[session.user.role] ?? "/unauthorized");
+  }
+
+  if (requireApproved && session.user.status !== UserStatus.APPROVED) {
+    redirect("/login?error=account_not_approved");
+  }
+
+  return session;
+}

@@ -1,5 +1,9 @@
+import { Role } from "@prisma/client";
+import { getServerSession } from "next-auth";
 import type { ReactNode } from "react";
 
+import { authOptions } from "@/lib/auth";
+import { requireDashboardRole } from "@/lib/roleGuard";
 import RoleShell, { RoleShellItem } from "@/components/dashboard/role-shell";
 
 const staffItems: RoleShellItem[] = [
@@ -65,11 +69,16 @@ const staffItems: RoleShellItem[] = [
   },
 ];
 
-export default function StaffDashboardLayout({
+export default async function StaffDashboardLayout({
   children,
 }: {
   children: ReactNode;
 }) {
+  const session = await getServerSession(authOptions);
+  requireDashboardRole(session, [Role.STAFF], {
+    unauthenticatedRedirect: "/login?role=STAFF",
+  });
+
   return (
     <RoleShell
       roleLabel="Staff Operations"
