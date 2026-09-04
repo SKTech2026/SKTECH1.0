@@ -28,6 +28,12 @@ const staffItems: RoleShellItem[] = [
     icon: "megaphone",
   },
   {
+    href: "/dashboard/staff/chat",
+    label: "Chat",
+    description: "Municipality messages",
+    icon: "messageSquare",
+  },
+  {
     href: "/dashboard/staff/profiling",
     label: "SK Profiling",
     description: "Manage official records",

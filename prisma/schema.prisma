@@ -78,6 +78,8 @@ model User {
   admissions              OfficialAdmission[]
   skOfficialProfile       SKOfficialProfile?
   auditLogs               AuditLog[]
+  chatParticipants        ChatParticipant[]
+  chatMessages            ChatMessage[]       @relation("ChatMessageSender")
   municipalityAsPresident Municipality?       @relation("MunicipalPresident", fields: [municipalityPresidentId], references: [id], onDelete: SetNull)
   municipalityAsOfficer   Municipality?       @relation("MunicipalOfficers", fields: [municipalityOfficerId], references: [id], onDelete: SetNull)
 
@@ -196,6 +198,7 @@ model Municipality {
   officialRecords    SKOfficial[]        @relation("MunicipalityOfficialsRecords")
   municipalPresident User?               @relation("MunicipalPresident")
   officers           User[]              @relation("MunicipalOfficers")
+  chatConversations  ChatConversation[]
 }
 
 model Barangay {
@@ -359,4 +362,62 @@ model OfficialOTP {
   @@index([email])
   @@index([expiresAt])
   @@index([purpose])
+}
+
+model ChatConversation {
+  id             String   @id @default(cuid())
+  municipalityId String
+  directKey      String   @unique
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  municipality Municipality      @relation(fields: [municipalityId], references: [id], onDelete: Cascade)
+  participants ChatParticipant[]
+  messages     ChatMessage[]
+
+  @@index([municipalityId])
+  @@index([updatedAt])
+}
+
+model ChatParticipant {
+  conversationId String
+  userId         String
+  lastReadAt     DateTime?
+
+  conversation ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, userId])
+  @@index([userId])
+  @@index([lastReadAt])
+}
+
+model ChatMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  senderId       String
+  content        String?
+  createdAt      DateTime @default(now())
+
+  conversation ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User             @relation("ChatMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  attachments  ChatAttachment[]
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+}
+
+model ChatAttachment {
+  id         String   @id @default(cuid())
+  messageId  String
+  objectPath String
+  fileName   String
+  mimeType   String
+  sizeBytes  Int
+  createdAt  DateTime @default(now())
+
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@index([objectPath])
 }

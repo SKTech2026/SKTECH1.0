@@ -14,6 +14,7 @@ import {
   LayoutDashboard,
   LogOut,
   Megaphone,
+  MessageSquare,
   ScanLine,
   Settings2,
   ShieldCheck,
@@ -33,6 +34,7 @@ export type IconName =
   | "clipboardList"
   | "layoutDashboard"
   | "megaphone"
+  | "messageSquare"
   | "scanLine"
   | "settings"
   | "shieldCheck"
@@ -49,6 +51,7 @@ const ICONS: Record<IconName, LucideIcon> = {
   clipboardList: ClipboardList,
   layoutDashboard: LayoutDashboard,
   megaphone: Megaphone,
+  messageSquare: MessageSquare,
   scanLine: ScanLine,
   settings: Settings2,
   shieldCheck: ShieldCheck,

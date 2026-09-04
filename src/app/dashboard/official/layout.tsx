@@ -28,6 +28,12 @@ const officialItems: RoleShellItem[] = [
     icon: "megaphone",
   },
   {
+    href: "/dashboard/official/chat",
+    label: "Chat",
+    description: "Municipality messages",
+    icon: "messageSquare",
+  },
+  {
     href: "/dashboard/official/digital-id",
     label: "Digital ID",
     description: "View and download card",
