@@ -5,6 +5,7 @@ import { ThemeProvider as NextThemeProvider } from "next-themes";
 import MobileAutoRedirect from "@/components/mobile/MobileAutoRedirect";
 import { ThemeProvider } from "@/context/ThemeContext";
 
+import "@aws-amplify/ui-react/styles.css";
 import "./globals.css";
 
 const geistSans = Geist({
