@@ -1,30 +1,25 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { ArrowRight, BarChart3, CalendarDays, Check, ChevronDown, Fingerprint, LockKeyhole, Menu, MessageSquare, QrCode, ScanFace, ShieldCheck, Sparkles, UsersRound, X } from "lucide-react";
+import { useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTheme } from "next-themes";
 
 import ThemeToggle from "@/components/ThemeToggle";
 
 export default function HomePage() {
   const router = useRouter();
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+  const reducedMotion = useReducedMotion();
+  const [menuOpen, setMenuOpen] = useState(false);
   const [showLoginActions, setShowLoginActions] = useState(false);
   const getStartedAudioRef = useRef<HTMLAudioElement | null>(null);
   const loginSelectAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => setMounted(true));
-    return () => cancelAnimationFrame(frame);
-  }, []);
-
-  const isDarkTheme = mounted ? resolvedTheme === "dark" : false;
-
   const onGetStarted = () => {
     setShowLoginActions(true);
+    document.getElementById("access")?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth" });
     const audio = getStartedAudioRef.current;
     if (!audio) return;
     audio.currentTime = 0;
@@ -32,6 +27,13 @@ export default function HomePage() {
       // Playback may fail until browser allows media after user interaction.
     });
   };
+
+  const reveal = reducedMotion ? {} : { initial: { opacity: 0, y: 22 }, whileInView: { opacity: 1, y: 0 }, viewport: { once: true, amount: 0.2 }, transition: { duration: 0.65 } };
+  const capabilities = [["Official Profiling", UsersRound], ["Digital ID", Fingerprint], ["QR Attendance", QrCode], ["Face Verification", ScanFace], ["Announcements", MessageSquare], ["Events", CalendarDays], ["Analytics", BarChart3], ["Secure Chat", ShieldCheck]] as const;
+  const featureGroups = [["Identity & Records", "Manage verified SK official profiles and governance information.", ["Official Profiling", "Digital ID", "ID Production", "Municipality Records"], Fingerprint], ["Operations", "Coordinate events, attendance, announcements, and QR verification.", ["Events", "Attendance", "Announcements", "QR Verification"], CalendarDays], ["Governance Intelligence", "Turn federation-wide activity into clear signals for planning and oversight.", ["Analytics", "Municipality Insights", "Secure Communication", "Administrative Oversight"], BarChart3]] as const;
+  const audiences = [["SK Officials", "Access Digital ID, announcements, attendance, and official services.", UsersRound], ["Municipal Staff", "Manage municipality-scoped profiling, events, attendance, and communication.", CalendarDays], ["Provincial Administrators", "Monitor federation-wide records, analytics, access, and system governance.", BarChart3]] as const;
+  const technologies = ["Next.js", "PostgreSQL", "Supabase", "AWS Rekognition", "PWA", "QR Technology", "Cloud Deployment"];
+  const navItems = [["About", "#about"], ["Features", "#features"], ["How It Works", "#how-it-works"], ["Security", "#security"]];
 
   const onLoginSelect = (
     event: React.MouseEvent<HTMLAnchorElement>,
@@ -51,140 +53,22 @@ export default function HomePage() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-950 transition-colors duration-500">
-      <Image
-        src="/illustrations/light.svg"
-        alt="SKTech landing background light"
-        fill
-        priority
-        sizes="100vw"
-        className={`object-cover object-center transition-[opacity,transform,filter] duration-[1100ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
-          isDarkTheme
-            ? "opacity-0 scale-[1.04] blur-[1.2px] saturate-[0.9]"
-            : "opacity-100 scale-100 blur-0 saturate-[1.07]"
-        }`}
-      />
-      <Image
-        src="/illustrations/dark.svg"
-        alt="SKTech landing background dark"
-        fill
-        priority
-        sizes="100vw"
-        className={`object-cover object-center transition-[opacity,transform,filter] duration-[1100ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
-          isDarkTheme
-            ? "opacity-100 scale-100 blur-0 saturate-[1.18] contrast-[1.12]"
-            : "opacity-0 scale-[1.04] blur-[1.2px] saturate-[0.92]"
-        }`}
-      />
-
-      <div
-        className={`pointer-events-none absolute inset-0 transition-[background,opacity] duration-[1100ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
-          isDarkTheme
-            ? "bg-[radial-gradient(circle_at_15%_14%,rgba(56,189,248,0.20),transparent_38%),radial-gradient(circle_at_85%_18%,rgba(59,130,246,0.16),transparent_42%),linear-gradient(135deg,rgba(2,6,23,0.30),rgba(2,6,23,0.62))]"
-            : "bg-[radial-gradient(circle_at_18%_16%,rgba(255,255,255,0.18),transparent_42%),linear-gradient(120deg,rgba(248,250,252,0.30),rgba(248,250,252,0.16))]"
-        }`}
-      />
-      <div
-        className={`pointer-events-none absolute inset-0 transition-opacity duration-[1100ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
-          isDarkTheme
-            ? "opacity-100 bg-[radial-gradient(ellipse_at_center,transparent_36%,rgba(2,6,23,0.68)_100%)]"
-            : "opacity-100 bg-[radial-gradient(ellipse_at_center,transparent_35%,rgba(148,163,184,0.22)_100%)]"
-        }`}
-      />
-
-      <ThemeToggle className="absolute left-4 top-4 z-30 sm:left-6 sm:top-6" />
+    <div className="min-h-screen overflow-x-hidden bg-[#06132d] text-slate-100">
       <audio ref={getStartedAudioRef} preload="auto" src="/sounds/e-1.mp3" />
       <audio ref={loginSelectAudioRef} preload="auto" src="/sounds/e-2.mp3" />
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-[#06132d]/85 backdrop-blur-xl"><div className="mx-auto flex h-[74px] max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10"><Link href="/" className="flex items-center gap-3"><Image src="/assets/logos/sktech-logo-enhance.png" alt="SKTECH" width={44} height={44} className="h-10 w-10 object-contain" priority /><span className="text-sm font-black uppercase tracking-[0.24em]">SKTECH</span></Link><nav className="hidden items-center gap-8 text-sm text-slate-300 lg:flex">{navItems.map(([label, href]) => <a key={href} href={href} className="hover:text-cyan-300">{label}</a>)}</nav><div className="hidden items-center gap-3 sm:flex"><ThemeToggle /><button type="button" onClick={onGetStarted} className="inline-flex items-center gap-2 rounded-full bg-cyan-300 px-5 py-2.5 text-sm font-bold text-[#06132d] hover:bg-cyan-200">Get Started <ArrowRight size={15} /></button></div><div className="flex items-center gap-2 sm:hidden"><ThemeToggle /><button type="button" aria-label="Toggle navigation" onClick={() => setMenuOpen((open) => !open)} className="rounded-full border border-white/15 p-2">{menuOpen ? <X size={20} /> : <Menu size={20} />}</button></div></div>{menuOpen ? <nav className="border-t border-white/10 bg-[#06132d] px-5 py-5 sm:hidden">{navItems.map(([label, href]) => <a key={href} href={href} onClick={() => setMenuOpen(false)} className="block rounded-xl px-3 py-3 text-sm text-slate-200 hover:bg-white/5">{label}</a>)}<button type="button" onClick={() => { setMenuOpen(false); onGetStarted(); }} className="mt-2 w-full rounded-xl bg-cyan-300 px-4 py-3 text-sm font-bold text-[#06132d]">Get Started</button></nav> : null}</header>
 
-      <main className="relative z-20 flex min-h-screen items-center px-4 py-10 sm:px-8 lg:px-16">
-        <article
-          className={`w-full max-w-xl rounded-[28px] p-6 transition-all duration-500 sm:p-8 ${
-            isDarkTheme
-              ? "bg-slate-900/68 text-slate-100 shadow-[0_22px_80px_-26px_rgba(56,189,248,0.55)] backdrop-blur-xl"
-              : "bg-white/88 text-slate-900 shadow-[0_30px_70px_-36px_rgba(15,23,42,0.45)] backdrop-blur-sm"
-          }`}
-        >
-          <div className="text-center">
-            <div className="group relative mx-auto mb-4 w-fit">
-              <div className="relative overflow-hidden rounded-3xl">
-                <Image
-                  src="/login-logo.png"
-                  alt="SKTech logo"
-                  width={360}
-                  height={360}
-                  priority
-                  className={`h-[170px] w-[170px] object-contain transition duration-300 group-hover:scale-105 sm:h-[240px] sm:w-[240px] ${
-                    isDarkTheme
-                      ? "drop-shadow-[0_0_18px_rgba(56,189,248,0.6)] group-hover:drop-shadow-[0_0_26px_rgba(56,189,248,0.85)]"
-                      : "drop-shadow-md group-hover:drop-shadow-[0_0_18px_rgba(37,99,235,0.45)]"
-                  }`}
-                />
-                <span className="pointer-events-none absolute inset-0 -translate-x-[145%] bg-gradient-to-r from-transparent via-white/60 to-transparent transition-transform duration-700 group-hover:translate-x-[145%]" />
-              </div>
-            </div>
-            <p
-              className={`text-[11px] font-semibold uppercase tracking-[0.26em] ${
-                isDarkTheme ? "text-cyan-300" : "text-blue-700"
-              }`}
-            >
-              SK Provincial Federation
-            </p>
-            <h1 className="mt-1 text-3xl font-black tracking-tight sm:text-4xl">
-              WELCOME TO SKTECH
-            </h1>
-          </div>
-
-          <p
-            className={`mt-4 text-sm sm:text-base ${
-              isDarkTheme ? "text-slate-300" : "text-slate-600"
-            }`}
-          >
-            SK Provincial Federation Integrated E-Governance System
-          </p>
-
-          <div className="mt-6 grid gap-3">
-            {!showLoginActions ? (
-              <button
-                type="button"
-                onClick={onGetStarted}
-                className={`w-full rounded-xl px-4 py-3 text-sm font-semibold transition ${
-                  isDarkTheme
-                    ? "bg-cyan-500/90 text-slate-950 hover:bg-cyan-400 hover:shadow-[0_0_22px_rgba(34,211,238,0.7)]"
-                    : "bg-blue-600 text-white hover:bg-blue-500 hover:shadow-[0_0_20px_rgba(37,99,235,0.45)]"
-                }`}
-              >
-                Get Started
-              </button>
-            ) : null}
-            <Link
-              href="/about"
-              className={`inline-flex items-center justify-center rounded-xl border px-4 py-3 text-sm font-semibold transition ${
-                isDarkTheme
-                  ? "border-cyan-300/30 text-cyan-100 hover:bg-cyan-300/10"
-                  : "border-blue-200 text-blue-700 hover:bg-blue-50"
-              }`}
-            >
-              About SKTECH
-            </Link>
-          </div>
-
-          <div
-            className={`grid gap-3 transition-all duration-300 ${
-              showLoginActions
-                ? "mt-6 max-h-40 opacity-100"
-                : "pointer-events-none max-h-0 overflow-hidden opacity-0"
-            }`}
-          >
-            <Link
-              href="/official/auth"
-              onClick={(event) => onLoginSelect(event, "/official/auth")}
-              className="inline-flex items-center justify-center rounded-xl bg-[#b03333] px-4 py-3 text-sm font-semibold text-white transition duration-300 hover:bg-[#9f2b2b] hover:shadow-[0_0_16px_rgba(176,51,51,0.45)]"
-            >
-              SK Official Login
-            </Link>
-          </div>
-        </article>
+      <main>
+        <section id="about" className="relative isolate overflow-hidden px-5 pb-20 pt-36 sm:px-8 sm:pt-44 lg:px-10 lg:pb-28"><div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_0%,rgba(14,165,233,0.2),transparent_42%),radial-gradient(circle_at_90%_25%,rgba(220,38,38,0.12),transparent_30%),linear-gradient(180deg,#06132d_0%,#0b2144_64%,#f4f8fc_100%)]" /><div className="mx-auto max-w-7xl"><div className="mx-auto max-w-4xl text-center"><motion.div {...(reducedMotion ? {} : { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.6 } })} className="inline-flex items-center gap-2 rounded-full border border-cyan-200/25 bg-cyan-200/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-cyan-200"><Sparkles size={14} /> Integrated E-Governance Platform</motion.div><motion.h1 {...(reducedMotion ? {} : { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 }, transition: { delay: 0.1, duration: 0.7 } })} className="mt-7 text-4xl font-black leading-[0.98] tracking-[-0.04em] text-white sm:text-6xl lg:text-7xl">Digital Governance for the <span className="bg-gradient-to-r from-cyan-200 via-sky-300 to-white bg-clip-text text-transparent">Sangguniang Kabataan</span></motion.h1><motion.p {...(reducedMotion ? {} : { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 }, transition: { delay: 0.2, duration: 0.7 } })} className="mx-auto mt-7 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">A secure and integrated platform for SK profiling, digital identification, attendance, communication, analytics, and youth governance.</motion.p><div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row"><button type="button" onClick={onGetStarted} className="inline-flex items-center justify-center gap-2 rounded-full bg-cyan-300 px-6 py-3.5 text-sm font-bold text-[#06132d] hover:bg-cyan-200">Get Started <ArrowRight size={16} /></button><a href="#how-it-works" className="inline-flex items-center justify-center gap-2 rounded-full border border-white/20 bg-white/5 px-6 py-3.5 text-sm font-bold text-white hover:bg-white/10">Learn More <ChevronDown size={16} /></a></div></div><motion.div {...(reducedMotion ? {} : { initial: { opacity: 0, y: 30 }, animate: { opacity: 1, y: 0 }, transition: { delay: 0.35, duration: 0.8 } })} className="relative mx-auto mt-16 max-w-5xl"><div className="absolute -inset-8 rounded-[40px] bg-cyan-300/10 blur-3xl" /><div className="relative overflow-hidden rounded-[24px] border border-white/15 bg-[#0b1d3b]/95 shadow-[0_34px_100px_-35px_rgba(8,47,73,0.95)]"><div className="flex items-center justify-between border-b border-white/10 px-4 py-3 sm:px-6"><div className="flex gap-2"><i className="h-2.5 w-2.5 rounded-full bg-red-400" /><i className="h-2.5 w-2.5 rounded-full bg-amber-300" /><i className="h-2.5 w-2.5 rounded-full bg-emerald-300" /></div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">SKTECH governance workspace</p><span className="h-2 w-16 rounded-full bg-white/10" /></div><div className="grid min-h-[300px] md:grid-cols-[190px_1fr]"><aside className="hidden border-r border-white/10 p-5 md:block"><div className="flex items-center gap-2 text-sm font-bold"><Image src="/assets/logos/sktech-logo-enhance.png" alt="" width={28} height={28} className="h-7 w-7 object-contain" /> SKTECH</div><div className="mt-8 grid gap-2 text-xs text-slate-500"><span className="rounded-lg bg-cyan-300/10 px-3 py-2 text-cyan-200">Overview</span><span className="px-3 py-2">Officials</span><span className="px-3 py-2">Attendance</span><span className="px-3 py-2">Analytics</span></div></aside><div className="p-5 sm:p-7"><div className="flex items-start justify-between gap-3"><div><p className="text-xs uppercase tracking-[0.16em] text-cyan-300">Provincial overview</p><h2 className="mt-2 text-xl font-bold text-white sm:text-2xl">Connected council operations</h2></div><span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1 text-[10px] font-bold uppercase text-emerald-200">Live system</span></div><div className="mt-7 grid gap-3 sm:grid-cols-3">{[["Verified officials", "248"], ["Attendance rate", "94.8%"], ["Active councils", "14 / 15"]].map(([label, value]) => <div key={label} className="rounded-2xl border border-white/10 bg-white/5 p-4"><p className="text-xs text-slate-500">{label}</p><p className="mt-3 text-2xl font-black text-white">{value}</p><div className="mt-3 h-1.5 rounded-full bg-cyan-300/20"><div className="h-full w-4/5 rounded-full bg-cyan-300" /></div></div>)}</div><div className="mt-4 grid gap-3 sm:grid-cols-[1.4fr_1fr]"><div className="h-20 rounded-2xl border border-white/10 bg-gradient-to-br from-cyan-300/10 to-blue-300/5 p-4"><p className="text-xs font-semibold text-slate-300">Recent governance activity</p><div className="mt-3 h-7 rounded-xl bg-[linear-gradient(170deg,transparent_50%,rgba(103,232,249,0.2)_51%,transparent_53%)]" /></div><div className="rounded-2xl border border-white/10 bg-white/5 p-4"><p className="text-xs text-slate-500">Next event</p><p className="mt-2 text-sm font-bold text-white">Provincial SK Assembly</p><p className="mt-1 flex items-center gap-2 text-xs text-cyan-200"><QrCode size={14} /> QR registration enabled</p></div></div></div></div></div></motion.div></div></section>
+        <section className="border-y border-slate-200 bg-white px-5 py-7 text-[#102b56] sm:px-8 lg:px-10"><div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-7 gap-y-4 sm:justify-between"><p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">One platform for every signal</p>{capabilities.map(([label, Icon]) => <div key={label} className="flex items-center gap-2 text-xs font-semibold text-slate-500"><Icon size={15} className="text-[#168bd1]" />{label}</div>)}</div></section>
+        <section id="how-it-works" className="bg-[#f4f8fc] px-5 py-20 text-[#102b56] sm:px-8 lg:px-10 lg:py-28"><div className="mx-auto max-w-7xl"><motion.div {...reveal} className="grid gap-8 lg:grid-cols-[0.72fr_1.28fr] lg:items-end"><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-[#168bd1]">SKTECH PLATFORM</p><h2 className="mt-4 text-4xl font-black tracking-[-0.04em] sm:text-5xl">One Platform.<br /><span className="text-[#168bd1]">Connected Governance.</span></h2></div><p className="max-w-xl text-base leading-7 text-slate-500">SKTECH brings essential Sangguniang Kabataan processes into one secure digital environment.</p></motion.div><div className="mt-12 grid gap-4 md:grid-cols-3">{[["01", "Centralized Records", "Manage verified SK official profiles and governance information.", Fingerprint], ["02", "Digital Credentials", "Provide secure, QR-verifiable digital identification.", QrCode], ["03", "Smart Attendance", "Combine QR and facial verification for events and official attendance.", ScanFace]].map(([number, title, description, Icon]) => <motion.article key={title as string} {...reveal} className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_20px_50px_-35px_rgba(15,43,86,0.5)]"><div className="flex items-start justify-between"><span className="text-xs font-black text-slate-300">{number as string}</span><Icon size={22} className="text-[#168bd1]" /></div><h3 className="mt-14 text-xl font-black">{title as string}</h3><p className="mt-3 text-sm leading-6 text-slate-500">{description as string}</p><div className="mt-6 h-px w-10 bg-[#168bd1]" /></motion.article>)}</div></div></section>
+        <section id="features" className="bg-white px-5 py-20 text-[#102b56] sm:px-8 lg:px-10 lg:py-28"><div className="mx-auto max-w-7xl"><motion.div {...reveal} className="max-w-2xl"><p className="text-xs font-bold uppercase tracking-[0.18em] text-[#168bd1]">CORE GOVERNANCE FEATURES</p><h2 className="mt-4 text-4xl font-black tracking-[-0.04em] sm:text-5xl">Built around the work that matters.</h2></motion.div><div className="mt-12 grid gap-4 lg:grid-cols-3">{featureGroups.map(([title, description, items, Icon]) => <motion.article key={title} {...reveal} className="rounded-[24px] border border-slate-200 bg-[#f7faff] p-7 shadow-[0_20px_55px_-38px_rgba(15,43,86,0.65)]"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-600"><Icon size={22} /></div><p className="mt-8 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">{title}</p><p className="mt-3 text-sm leading-6 text-slate-500">{description}</p><ul className="mt-7 grid gap-3 border-t border-slate-200 pt-5 text-sm font-semibold text-slate-600">{items.map((item) => <li key={item} className="flex items-center gap-2"><Check size={15} className="text-cyan-600" />{item}</li>)}</ul></motion.article>)}</div></div></section>
+        <section className="bg-[#071a38] px-5 py-20 text-white sm:px-8 lg:px-10 lg:py-28"><div className="mx-auto max-w-7xl"><motion.div {...reveal} className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end"><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-300">INTENDED USERS</p><h2 className="mt-4 text-4xl font-black tracking-[-0.04em] sm:text-5xl">Governance, at every level.</h2></div><p className="max-w-md text-sm leading-6 text-slate-400">Clear roles and shared visibility help every part of the federation work from the same record.</p></motion.div><div className="mt-12 grid gap-4 lg:grid-cols-3">{audiences.map(([title, description, Icon]) => <motion.article key={title} {...reveal} className="rounded-[24px] border border-white/10 bg-white/[0.06] p-7"><Icon size={23} className="text-cyan-200" /><h3 className="mt-16 text-2xl font-black">{title}</h3><p className="mt-3 text-sm leading-6 text-slate-400">{description}</p></motion.article>)}</div></div></section>
+        <section id="security" className="relative overflow-hidden bg-[#f4f8fc] px-5 py-20 text-[#102b56] sm:px-8 lg:px-10 lg:py-28"><div className="relative mx-auto grid max-w-7xl gap-12 lg:grid-cols-2 lg:items-center"><motion.div {...reveal}><p className="text-xs font-bold uppercase tracking-[0.18em] text-[#168bd1]">SECURITY & INNOVATION</p><h2 className="mt-4 text-4xl font-black tracking-[-0.04em] sm:text-5xl">Designed with Security at Every Level</h2><p className="mt-5 max-w-xl text-base leading-7 text-slate-500">A public-facing platform built around thoughtful access, protected identity, and dependable records.</p><div className="mt-9 grid grid-cols-2 gap-3">{["Role-Based Access", "Municipality Isolation", "Secure Identity", "Protected Data"].map((item) => <div key={item} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold"><LockKeyhole size={16} className="text-[#168bd1]" />{item}</div>)}</div></motion.div><motion.div {...reveal} className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_25px_70px_-38px_rgba(15,43,86,0.7)]"><div className="flex items-center justify-between border-b border-slate-100 pb-5"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Technology foundation</p><p className="mt-2 text-lg font-black">Built to evolve with councils</p></div><ShieldCheck className="text-cyan-600" /></div><div className="mt-6 flex flex-wrap gap-2">{technologies.map((technology) => <span key={technology} className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">{technology}</span>)}</div></motion.div></div></section>
+        <section id="access" className="bg-white px-5 py-20 text-[#102b56] sm:px-8 lg:px-10 lg:py-28"><motion.div {...reveal} className="relative mx-auto max-w-7xl overflow-hidden rounded-[32px] bg-gradient-to-br from-[#0b2d61] via-[#0d5e9b] to-[#13a6c9] px-7 py-12 text-white shadow-[0_30px_80px_-36px_rgba(7,89,133,0.8)] sm:px-12 lg:px-16"><p className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-100">START WITH A BETTER SYSTEM</p><h2 className="mt-5 max-w-3xl text-4xl font-black tracking-[-0.04em] sm:text-5xl">Modernizing Youth Governance, One Council at a Time.</h2><p className="mt-5 max-w-2xl text-base leading-7 text-cyan-50/80">Experience a more connected, transparent, and accessible approach to Sangguniang Kabataan administration.</p><div className="mt-8 flex flex-col gap-3 sm:flex-row"><button type="button" onClick={onGetStarted} className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 text-sm font-bold text-[#0b2d61]">Get Started <ArrowRight size={16} /></button><Link href="/about" className="inline-flex items-center justify-center rounded-full border border-white/30 px-6 py-3.5 text-sm font-bold">About SKTECH</Link></div>{showLoginActions ? <div className="mt-5"><Link href="/official/auth" onClick={(event) => onLoginSelect(event, "/official/auth")} className="inline-flex rounded-xl bg-[#b03333] px-4 py-3 text-sm font-bold">SK Official Login</Link></div> : null}</motion.div></section>
       </main>
+
+      <footer className="border-t border-white/10 bg-[#06132d] px-5 py-12 text-white sm:px-8 lg:px-10"><div className="mx-auto max-w-7xl"><div className="grid gap-10 lg:grid-cols-[1.3fr_0.7fr_1fr]"><div><Link href="/" className="flex items-center gap-3"><Image src="/assets/logos/sktech-logo-enhance.png" alt="SKTECH" width={42} height={42} className="h-9 w-9 object-contain" /><span className="font-black tracking-[0.22em]">SKTECH</span></Link><p className="mt-5 max-w-sm text-sm leading-6 text-slate-400">Integrated E-Governance and Emerging Technology Platform for Sangguniang Kabataan Councils.</p></div><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-cyan-300">Explore</p><div className="mt-4 grid gap-3 text-sm text-slate-400"><a href="#about">About</a><a href="#features">Features</a><a href="#security">Security</a><Link href="/about">About SKTECH</Link></div></div><div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5"><p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-300">Capstone notice</p><p className="mt-3 text-xs leading-5 text-slate-500">SKTECH is currently a capstone and prototype e-governance platform. It is not an official government system unless formally adopted and authorized by the appropriate government authority.</p></div></div><div className="mt-10 border-t border-white/10 pt-5 text-xs text-slate-600">SKTECH Provincial Federation Platform</div></div></footer>
     </div>
   );
 }
