@@ -29,7 +29,7 @@ export default async function StaffAnnouncementsPage() {
         <h2 className="mt-3 text-3xl font-bold text-foreground">Public Announcement Feed</h2>
         <p className="mt-2 max-w-3xl text-sm text-muted">
           Review the {ACTIVE_ANNOUNCEMENT_LIMIT} active notices currently visible
-          to SK officials. The soonest scheduled notice appears first.
+          to SK officials. The newest notice appears first.
         </p>
       </section>
 
@@ -63,7 +63,7 @@ export default async function StaffAnnouncementsPage() {
         <div>
           <h3 className="text-lg font-semibold text-foreground">Archive</h3>
           <p className="mt-1 text-sm text-muted">
-            Past announcements are moved here automatically after their date passes.
+            Announcements move here automatically after their date passes or when newer notices rotate in.
           </p>
         </div>
         {archivedEvents.length === 0 ? (

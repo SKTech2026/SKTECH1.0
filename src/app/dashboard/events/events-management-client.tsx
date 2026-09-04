@@ -211,7 +211,7 @@ export default function EventsManagementClient({
           <div>
             <h2 className="text-xl font-semibold text-foreground">Events</h2>
             <p className="text-sm text-muted">
-              Active announcements appear first by nearest date; past dates are archived automatically.
+              The newest active announcements stay visible; older and past announcements archive automatically.
             </p>
           </div>
           <button

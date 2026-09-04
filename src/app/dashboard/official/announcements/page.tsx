@@ -29,7 +29,7 @@ export default async function OfficialAnnouncementsPage() {
         <h2 className="mt-3 text-3xl font-bold text-foreground">Public Announcements</h2>
         <p className="mt-2 max-w-3xl text-sm text-muted">
           Active announcements are limited to {ACTIVE_ANNOUNCEMENT_LIMIT} posts and
-          shown by nearest scheduled date first.
+          show the newest posts first.
         </p>
       </section>
 
@@ -63,7 +63,7 @@ export default async function OfficialAnnouncementsPage() {
         <div>
           <h3 className="text-lg font-semibold text-foreground">Archive</h3>
           <p className="mt-1 text-sm text-muted">
-            Announcements move here automatically after their scheduled date passes.
+            Announcements move here automatically after their scheduled date passes or when newer posts rotate in.
           </p>
         </div>
         {archivedEvents.length === 0 ? (

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 
 import { authOptions } from "@/lib/auth";
 import {
+  getActiveAnnouncementIds,
   getActiveAnnouncementWhere,
   getArchivedAnnouncementWhere,
 } from "@/lib/announcements";
@@ -33,10 +34,14 @@ const requireAdminOrStaff = async () => {
 export async function GET() {
   try {
     const now = new Date();
+    const activeAnnouncementIds = await getActiveAnnouncementIds(now);
     const [activeEvents, archivedEvents] = await Promise.all([
       prisma.event.findMany({
-        where: getActiveAnnouncementWhere(now),
-        orderBy: { eventDate: "asc" },
+        where: {
+          id: { in: activeAnnouncementIds },
+          ...getActiveAnnouncementWhere(now),
+        },
+        orderBy: [{ createdAt: "desc" }, { id: "asc" }],
         include: {
           _count: {
             select: { officialAttendances: true },
@@ -44,8 +49,20 @@ export async function GET() {
         },
       }),
       prisma.event.findMany({
-        where: getArchivedAnnouncementWhere(now),
-        orderBy: { eventDate: "desc" },
+        where: {
+          OR: [
+            getArchivedAnnouncementWhere(now),
+            {
+              eventDate: {
+                gte: now,
+              },
+              id: {
+                notIn: activeAnnouncementIds,
+              },
+            },
+          ],
+        },
+        orderBy: [{ createdAt: "desc" }, { eventDate: "desc" }, { id: "asc" }],
         include: {
           _count: {
             select: { officialAttendances: true },
