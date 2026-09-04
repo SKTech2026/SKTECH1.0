@@ -1,6 +1,15 @@
 "use client";
 
-import { Camera, CheckCircle2, ShieldCheck, Video, VideoOff } from "lucide-react";
+import {
+  Camera,
+  CheckCircle2,
+  CircleAlert,
+  RotateCcw,
+  ShieldCheck,
+  Sparkles,
+  Video,
+  VideoOff,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type RegisterResult = {
@@ -10,6 +19,69 @@ type RegisterResult = {
   livenessPassed?: boolean;
   error?: string;
 };
+
+type EnrollmentStage = {
+  id: string;
+  title: string;
+  instruction: string;
+  helper: string;
+};
+
+type FrameQuality = {
+  dataUrl: string;
+  brightness: number;
+  sharpness: number;
+};
+
+const FRAMES_PER_STAGE = 3;
+const CAPTURE_DELAY_MS = 260;
+const MAX_FRAME_WIDTH = 480;
+const MIN_BRIGHTNESS = 35;
+const MAX_BRIGHTNESS = 225;
+const MIN_SHARPNESS = 6;
+
+const ENROLLMENT_STAGES: EnrollmentStage[] = [
+  {
+    id: "straight",
+    title: "Center face",
+    instruction: "Look straight ahead",
+    helper: "Position your face inside the frame and hold still.",
+  },
+  {
+    id: "left",
+    title: "Left angle",
+    instruction: "Slowly turn your head to the left",
+    helper: "Use a small natural turn. Keep your eyes near the camera.",
+  },
+  {
+    id: "right",
+    title: "Right angle",
+    instruction: "Slowly turn your head to the right",
+    helper: "Use a small natural turn. Keep your face inside the guide.",
+  },
+  {
+    id: "up",
+    title: "Slightly up",
+    instruction: "Raise your face slightly",
+    helper: "Tilt up gently, without leaving the oval guide.",
+  },
+  {
+    id: "down",
+    title: "Slightly down",
+    instruction: "Lower your face slightly",
+    helper: "Tilt down gently and keep the camera steady.",
+  },
+  {
+    id: "live",
+    title: "Liveness",
+    instruction: "Natural frontal/liveness frames",
+    helper: "Look forward, blink naturally, and hold still.",
+  },
+];
+
+function sleep(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
 
 function isBenignPlayInterruption(error: unknown): boolean {
   if (!(error instanceof Error)) {
@@ -85,21 +157,72 @@ async function waitForVideoReady(video: HTMLVideoElement, timeoutMs = 2000): Pro
   });
 }
 
-function frameFromVideo(video: HTMLVideoElement): string | null {
+function getFrameQuality(video: HTMLVideoElement): FrameQuality | null {
   if (!video.videoWidth || !video.videoHeight) {
     return null;
   }
 
+  const scale = Math.min(1, MAX_FRAME_WIDTH / video.videoWidth);
+  const width = Math.max(1, Math.round(video.videoWidth * scale));
+  const height = Math.max(1, Math.round(video.videoHeight * scale));
   const canvas = document.createElement("canvas");
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  const context = canvas.getContext("2d");
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext("2d", { willReadFrequently: true });
   if (!context) {
     return null;
   }
 
-  context.drawImage(video, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL("image/jpeg", 0.9);
+  context.drawImage(video, 0, 0, width, height);
+  const imageData = context.getImageData(0, 0, width, height);
+  const pixels = imageData.data;
+  let brightnessTotal = 0;
+  let sharpnessTotal = 0;
+  let sharpnessSamples = 0;
+
+  for (let index = 0; index < pixels.length; index += 4) {
+    brightnessTotal += (pixels[index] + pixels[index + 1] + pixels[index + 2]) / 3;
+  }
+
+  for (let y = 1; y < height; y += 4) {
+    for (let x = 1; x < width; x += 4) {
+      const index = (y * width + x) * 4;
+      const leftIndex = (y * width + (x - 1)) * 4;
+      const topIndex = ((y - 1) * width + x) * 4;
+      const current = (pixels[index] + pixels[index + 1] + pixels[index + 2]) / 3;
+      const left = (pixels[leftIndex] + pixels[leftIndex + 1] + pixels[leftIndex + 2]) / 3;
+      const top = (pixels[topIndex] + pixels[topIndex + 1] + pixels[topIndex + 2]) / 3;
+      sharpnessTotal += Math.abs(current - left) + Math.abs(current - top);
+      sharpnessSamples += 2;
+    }
+  }
+
+  return {
+    dataUrl: canvas.toDataURL("image/jpeg", 0.72),
+    brightness: brightnessTotal / Math.max(1, pixels.length / 4),
+    sharpness: sharpnessTotal / Math.max(1, sharpnessSamples),
+  };
+}
+
+function getQualityMessage(frame: FrameQuality | null): string | null {
+  if (!frame) {
+    return "Camera is not ready yet.";
+  }
+
+  if (frame.brightness < MIN_BRIGHTNESS) {
+    return "Improve lighting";
+  }
+
+  if (frame.brightness > MAX_BRIGHTNESS) {
+    return "Reduce glare";
+  }
+
+  if (frame.sharpness < MIN_SHARPNESS) {
+    return "Hold still";
+  }
+
+  return null;
 }
 
 export default function FacialRegistrationClient() {
@@ -109,14 +232,40 @@ export default function FacialRegistrationClient() {
   const [cameraEnabled, setCameraEnabled] = useState(false);
   const [consentChecked, setConsentChecked] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [currentStageIndex, setCurrentStageIndex] = useState(0);
+  const [completedStages, setCompletedStages] = useState<string[]>([]);
+  const [acceptedFrameCount, setAcceptedFrameCount] = useState(0);
+  const [qualityFeedback, setQualityFeedback] = useState("Position your face inside the frame");
+  const [enrolledAt, setEnrolledAt] = useState<string | null>(null);
   const [livenessState, setLivenessState] = useState<"idle" | "capturing" | "passed" | "failed">(
     "idle",
   );
   const [result, setResult] = useState<RegisterResult | null>(null);
 
+  const totalFramesNeeded = ENROLLMENT_STAGES.length * FRAMES_PER_STAGE;
+  const progress = busy
+    ? Math.round((acceptedFrameCount / totalFramesNeeded) * 100)
+    : result?.success
+      ? 100
+      : 0;
+  const currentStage = ENROLLMENT_STAGES[currentStageIndex] ?? ENROLLMENT_STAGES[0];
+  const progressRingStyle = {
+    background: `conic-gradient(var(--accent-color) ${progress * 3.6}deg, rgba(148, 163, 184, 0.24) 0deg)`,
+  };
+
   const isLivenessError = useCallback((message: string) => {
     const value = message.toLowerCase();
     return value.includes("liveness") || value.includes("blink") || value.includes("head movement");
+  }, []);
+
+  const resetEnrollment = useCallback(() => {
+    setCurrentStageIndex(0);
+    setCompletedStages([]);
+    setAcceptedFrameCount(0);
+    setQualityFeedback("Position your face inside the frame");
+    setResult(null);
+    setEnrolledAt(null);
+    setLivenessState("idle");
   }, []);
 
   const startCamera = useCallback(async () => {
@@ -143,8 +292,8 @@ export default function FacialRegistrationClient() {
         {
           video: {
             facingMode: "user",
-            width: { ideal: 960 },
-            height: { ideal: 540 },
+            width: { ideal: 720 },
+            height: { ideal: 960 },
           },
           audio: false,
         },
@@ -234,6 +383,42 @@ export default function FacialRegistrationClient() {
     return () => stopCamera();
   }, [startCamera, stopCamera]);
 
+  const captureStageFrames = useCallback(
+    async (stage: EnrollmentStage) => {
+      const frames: string[] = [];
+      let attempts = 0;
+      let lastFeedback = stage.helper;
+      setQualityFeedback(stage.helper);
+
+      while (frames.length < FRAMES_PER_STAGE && attempts < FRAMES_PER_STAGE * 5) {
+        attempts += 1;
+        await sleep(CAPTURE_DELAY_MS);
+
+        const frame = videoRef.current ? getFrameQuality(videoRef.current) : null;
+        const qualityMessage = getQualityMessage(frame);
+
+        if (qualityMessage || !frame) {
+          lastFeedback = qualityMessage ?? "Position your face inside the frame";
+          setQualityFeedback(lastFeedback);
+          continue;
+        }
+
+        frames.push(frame.dataUrl);
+        setAcceptedFrameCount((count) => count + 1);
+        lastFeedback = frames.length === FRAMES_PER_STAGE ? "Face captured" : "Hold still";
+        setQualityFeedback(lastFeedback);
+      }
+
+      if (frames.length < FRAMES_PER_STAGE) {
+        throw new Error(`${stage.title}: ${lastFeedback || "Unable to capture enough clear frames."}`);
+      }
+
+      setCompletedStages((stages) => [...stages, stage.id]);
+      return frames;
+    },
+    [],
+  );
+
   const captureAndRegister = useCallback(async () => {
     if (!videoRef.current) {
       return;
@@ -241,20 +426,24 @@ export default function FacialRegistrationClient() {
 
     setBusy(true);
     setResult(null);
+    setEnrolledAt(null);
     setLivenessState("capturing");
+    setCurrentStageIndex(0);
+    setCompletedStages([]);
+    setAcceptedFrameCount(0);
+    setQualityFeedback("Position your face inside the frame");
 
     try {
       const frames: string[] = [];
-      for (let index = 0; index < 4; index += 1) {
-        const frame = frameFromVideo(videoRef.current);
-        if (frame) {
-          frames.push(frame);
-        }
-        await new Promise((resolve) => setTimeout(resolve, 220));
+
+      for (let stageIndex = 0; stageIndex < ENROLLMENT_STAGES.length; stageIndex += 1) {
+        const stage = ENROLLMENT_STAGES[stageIndex];
+        setCurrentStageIndex(stageIndex);
+        frames.push(...(await captureStageFrames(stage)));
       }
 
-      if (frames.length < 2) {
-        throw new Error("Unable to capture enough frames for liveness.");
+      if (frames.length < totalFramesNeeded) {
+        throw new Error("Unable to capture enough clear live frames.");
       }
 
       const primaryImage = frames[frames.length - 1];
@@ -273,62 +462,81 @@ export default function FacialRegistrationClient() {
       }
 
       setResult(payload);
+      setEnrolledAt(new Date().toLocaleString());
       setLivenessState("passed");
+      setQualityFeedback("Registration complete");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Face registration failed.";
       setResult({
         error: message,
       });
       setLivenessState(isLivenessError(message) ? "failed" : "idle");
+      setQualityFeedback(message);
     } finally {
       setBusy(false);
     }
-  }, [isLivenessError]);
+  }, [captureStageFrames, isLivenessError, totalFramesNeeded]);
 
   const livenessLabel = useMemo(() => {
     if (livenessState === "capturing") return "Validating liveness...";
     if (livenessState === "passed") return "Liveness check passed";
     if (livenessState === "failed") return "Liveness validation failed";
-    return "Awaiting capture";
+    return "Awaiting guided capture";
   }, [livenessState]);
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-3xl border border-glass-border bg-surface p-6 shadow-[0_24px_48px_-24px_var(--shadow-color)] backdrop-blur-md sm:p-8">
+    <div className="space-y-5 sm:space-y-6">
+      <section className="rounded-2xl border border-glass-border bg-surface p-5 shadow-[0_24px_48px_-24px_var(--shadow-color)] backdrop-blur-md sm:p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
           Biometric Enrollment
         </p>
-        <h2 className="mt-3 text-3xl font-bold text-foreground">Facial Registration</h2>
+        <h2 className="mt-3 text-2xl font-bold text-foreground sm:text-3xl">
+          Facial Registration
+        </h2>
         <p className="mt-2 max-w-3xl text-sm text-muted">
-          Capture your face with consent to generate an encrypted biometric embedding for
+          Follow the guided capture to generate one stronger encrypted facial profile for SKTECH
           attendance verification.
         </p>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
-        <article className="rounded-2xl border border-glass-border bg-surface p-5 shadow-xl backdrop-blur-md">
-          <div className="relative overflow-hidden rounded-2xl border border-glass-border bg-black/70">
+      <section className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+        <article className="rounded-2xl border border-glass-border bg-surface p-3 shadow-xl backdrop-blur-md sm:p-5">
+          <div className="relative overflow-hidden rounded-[1.75rem] border border-glass-border bg-black/80">
             <video
               ref={videoRef}
-              className="aspect-video w-full object-cover"
+              className="aspect-[3/4] w-full object-cover sm:aspect-video"
               muted
               autoPlay
               playsInline
             />
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <div className="h-[58%] w-[44%] rounded-[28px] border-2 border-cyan-300/70 shadow-[0_0_30px_rgba(56,189,248,0.3)]" />
+              <div
+                className="grid h-[68%] w-[68%] max-w-[280px] place-items-center rounded-[50%] p-1"
+                style={progressRingStyle}
+              >
+                <div className="h-full w-full rounded-[50%] border-2 border-cyan-200/80 bg-transparent shadow-[0_0_36px_rgba(34,211,238,0.35)]" />
+              </div>
             </div>
-            <div className="absolute left-4 top-4 rounded-full border border-white/20 bg-black/40 px-3 py-1 text-xs font-semibold text-white/90">
-              Live Camera
+            <div className="pointer-events-none absolute inset-x-3 top-3 flex items-center justify-between gap-3">
+              <div className="rounded-full border border-white/20 bg-black/45 px-3 py-1 text-xs font-semibold text-white/90">
+                Live Camera
+              </div>
+              <div className="rounded-full border border-cyan-200/30 bg-black/45 px-3 py-1 text-xs font-semibold text-cyan-100">
+                {progress}%
+              </div>
+            </div>
+            <div className="absolute inset-x-3 bottom-3 rounded-2xl border border-white/10 bg-black/55 p-3 text-center backdrop-blur">
+              <p className="text-base font-bold text-white sm:text-lg">{currentStage.instruction}</p>
+              <p className="mt-1 text-xs text-cyan-100/90 sm:text-sm">{qualityFeedback}</p>
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center gap-3">
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             {cameraEnabled ? (
               <button
                 type="button"
                 onClick={stopCamera}
-                className="inline-flex items-center gap-2 rounded-lg border border-glass-border bg-surface-elevated px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-glass-border bg-surface-elevated px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface"
               >
                 <VideoOff className="h-4 w-4" />
                 Disable Camera
@@ -337,7 +545,7 @@ export default function FacialRegistrationClient() {
               <button
                 type="button"
                 onClick={() => void startCamera()}
-                className="inline-flex items-center gap-2 rounded-lg border border-glass-border bg-surface-elevated px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-glass-border bg-surface-elevated px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface"
               >
                 <Video className="h-4 w-4" />
                 Enable Camera
@@ -348,15 +556,25 @@ export default function FacialRegistrationClient() {
               type="button"
               disabled={!cameraEnabled || !consentChecked || busy}
               onClick={() => void captureAndRegister()}
-              className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Camera className="h-4 w-4" />
-              {busy ? "Capturing..." : "Capture & Register"}
+              {busy ? "Capturing..." : "Start Guided Enrollment"}
+            </button>
+
+            <button
+              type="button"
+              disabled={busy}
+              onClick={resetEnrollment}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-glass-border bg-surface-elevated px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Reset
             </button>
           </div>
         </article>
 
-        <article className="space-y-4 rounded-2xl border border-glass-border bg-surface p-5 shadow-xl backdrop-blur-md">
+        <article className="space-y-4 rounded-2xl border border-glass-border bg-surface p-4 shadow-xl backdrop-blur-md sm:p-5">
           <label className="flex items-start gap-3 rounded-xl border border-glass-border bg-surface-elevated/60 p-3">
             <input
               type="checkbox"
@@ -369,6 +587,37 @@ export default function FacialRegistrationClient() {
               stored and only encrypted embeddings are kept.
             </span>
           </label>
+
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-2">
+            {ENROLLMENT_STAGES.map((stage, index) => {
+              const completed = completedStages.includes(stage.id) || result?.success;
+              const active = busy && index === currentStageIndex;
+              return (
+                <div
+                  key={stage.id}
+                  className={`rounded-xl border p-3 ${
+                    completed
+                      ? "border-emerald-400/35 bg-emerald-500/10 text-emerald-100"
+                      : active
+                        ? "border-cyan-300/45 bg-cyan-500/10 text-cyan-100"
+                        : "border-glass-border bg-surface-elevated/40 text-muted"
+                  }`}
+                >
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.12em]">
+                      Step {index + 1}
+                    </span>
+                    {completed ? (
+                      <CheckCircle2 className="h-4 w-4" />
+                    ) : active ? (
+                      <Sparkles className="h-4 w-4" />
+                    ) : null}
+                  </div>
+                  <p className="text-sm font-semibold text-foreground">{stage.title}</p>
+                </div>
+              );
+            })}
+          </div>
 
           <div className="rounded-xl border border-glass-border bg-surface-elevated/50 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-accent">
@@ -385,15 +634,21 @@ export default function FacialRegistrationClient() {
             >
               {livenessLabel}
             </p>
+            <p className="mt-1 text-xs text-muted">
+              {acceptedFrameCount}/{totalFramesNeeded} clear frames accepted
+            </p>
           </div>
 
           {result?.success ? (
             <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-4 text-emerald-200">
               <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-semibold">
                 <CheckCircle2 className="h-4 w-4" />
-                Enrollment Complete
+                Face Registration Complete
               </div>
-              <p className="text-sm">{result.message}</p>
+              <p className="text-sm">Your facial profile is ready for SKTECH attendance verification.</p>
+              {enrolledAt ? (
+                <p className="mt-1 text-xs text-emerald-100/80">Enrolled: {enrolledAt}</p>
+              ) : null}
               <p className="mt-1 text-xs text-emerald-100/80">
                 Detected Faces: {result.detectedFaces ?? 0}
               </p>
@@ -401,8 +656,9 @@ export default function FacialRegistrationClient() {
           ) : null}
 
           {result?.error ? (
-            <div className="rounded-xl border border-rose-400/30 bg-rose-500/10 p-4 text-sm text-rose-200">
-              {result.error}
+            <div className="flex gap-2 rounded-xl border border-rose-400/30 bg-rose-500/10 p-4 text-sm text-rose-200">
+              <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{result.error}</span>
             </div>
           ) : null}
 

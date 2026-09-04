@@ -57,7 +57,7 @@ MIN_FACE_AREA_RATIO = float(
 class RegisterFaceRequest(BaseModel):
     userId: str = Field(min_length=1)
     imageBase64: str = Field(min_length=20)
-    livenessFrames: List[str] = Field(default_factory=list, max_length=8)
+    livenessFrames: List[str] = Field(default_factory=list, max_length=24)
 
 
 class RegisterFaceResponse(BaseModel):
