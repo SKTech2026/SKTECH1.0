@@ -371,6 +371,25 @@ body {
   }
 }
 
+.role-shell-admin-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--color-accent) 34%, transparent)
+    transparent;
+}
+
+.role-shell-admin-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.role-shell-admin-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.role-shell-admin-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--color-accent) 30%, transparent);
+}
+
 @media print {
   body {
     background: #ffffff !important;

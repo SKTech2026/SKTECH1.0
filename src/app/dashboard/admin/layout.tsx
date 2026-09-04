@@ -5,8 +5,8 @@ import RoleShell, { RoleShellItem } from "@/components/dashboard/role-shell";
 const adminItems: RoleShellItem[] = [
   {
     href: "/dashboard/admin",
-    label: "Command Center",
-    description: "Provincial control room",
+    label: "System Overview",
+    description: "Provincial administration",
     icon: "layoutDashboard",
   },
   {
@@ -74,7 +74,7 @@ export default function AdminDashboardLayout({
     <RoleShell
       roleLabel="Administrator"
       heading="Provincial Admin Dashboard"
-      subheading="Operational command interface for governance, identity, and attendance oversight."
+      subheading="Administrative workspace for governance, identity, and attendance oversight."
       items={adminItems}
       variant="adminCn"
     >

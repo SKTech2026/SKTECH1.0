@@ -133,16 +133,16 @@ export default async function AdminDashboardHomePage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <section className="overflow-hidden rounded-[1.25rem] border border-glass-border bg-surface shadow-[0_24px_48px_-24px_var(--shadow-color)] backdrop-blur-md">
-        <div className="border-b border-glass-border bg-surface-elevated/40 px-6 py-4 sm:px-8">
+        <div className="border-b border-glass-border bg-surface-elevated/40 px-5 py-3.5 sm:px-6">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
-            Provincial Control Room
+            Provincial Administration
           </p>
         </div>
-        <div className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[1fr_auto] lg:items-end">
+        <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[1fr_auto] lg:items-center">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight text-foreground">
+            <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
               Welcome, {authorizedSession.user.name ?? authorizedSession.user.email}
             </h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
@@ -150,39 +150,39 @@ export default async function AdminDashboardHomePage() {
               integrity across the provincial federation network.
             </p>
           </div>
-          <div className="rounded-2xl border border-accent/30 bg-accent/10 px-4 py-3 text-sm font-semibold text-accent">
+          <div className="rounded-xl border border-accent/30 bg-accent/10 px-3.5 py-2.5 text-sm font-semibold text-accent">
             Administrator Workspace
           </div>
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
         {metrics.map((metric) => (
           <article
             key={metric.label}
-            className="rounded-[1.25rem] border border-glass-border bg-surface p-4 shadow-xl backdrop-blur-md transition hover:border-accent/30 hover:bg-surface-elevated/60"
+            className="rounded-[1.15rem] border border-glass-border bg-surface p-3.5 shadow-xl backdrop-blur-md transition hover:border-accent/30 hover:bg-surface-elevated/60"
           >
             <div className="flex items-center justify-between gap-3">
               <p className="text-xs uppercase tracking-[0.14em] text-muted">
                 {metric.label}
               </p>
-              <span className="rounded-lg border border-glass-border bg-surface-elevated/70 p-2 text-muted">
+              <span className="rounded-lg border border-glass-border bg-surface-elevated/70 p-1.5 text-muted">
                 <metric.Icon className="h-4 w-4" />
               </span>
             </div>
-            <p className={`mt-4 text-3xl font-bold tracking-tight ${metric.tone}`}>
+            <p className={`mt-3 text-3xl font-bold tracking-tight ${metric.tone}`}>
               {metric.value}
             </p>
           </article>
         ))}
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {modules.map((module) => (
           <Link
             key={module.href}
             href={module.href}
-            className="group rounded-[1.25rem] border border-glass-border bg-surface p-5 shadow-xl backdrop-blur-md transition hover:-translate-y-0.5 hover:border-accent/40 hover:bg-surface-elevated"
+            className="group rounded-[1.15rem] border border-glass-border bg-surface p-4 shadow-xl backdrop-blur-md transition hover:-translate-y-0.5 hover:border-accent/40 hover:bg-surface-elevated"
           >
             <div className="flex items-start justify-between gap-4">
               <span className="rounded-xl border border-glass-border bg-surface-elevated/70 p-2 text-accent">
@@ -190,7 +190,7 @@ export default async function AdminDashboardHomePage() {
               </span>
               <ArrowUpRight className="h-4 w-4 text-muted transition group-hover:text-accent" />
             </div>
-            <h3 className="mt-4 text-lg font-semibold text-foreground">
+            <h3 className="mt-3 text-base font-semibold text-foreground">
               {module.title}
             </h3>
             <p className="mt-2 text-sm leading-6 text-muted">{module.description}</p>

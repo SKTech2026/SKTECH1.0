@@ -113,11 +113,15 @@ export default function RoleShell({
         </>
       ) : null}
 
-      <div className="relative mx-auto flex w-full max-w-[1600px] flex-col gap-6 px-4 py-6 lg:flex-row lg:px-8 lg:py-8">
+      <div
+        className={`relative mx-auto flex w-full max-w-[1600px] flex-col px-4 lg:flex-row lg:px-8 ${
+          isAdminCn ? "gap-5 py-5 lg:py-6" : "gap-6 py-6 lg:py-8"
+        }`}
+      >
         <aside
           className={`hidden shrink-0 border border-glass-border bg-surface shadow-[0_24px_48px_-24px_var(--shadow-color)] backdrop-blur-md lg:flex lg:flex-col ${
             isAdminCn
-              ? "sticky top-8 h-[calc(100vh-4rem)] w-[300px] rounded-[1.25rem] p-4"
+              ? "sticky top-6 h-[calc(100vh-3rem)] w-[280px] rounded-[1.25rem] p-3.5"
               : "w-[320px] rounded-3xl p-6"
           }`}
         >
@@ -125,7 +129,7 @@ export default function RoleShell({
             <div
               className={`flex items-center gap-3 ${
                 isAdminCn
-                  ? "mb-5 rounded-2xl border border-glass-border bg-surface-elevated/45 p-3"
+                  ? "mb-4 rounded-2xl border border-glass-border bg-surface-elevated/45 p-3"
                   : "mb-5"
               }`}
             >
@@ -138,7 +142,7 @@ export default function RoleShell({
               </div>
             </div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">
-              SKTech Command
+              {isAdminCn ? "SKTECH Administration" : "SKTech Command"}
             </p>
             <h1
               className={`mt-3 font-bold leading-tight text-foreground ${
@@ -151,9 +155,9 @@ export default function RoleShell({
           </div>
 
           <div
-            className={`mt-6 inline-flex w-fit border border-accent/40 bg-accent/15 px-3 py-1 text-xs font-semibold tracking-wide text-accent ${
+            className={`inline-flex w-fit border border-accent/40 bg-accent/15 px-3 py-1 text-xs font-semibold tracking-wide text-accent ${
               isAdminCn ? "rounded-lg" : "rounded-full"
-            }`}
+            } ${isAdminCn ? "mt-4" : "mt-6"}`}
           >
             {roleLabel}
           </div>
@@ -161,7 +165,7 @@ export default function RoleShell({
           <nav
             className={
               isAdminCn
-                ? "mt-6 min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1"
+                ? "role-shell-admin-scroll mt-4 min-h-0 flex-1 space-y-1 overflow-y-auto pr-1"
                 : "mt-6 space-y-2"
             }
           >
@@ -174,7 +178,7 @@ export default function RoleShell({
                   key={item.href}
                   href={item.href}
                   className={`group block border transition ${
-                    isAdminCn ? "rounded-xl px-3 py-2.5" : "rounded-2xl px-4 py-3"
+                    isAdminCn ? "rounded-xl px-3 py-2" : "rounded-2xl px-4 py-3"
                   } ${
                     active
                       ? "border-accent/40 bg-accent/15 shadow-lg shadow-[0_16px_32px_-18px_var(--color-ring)]"
@@ -194,7 +198,9 @@ export default function RoleShell({
                       <Icon className="h-4 w-4" />
                     </span>
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground">{item.label}</p>
+                      <p className="text-sm font-semibold text-foreground">
+                        {item.label}
+                      </p>
                       <p
                         className={`text-xs text-muted ${
                           isAdminCn ? "truncate" : ""
