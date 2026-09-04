@@ -3,10 +3,12 @@ import { AdmissionStatus, Role, UserStatus } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 
+import FlippablePortraitID from "@/components/id/FlippablePortraitID";
 import { authOptions } from "@/lib/auth";
 import { getActiveAnnouncements } from "@/lib/announcements";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/roleGuard";
+import { formatEnumLabel, formatOfficialFullName } from "@/lib/sk-official";
 
 export const dynamic = "force-dynamic";
 
@@ -21,12 +23,23 @@ export default async function OfficialDashboardHomePage() {
       name: true,
       email: true,
       status: true,
+      image: true,
       official: {
         select: {
           id: true,
           firstName: true,
+          middleName: true,
           lastName: true,
+          suffix: true,
           role: true,
+          position: true,
+          skFederationOfficer: true,
+          skFederationPosition: true,
+          municipality: true,
+          barangay: true,
+          sitio: true,
+          dateElected: true,
+          termStart: true,
           status: true,
           admissionStatus: true,
           updatedAt: true,
@@ -98,6 +111,10 @@ export default async function OfficialDashboardHomePage() {
       : Promise.resolve(0),
     getActiveAnnouncements(3),
   ]);
+  const photoUrl =
+    currentUser.image && currentUser.image.startsWith("/")
+      ? currentUser.image
+      : "/images/default-official.svg";
 
   return (
     <div className="space-y-6">
@@ -132,6 +149,46 @@ export default async function OfficialDashboardHomePage() {
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">
+        {currentUser.official ? (
+          <article className="rounded-2xl border border-glass-border bg-surface p-4 shadow-xl backdrop-blur-md sm:p-5">
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.14em] text-muted">Digital ID</p>
+                <h3 className="mt-1 text-lg font-semibold text-foreground">
+                  {formatOfficialFullName(currentUser.official)}
+                </h3>
+              </div>
+              <Link
+                href={`/id/${currentUser.official.id}`}
+                target="_blank"
+                className="rounded-lg border border-glass-border px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-elevated/70"
+              >
+                Full Page
+              </Link>
+            </div>
+            <FlippablePortraitID
+              fullName={formatOfficialFullName(currentUser.official)}
+              position={formatEnumLabel(currentUser.official.position ?? currentUser.official.role)}
+              skfedPosition={
+                currentUser.official.skFederationOfficer
+                  ? formatEnumLabel(currentUser.official.skFederationPosition)
+                  : null
+              }
+              barangay={currentUser.official.barangay ?? "Not specified"}
+              municipality={currentUser.official.municipality ?? "Not specified"}
+              sitio={currentUser.official.sitio}
+              dateElected={(currentUser.official.dateElected ?? currentUser.official.termStart).toISOString()}
+              idNumber={currentUser.official.id.replace(/-/g, "").slice(-12).toUpperCase()}
+              qrValue={`/id/${currentUser.official.id}`}
+              photoUrl={photoUrl}
+              registryStatus={currentUser.official.status}
+              sktechLogoUrl="/sk-tech-logo.png"
+              provincialSealUrl="/images/provincial-seal-logo.png"
+              skfedLogoUrl="/login-logo.png"
+            />
+          </article>
+        ) : null}
+
         <article className="rounded-2xl border border-glass-border bg-surface p-5 shadow-xl backdrop-blur-md">
           <h3 className="text-lg font-semibold text-foreground">Quick Access</h3>
           <div className="mt-4 flex flex-wrap gap-3">

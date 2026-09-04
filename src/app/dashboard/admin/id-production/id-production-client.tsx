@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import FlippablePortraitID from "@/components/id/FlippablePortraitID";
+import { formatEnumLabel } from "@/lib/sk-official";
+
 type OfficialRecord = {
   id: string;
   firstName: string;
@@ -10,13 +13,19 @@ type OfficialRecord = {
   lastName: string;
   suffix: string | null;
   role: string;
+  position: string | null;
   status: string;
   admissionStatus: string;
   municipalityId: string | null;
   municipality: string | null;
   barangayId: string | null;
   barangay: string | null;
+  sitio: string | null;
+  skFederationOfficer: boolean;
+  skFederationPosition: string | null;
+  dateElected: string;
   userStatus: string | null;
+  photoUrl: string | null;
 };
 
 type MunicipalityOption = {
@@ -41,6 +50,8 @@ export default function IdProductionClient({
   const [search, setSearch] = useState("");
   const [municipalityId, setMunicipalityId] = useState("");
   const [barangayId, setBarangayId] = useState("");
+  const [selectedOfficialId, setSelectedOfficialId] = useState(officials[0]?.id ?? "");
+  const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL ?? "").replace(/\/+$/, "");
 
   const selectedMunicipality = useMemo(
     () => municipalities.find((entry) => entry.id === municipalityId) ?? null,
@@ -76,6 +87,28 @@ export default function IdProductionClient({
       );
     });
   }, [barangayId, municipalityId, officials, search]);
+
+  const selectedOfficial = useMemo(
+    () =>
+      filteredOfficials.find((official) => official.id === selectedOfficialId) ??
+      filteredOfficials[0] ??
+      null,
+    [filteredOfficials, selectedOfficialId],
+  );
+
+  const buildFullName = (official: OfficialRecord) =>
+    [official.firstName, official.middleName, official.lastName, official.suffix]
+      .filter(Boolean)
+      .join(" ");
+
+  const buildCredentialNumber = (official: OfficialRecord) =>
+    official.id.replace(/-/g, "").slice(-12).toUpperCase();
+
+  const buildPhotoUrl = (official: OfficialRecord) =>
+    official.photoUrl?.startsWith("/") ? official.photoUrl : "/images/default-official.svg";
+
+  const buildQrValue = (official: OfficialRecord) =>
+    baseUrl ? `${baseUrl}/id/${official.id}` : `/id/${official.id}`;
 
   return (
     <div className="space-y-6">
@@ -133,53 +166,107 @@ export default function IdProductionClient({
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {filteredOfficials.length === 0 ? (
-          <article className="rounded-2xl border border-glass-border bg-surface p-5 text-sm text-muted">
-            No officials available for ID production under the current filters.
-          </article>
-        ) : (
-          filteredOfficials.map((official) => (
-            <article
-              key={official.id}
-              className="rounded-2xl border border-glass-border bg-surface p-5 shadow-xl backdrop-blur-md"
-            >
-              <h3 className="text-lg font-semibold text-foreground">
-                {[official.firstName, official.middleName, official.lastName, official.suffix]
-                  .filter(Boolean)
-                  .join(" ")}
-              </h3>
-              <p className="mt-1 text-sm text-muted">{official.role}</p>
-              <p className="mt-1 text-xs text-muted">
-                {official.barangay ?? "N/A"} | {official.municipality ?? "N/A"}
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                <span className="rounded-full border border-accent/40 bg-accent/15 px-2.5 py-1 text-accent">
-                  Admission: {official.admissionStatus}
-                </span>
-                <span className="rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2.5 py-1 text-emerald-200">
-                  User: {official.userStatus ?? "NO_ACCOUNT"}
-                </span>
-              </div>
-              <div className="mt-4 flex gap-2">
-                <Link
-                  href={`/id/${official.id}`}
-                  target="_blank"
-                  className="rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-accent-foreground transition hover:opacity-90"
-                >
-                  View ID
-                </Link>
-                <Link
-                  href={`/id/${official.id}`}
-                  target="_blank"
-                  className="rounded-lg border border-glass-border px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-elevated/70"
-                >
-                  Download / Print
-                </Link>
-              </div>
+      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
+        <div className="grid content-start gap-3">
+          {filteredOfficials.length === 0 ? (
+            <article className="rounded-2xl border border-glass-border bg-surface p-5 text-sm text-muted">
+              No officials available for ID production under the current filters.
             </article>
-          ))
-        )}
+          ) : (
+            filteredOfficials.map((official) => (
+              <article
+                key={official.id}
+                className={`rounded-2xl border p-4 shadow-xl backdrop-blur-md transition ${
+                  selectedOfficial?.id === official.id
+                    ? "border-accent/50 bg-accent/10"
+                    : "border-glass-border bg-surface"
+                }`}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-base font-semibold text-foreground">
+                      {buildFullName(official)}
+                    </h3>
+                    <p className="mt-1 text-sm text-muted">
+                      {formatEnumLabel(official.position ?? official.role)}
+                    </p>
+                    <p className="mt-1 text-xs text-muted">
+                      {official.barangay ?? "N/A"} | {official.municipality ?? "N/A"}
+                    </p>
+                  </div>
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      official.status === "ACTIVE"
+                        ? "bg-emerald-500/15 text-emerald-200"
+                        : "bg-rose-500/15 text-rose-200"
+                    }`}
+                  >
+                    {official.status}
+                  </span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                  <span className="rounded-full border border-accent/40 bg-accent/15 px-2.5 py-1 text-accent">
+                    {buildCredentialNumber(official)}
+                  </span>
+                  <span className="rounded-full border border-glass-border bg-surface-elevated/60 px-2.5 py-1 text-muted">
+                    User: {official.userStatus ?? "NO_ACCOUNT"}
+                  </span>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedOfficialId(official.id)}
+                    className="rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-accent-foreground transition hover:opacity-90"
+                  >
+                    Preview
+                  </button>
+                  <Link
+                    href={`/id/${official.id}`}
+                    target="_blank"
+                    className="rounded-lg border border-glass-border px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-elevated/70"
+                  >
+                    Print
+                  </Link>
+                </div>
+              </article>
+            ))
+          )}
+        </div>
+
+        <aside className="rounded-2xl border border-glass-border bg-surface p-4 shadow-xl backdrop-blur-md">
+          {selectedOfficial ? (
+            <>
+              <div className="mb-4">
+                <p className="text-xs uppercase tracking-[0.14em] text-muted">Production Preview</p>
+                <h3 className="mt-1 text-lg font-semibold text-foreground">
+                  {buildFullName(selectedOfficial)}
+                </h3>
+              </div>
+              <FlippablePortraitID
+                fullName={buildFullName(selectedOfficial)}
+                position={formatEnumLabel(selectedOfficial.position ?? selectedOfficial.role)}
+                skfedPosition={
+                  selectedOfficial.skFederationOfficer
+                    ? formatEnumLabel(selectedOfficial.skFederationPosition)
+                    : null
+                }
+                barangay={selectedOfficial.barangay ?? "Not specified"}
+                municipality={selectedOfficial.municipality ?? "Not specified"}
+                sitio={selectedOfficial.sitio}
+                dateElected={selectedOfficial.dateElected}
+                idNumber={buildCredentialNumber(selectedOfficial)}
+                qrValue={buildQrValue(selectedOfficial)}
+                photoUrl={buildPhotoUrl(selectedOfficial)}
+                registryStatus={selectedOfficial.status}
+                sktechLogoUrl="/sk-tech-logo.png"
+                provincialSealUrl="/images/provincial-seal-logo.png"
+                skfedLogoUrl="/login-logo.png"
+              />
+            </>
+          ) : (
+            <p className="text-sm text-muted">No ID preview available.</p>
+          )}
+        </aside>
       </section>
     </div>
   );

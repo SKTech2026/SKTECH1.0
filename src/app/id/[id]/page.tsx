@@ -1,16 +1,9 @@
 import FlippablePortraitID from "@/components/id/FlippablePortraitID";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/db";
-import { formatOfficialFullName } from "@/lib/sk-official";
+import { formatEnumLabel, formatOfficialFullName } from "@/lib/sk-official";
 
 export const dynamic = "force-dynamic";
-
-const formatEnumLabel = (value: string) =>
-  value
-    .toLowerCase()
-    .split("_")
-    .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
-    .join(" ");
 
 export default async function IDPage({
   params,
@@ -39,13 +32,16 @@ export default async function IDPage({
       suffix: true,
       role: true,
       position: true,
+      skFederationOfficer: true,
+      skFederationPosition: true,
       municipality: true,
       barangay: true,
+      sitio: true,
       dateElected: true,
       termStart: true,
-      termEnd: true,
       address: true,
       admissionStatus: true,
+      status: true,
       user: {
         select: {
           image: true,
@@ -81,20 +77,13 @@ export default async function IDPage({
 
   const fullName = formatOfficialFullName(official);
   const position = formatEnumLabel((official.position ?? "SK_COUNCILOR").toString());
+  const skfedPosition =
+    official.skFederationOfficer && official.skFederationPosition
+      ? formatEnumLabel(official.skFederationPosition)
+      : null;
   const barangay = official.barangay ?? fallbackBarangay ?? "Not specified";
   const municipality = official.municipality ?? fallbackMunicipality ?? "Not specified";
-  const termStart = official.dateElected ?? official.termStart;
-  const termEnd = official.termEnd ?? official.termStart;
   const idNumber = official.id.replace(/-/g, "").slice(-12).toUpperCase();
-  const termPeriod = `${new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "2-digit",
-    year: "numeric",
-  }).format(termStart)} - ${new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "2-digit",
-    year: "numeric",
-  }).format(termEnd)}`;
 
   return (
     <div className="min-h-screen bg-[#eef2f6] px-4 py-8 text-[#13213b] sm:px-6 sm:py-12">
@@ -113,7 +102,10 @@ export default async function IDPage({
           position={position}
           barangay={barangay}
           municipality={municipality}
-          termPeriod={termPeriod}
+          sitio={official.sitio}
+          skfedPosition={skfedPosition}
+          dateElected={(official.dateElected ?? official.termStart).toISOString()}
+          registryStatus={official.status}
           photoUrl={photoUrl}
           qrValue={`${baseUrl}/id/${official.id}`}
           idNumber={idNumber}
