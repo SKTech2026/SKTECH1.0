@@ -1,7 +1,7 @@
 "use client";
 
 import { Camera, ChevronLeft, ChevronRight, FileCheck2, UserCheck, Video, VideoOff } from "lucide-react";
-import { OfficialPosition } from "@prisma/client";
+import { OfficialPosition, SKFederationPosition, Sex } from "@prisma/client";
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -9,9 +9,12 @@ import {
   AdmissionProofUploadPayload,
   MunicipalityOption,
   OFFICIAL_POSITION_OPTIONS,
+  SEX_OPTIONS,
+  SKFED_POSITION_OPTIONS,
   SKOfficialAdmissionSubmissionPayload,
   SKOfficialFormPayload,
-  toTermEndDate,
+  calculateAge,
+  formatEnumLabel,
   validateSKOfficialPayload,
 } from "@/lib/sk-official";
 
@@ -30,6 +33,7 @@ type SKOfficialAdmissionWizardProps = {
   submitting?: boolean;
   submitLabel?: string;
   statusLabel?: string | null;
+  profileOnly?: boolean;
   onSubmit: (payload: SKOfficialAdmissionSubmissionPayload) => Promise<void> | void;
 };
 
@@ -64,14 +68,6 @@ function frameFromVideo(video: HTMLVideoElement): string | null {
   return canvas.toDataURL("image/jpeg", 0.9);
 }
 
-function formatPositionLabel(value: OfficialPosition): string {
-  return value
-    .toLowerCase()
-    .split("_")
-    .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
-    .join(" ");
-}
-
 export default function SKOfficialAdmissionWizard({
   municipalities,
   initialValues,
@@ -81,21 +77,31 @@ export default function SKOfficialAdmissionWizard({
   submitting = false,
   submitLabel = "Submit Admission",
   statusLabel = null,
+  profileOnly = false,
   onSubmit,
 }: SKOfficialAdmissionWizardProps) {
-  const [step, setStep] = useState(clampStep(initialStep));
+  const totalSteps = profileOnly ? 1 : TOTAL_STEPS;
+  const [step, setStep] = useState(profileOnly ? 1 : clampStep(initialStep));
   const [error, setError] = useState<string | null>(null);
 
   const [firstName, setFirstName] = useState(initialValues?.firstName ?? "");
   const [middleName, setMiddleName] = useState(initialValues?.middleName ?? "");
   const [lastName, setLastName] = useState(initialValues?.lastName ?? "");
+  const [suffix, setSuffix] = useState(initialValues?.suffix ?? "");
   const [birthDate, setBirthDate] = useState(initialValues?.birthDate ?? "");
+  const [sex, setSex] = useState<Sex | null>(initialValues?.sex ?? null);
   const [province, setProvince] = useState(initialValues?.province ?? "Oriental Mindoro");
   const [municipalityId, setMunicipalityId] = useState(initialValues?.municipalityId ?? "");
   const [barangayId, setBarangayId] = useState(initialValues?.barangayId ?? "");
+  const [sitio, setSitio] = useState(initialValues?.sitio ?? "");
   const [position, setPosition] = useState<OfficialPosition>(
     initialValues?.position ?? "SK_CHAIRPERSON",
   );
+  const [skFederationOfficer, setSkFederationOfficer] = useState(
+    initialValues?.skFederationOfficer ?? false,
+  );
+  const [skFederationPosition, setSkFederationPosition] =
+    useState<SKFederationPosition | null>(initialValues?.skFederationPosition ?? null);
   const [dateElected, setDateElected] = useState(initialValues?.dateElected ?? "");
   const [email, setEmail] = useState(initialValues?.email ?? "");
   const [contactNo, setContactNo] = useState(initialValues?.contactNo ?? "");
@@ -116,7 +122,7 @@ export default function SKOfficialAdmissionWizard({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  const termEnd = useMemo(() => toTermEndDate(dateElected), [dateElected]);
+  const age = useMemo(() => calculateAge(birthDate), [birthDate]);
 
   const selectedMunicipality = useMemo(
     () => municipalities.find((entry) => entry.id === municipalityId) ?? null,
@@ -149,13 +155,18 @@ export default function SKOfficialAdmissionWizard({
       firstName: firstName.trim(),
       middleName: middleName.trim() || null,
       lastName: lastName.trim(),
+      suffix: suffix.trim() || null,
       birthDate,
+      sex,
       province: province.trim(),
       municipalityId,
       barangayId,
+      sitio: sitio.trim() || null,
       position,
+      skFederationOfficer,
+      skFederationPosition: skFederationOfficer ? skFederationPosition : null,
       dateElected,
-      termEnd,
+      termEnd: initialValues?.termEnd ?? null,
       email: email.trim(),
       contactNo: contactNo.trim() || null,
       address: address.trim() || null,
@@ -164,13 +175,18 @@ export default function SKOfficialAdmissionWizard({
       firstName,
       middleName,
       lastName,
+      suffix,
       birthDate,
+      sex,
       province,
       municipalityId,
       barangayId,
+      sitio,
       position,
+      skFederationOfficer,
+      skFederationPosition,
       dateElected,
-      termEnd,
+      initialValues?.termEnd,
       email,
       contactNo,
       address,
@@ -341,7 +357,7 @@ export default function SKOfficialAdmissionWizard({
   };
 
   const nextStep = () => {
-    const targetStep = Math.min(TOTAL_STEPS, step + 1);
+    const targetStep = Math.min(totalSteps, step + 1);
     if (!validateStep(targetStep)) return;
     setError(null);
     setStep(targetStep);
@@ -353,7 +369,24 @@ export default function SKOfficialAdmissionWizard({
   };
 
   const submit = async () => {
-    if (!validateStep(4)) return;
+    if (!validateStep(totalSteps)) return;
+    if (profileOnly) {
+      setError(null);
+      await onSubmit({
+        ...assembledPayload,
+        proofUpload: {
+          fileName: "",
+          mimeType: "",
+          dataUrl: "",
+        },
+        faceCapture: {
+          imageBase64: "",
+          livenessFrames: [],
+        },
+      });
+      return;
+    }
+
     if (!proofUpload) {
       setError("Please re-upload proof document before final submission.");
       setStep(2);
@@ -380,7 +413,7 @@ export default function SKOfficialAdmissionWizard({
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          {[1, 2, 3, 4].map((index) => (
+          {Array.from({ length: totalSteps }, (_, item) => item + 1).map((index) => (
             <button
               key={index}
               type="button"
@@ -420,7 +453,7 @@ export default function SKOfficialAdmissionWizard({
             </p>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-4">
             <div>
               <label className="text-xs uppercase tracking-[0.14em] text-muted">Last Name</label>
               <input className={inputClass} value={lastName} onChange={(e) => setLastName(e.target.value)} />
@@ -433,6 +466,10 @@ export default function SKOfficialAdmissionWizard({
               <label className="text-xs uppercase tracking-[0.14em] text-muted">Middle Name</label>
               <input className={inputClass} value={middleName} onChange={(e) => setMiddleName(e.target.value)} />
             </div>
+            <div>
+              <label className="text-xs uppercase tracking-[0.14em] text-muted">Suffix</label>
+              <input className={inputClass} value={suffix} onChange={(e) => setSuffix(e.target.value)} placeholder="Jr., Sr., III" />
+            </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
@@ -441,12 +478,30 @@ export default function SKOfficialAdmissionWizard({
               <input type="date" className={inputClass} value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
             </div>
             <div>
-              <label className="text-xs uppercase tracking-[0.14em] text-muted">Date Elected</label>
-              <input type="date" className={inputClass} value={dateElected} onChange={(e) => setDateElected(e.target.value)} />
+              <label className="text-xs uppercase tracking-[0.14em] text-muted">Age</label>
+              <input className={inputClass} value={age ?? ""} disabled readOnly />
             </div>
             <div>
-              <label className="text-xs uppercase tracking-[0.14em] text-muted">Term End (Auto)</label>
-              <input type="date" className={inputClass} value={termEnd} disabled readOnly />
+              <label className="text-xs uppercase tracking-[0.14em] text-muted">Sex</label>
+              <select
+                className={inputClass}
+                value={sex ?? ""}
+                onChange={(e) => setSex(e.target.value ? (e.target.value as Sex) : null)}
+              >
+                <option value="">Select sex</option>
+                {SEX_OPTIONS.map((entry) => (
+                  <option key={entry} value={entry}>
+                    {formatEnumLabel(entry)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <label className="text-xs uppercase tracking-[0.14em] text-muted">Date Elected</label>
+              <input type="date" className={inputClass} value={dateElected} onChange={(e) => setDateElected(e.target.value)} />
             </div>
           </div>
 
@@ -464,10 +519,23 @@ export default function SKOfficialAdmissionWizard({
               >
                 {OFFICIAL_POSITION_OPTIONS.map((entry) => (
                   <option key={entry} value={entry}>
-                    {formatPositionLabel(entry)}
+                    {formatEnumLabel(entry)}
                   </option>
                 ))}
               </select>
+            </div>
+            <div>
+              <label className="flex items-center gap-3 pt-8 text-xs uppercase tracking-[0.14em] text-muted">
+                <input
+                  type="checkbox"
+                  checked={skFederationOfficer}
+                  onChange={(e) => {
+                    setSkFederationOfficer(e.target.checked);
+                    if (!e.target.checked) setSkFederationPosition(null);
+                  }}
+                />
+                SK Federation Officer
+              </label>
             </div>
             {includeEmail ? (
               <div>
@@ -483,6 +551,28 @@ export default function SKOfficialAdmissionWizard({
               </div>
             ) : null}
           </div>
+
+          {skFederationOfficer ? (
+            <div>
+              <label className="text-xs uppercase tracking-[0.14em] text-muted">SKFED Position</label>
+              <select
+                className={inputClass}
+                value={skFederationPosition ?? ""}
+                onChange={(e) =>
+                  setSkFederationPosition(
+                    e.target.value ? (e.target.value as SKFederationPosition) : null,
+                  )
+                }
+              >
+                <option value="">Select SKFED position</option>
+                {SKFED_POSITION_OPTIONS.map((entry) => (
+                  <option key={entry} value={entry}>
+                    {formatEnumLabel(entry)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
 
           <div className="grid gap-4 md:grid-cols-2">
             <div>
@@ -531,6 +621,10 @@ export default function SKOfficialAdmissionWizard({
             <div>
               <label className="text-xs uppercase tracking-[0.14em] text-muted">Address</label>
               <textarea rows={3} className={inputClass} value={address} onChange={(e) => setAddress(e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs uppercase tracking-[0.14em] text-muted">Sitio</label>
+              <input className={inputClass} value={sitio} onChange={(e) => setSitio(e.target.value)} />
             </div>
           </div>
         </section>
@@ -666,12 +760,14 @@ export default function SKOfficialAdmissionWizard({
             <div className="rounded-xl border border-glass-border bg-surface p-3">
               <p className="text-xs uppercase tracking-[0.14em] text-muted">Full Name</p>
               <p className="mt-1 text-sm text-foreground">
-                {[firstName, middleName, lastName].filter(Boolean).join(" ")}
+                {[firstName, middleName, lastName, suffix].filter(Boolean).join(" ")}
               </p>
             </div>
             <div className="rounded-xl border border-glass-border bg-surface p-3">
-              <p className="text-xs uppercase tracking-[0.14em] text-muted">Birth Date</p>
-              <p className="mt-1 text-sm text-foreground">{birthDate || "N/A"}</p>
+              <p className="text-xs uppercase tracking-[0.14em] text-muted">Birth Date / Age / Sex</p>
+              <p className="mt-1 text-sm text-foreground">
+                {birthDate || "N/A"} / {age ?? "N/A"} / {sex ? formatEnumLabel(sex) : "N/A"}
+              </p>
             </div>
             <div className="rounded-xl border border-glass-border bg-surface p-3">
               <p className="text-xs uppercase tracking-[0.14em] text-muted">Municipality / Barangay</p>
@@ -681,12 +777,15 @@ export default function SKOfficialAdmissionWizard({
             </div>
             <div className="rounded-xl border border-glass-border bg-surface p-3">
               <p className="text-xs uppercase tracking-[0.14em] text-muted">Position</p>
-              <p className="mt-1 text-sm text-foreground">{formatPositionLabel(position)}</p>
+              <p className="mt-1 text-sm text-foreground">{formatEnumLabel(position)}</p>
             </div>
             <div className="rounded-xl border border-glass-border bg-surface p-3">
-              <p className="text-xs uppercase tracking-[0.14em] text-muted">Date Elected / Term End</p>
-              <p className="mt-1 text-sm text-foreground">
-                {dateElected || "N/A"} - {termEnd || "N/A"}
+              <p className="text-xs uppercase tracking-[0.14em] text-muted">Date Elected / SKFED</p>
+              <p className="mt-1 text-sm text-foreground">{dateElected || "N/A"}</p>
+              <p className="mt-1 text-xs text-muted">
+                {skFederationOfficer
+                  ? `SKFED: ${formatEnumLabel(skFederationPosition)}`
+                  : "Not a SKFED officer"}
               </p>
             </div>
             <div className="rounded-xl border border-glass-border bg-surface p-3">
@@ -718,7 +817,7 @@ export default function SKOfficialAdmissionWizard({
           Back
         </button>
 
-        {step < TOTAL_STEPS ? (
+        {step < totalSteps ? (
           <button
             type="button"
             onClick={nextStep}

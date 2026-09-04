@@ -6,7 +6,9 @@ import { useMemo, useState } from "react";
 type OfficialRecord = {
   id: string;
   firstName: string;
+  middleName: string | null;
   lastName: string;
+  suffix: string | null;
   role: string;
   status: string;
   admissionStatus: string;
@@ -63,7 +65,10 @@ export default function IdProductionClient({
         return true;
       }
 
-      const fullName = `${official.firstName} ${official.lastName}`.toLowerCase();
+      const fullName = [official.firstName, official.middleName, official.lastName, official.suffix]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
       return (
         fullName.includes(keyword) ||
         (official.municipality ?? "").toLowerCase().includes(keyword) ||
@@ -140,7 +145,9 @@ export default function IdProductionClient({
               className="rounded-2xl border border-glass-border bg-surface p-5 shadow-xl backdrop-blur-md"
             >
               <h3 className="text-lg font-semibold text-foreground">
-                {official.firstName} {official.lastName}
+                {[official.firstName, official.middleName, official.lastName, official.suffix]
+                  .filter(Boolean)
+                  .join(" ")}
               </h3>
               <p className="mt-1 text-sm text-muted">{official.role}</p>
               <p className="mt-1 text-xs text-muted">

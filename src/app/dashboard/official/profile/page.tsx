@@ -27,9 +27,15 @@ export default async function OfficialProfilePage() {
             firstName: true,
             middleName: true,
             lastName: true,
+            suffix: true,
+            birthDate: true,
+            sex: true,
             position: true,
+            skFederationOfficer: true,
+            skFederationPosition: true,
             municipalityId: true,
             barangayId: true,
+            sitio: true,
             dateElected: true,
             termEnd: true,
             contactNo: true,
@@ -95,9 +101,15 @@ export default async function OfficialProfilePage() {
           firstName: user.official.firstName,
           middleName: user.official.middleName ?? "",
           lastName: user.official.lastName,
+          suffix: user.official.suffix ?? "",
+          birthDate: user.official.birthDate?.toISOString().slice(0, 10) ?? "",
+          sex: user.official.sex,
           position: user.official.position ?? "SK_CHAIRPERSON",
+          skFederationOfficer: user.official.skFederationOfficer,
+          skFederationPosition: user.official.skFederationPosition,
           municipalityId: user.official.municipalityId ?? "",
           barangayId: user.official.barangayId ?? "",
+          sitio: user.official.sitio ?? "",
           dateElected: user.official.dateElected?.toISOString().slice(0, 10) ?? "",
           termEnd: user.official.termEnd?.toISOString().slice(0, 10) ?? "",
           contactNo: user.official.contactNo ?? "",
@@ -109,4 +121,3 @@ export default async function OfficialProfilePage() {
     </div>
   );
 }
-

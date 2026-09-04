@@ -52,6 +52,17 @@ export type DashboardAnalytics = {
     label: string;
     count: number;
   } | null;
+  profile: {
+    sexBreakdown: Array<{ label: string; count: number }>;
+    ageBreakdown: Array<{ label: string; count: number }>;
+    municipalityBreakdown: Array<{ label: string; count: number }>;
+    barangayBreakdown: Array<{ label: string; count: number }>;
+    sitioBreakdown: Array<{ label: string; count: number }>;
+    positionBreakdown: Array<{ label: string; count: number }>;
+    skFederationBreakdown: Array<{ label: string; count: number }>;
+    lifecycleBreakdown: Array<{ label: string; count: number }>;
+    missingOptionalDimensions: string[];
+  };
 };
 
 type DashboardAnalyticsClientProps = {
@@ -74,6 +85,40 @@ const pieColors = [
   "var(--color-accent)",
   "color-mix(in oklab, var(--color-muted) 70%, var(--color-background))",
 ];
+
+const formatLabel = (value: string) =>
+  value
+    .toLowerCase()
+    .split("_")
+    .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
+    .join(" ");
+
+function MiniBreakdown({
+  title,
+  data,
+}: {
+  title: string;
+  data: Array<{ label: string; count: number }>;
+}) {
+  const topRows = data.slice(0, 6);
+  return (
+    <div className="rounded-lg border border-glass-border bg-surface-elevated p-4">
+      <p className="text-xs uppercase tracking-wide text-muted">{title}</p>
+      <div className="mt-3 space-y-2">
+        {topRows.length === 0 ? (
+          <p className="text-sm text-muted">No profile data yet.</p>
+        ) : (
+          topRows.map((entry) => (
+            <div key={entry.label} className="flex items-center justify-between gap-3 text-sm">
+              <span className="truncate text-muted">{formatLabel(entry.label)}</span>
+              <span className="font-semibold text-foreground">{entry.count.toLocaleString()}</span>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function DashboardAnalyticsClient({
   analytics,
@@ -318,6 +363,27 @@ export default function DashboardAnalyticsClient({
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="rounded-xl border border-glass-border bg-surface-elevated p-5 shadow-lg">
+        <h2 className="text-lg font-semibold text-foreground">SK Official Profile Analytics</h2>
+        <p className="mt-1 text-sm text-muted">
+          Live breakdowns from the canonical SK Official profile records.
+        </p>
+        <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <MiniBreakdown title="Sex" data={analytics.profile.sexBreakdown} />
+          <MiniBreakdown title="Age Classification" data={analytics.profile.ageBreakdown} />
+          <MiniBreakdown title="SK Position" data={analytics.profile.positionBreakdown} />
+          <MiniBreakdown title="SKFED" data={analytics.profile.skFederationBreakdown} />
+          <MiniBreakdown title="Municipality" data={analytics.profile.municipalityBreakdown} />
+          <MiniBreakdown title="Barangay" data={analytics.profile.barangayBreakdown} />
+          <MiniBreakdown title="Sitio" data={analytics.profile.sitioBreakdown} />
+          <MiniBreakdown title="Lifecycle" data={analytics.profile.lifecycleBreakdown} />
+        </div>
+        <p className="mt-4 text-xs text-muted">
+          Missing optional profile dimensions:{" "}
+          {analytics.profile.missingOptionalDimensions.join(", ")}.
+        </p>
       </div>
     </div>
   );

@@ -1,13 +1,16 @@
 "use client";
 
-import { OfficialPosition } from "@prisma/client";
+import { OfficialPosition, SKFederationPosition, Sex } from "@prisma/client";
 import { useMemo, useState } from "react";
 
 import {
   MunicipalityOption,
   OFFICIAL_POSITION_OPTIONS,
+  SEX_OPTIONS,
+  SKFED_POSITION_OPTIONS,
   SKOfficialFormPayload,
-  toTermEndDate,
+  calculateAge,
+  formatEnumLabel,
   validateSKOfficialPayload,
 } from "@/lib/sk-official";
 
@@ -36,22 +39,31 @@ export default function SKOfficialForm({
   const [firstName, setFirstName] = useState(initialValues?.firstName ?? "");
   const [middleName, setMiddleName] = useState(initialValues?.middleName ?? "");
   const [lastName, setLastName] = useState(initialValues?.lastName ?? "");
+  const [suffix, setSuffix] = useState(initialValues?.suffix ?? "");
   const [birthDate, setBirthDate] = useState(initialValues?.birthDate ?? "");
+  const [sex, setSex] = useState(initialValues?.sex ?? null);
   const [province, setProvince] = useState(initialValues?.province ?? "Oriental Mindoro");
   const [municipalityId, setMunicipalityId] = useState(initialValues?.municipalityId ?? "");
   const [barangayId, setBarangayId] = useState(initialValues?.barangayId ?? "");
   const [position, setPosition] = useState<OfficialPosition>(
     initialValues?.position ?? "SK_CHAIRPERSON",
   );
+  const [skFederationOfficer, setSkFederationOfficer] = useState(
+    initialValues?.skFederationOfficer ?? false,
+  );
+  const [skFederationPosition, setSkFederationPosition] = useState(
+    initialValues?.skFederationPosition ?? null,
+  );
   const [dateElected, setDateElected] = useState(initialValues?.dateElected ?? "");
   const [email, setEmail] = useState(initialValues?.email ?? "");
   const [contactNo, setContactNo] = useState(initialValues?.contactNo ?? "");
   const [address, setAddress] = useState(initialValues?.address ?? "");
+  const [sitio, setSitio] = useState(initialValues?.sitio ?? "");
   const [municipalitySearch, setMunicipalitySearch] = useState("");
   const [barangaySearch, setBarangaySearch] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const termEnd = useMemo(() => toTermEndDate(dateElected), [dateElected]);
+  const age = useMemo(() => calculateAge(birthDate), [birthDate]);
 
   const filteredMunicipalities = useMemo(() => {
     const keyword = municipalitySearch.trim().toLowerCase();
@@ -89,13 +101,18 @@ export default function SKOfficialForm({
       firstName: firstName.trim(),
       middleName: middleName.trim() || null,
       lastName: lastName.trim(),
+      suffix: suffix.trim() || null,
       birthDate,
+      sex,
       province: province.trim(),
       municipalityId,
       barangayId,
+      sitio: sitio.trim() || null,
       position,
+      skFederationOfficer,
+      skFederationPosition: skFederationOfficer ? skFederationPosition : null,
       dateElected,
-      termEnd,
+      termEnd: initialValues?.termEnd ?? null,
       email: email.trim(),
       contactNo: contactNo.trim() || null,
       address: address.trim() || null,
@@ -127,7 +144,7 @@ export default function SKOfficialForm({
         </p>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <div>
           <label className="text-xs uppercase tracking-[0.14em] text-muted">First Name</label>
           <input className={inputClass} value={firstName} onChange={(e) => setFirstName(e.target.value)} />
@@ -140,6 +157,10 @@ export default function SKOfficialForm({
           <label className="text-xs uppercase tracking-[0.14em] text-muted">Last Name</label>
           <input className={inputClass} value={lastName} onChange={(e) => setLastName(e.target.value)} />
         </div>
+        <div>
+          <label className="text-xs uppercase tracking-[0.14em] text-muted">Suffix</label>
+          <input className={inputClass} value={suffix} onChange={(e) => setSuffix(e.target.value)} placeholder="Jr., Sr., III" />
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -148,6 +169,28 @@ export default function SKOfficialForm({
           <input type="date" className={inputClass} value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
         </div>
         <div>
+          <label className="text-xs uppercase tracking-[0.14em] text-muted">Age</label>
+          <input className={inputClass} value={age ?? ""} readOnly disabled />
+        </div>
+        <div>
+          <label className="text-xs uppercase tracking-[0.14em] text-muted">Sex</label>
+          <select
+            className={inputClass}
+            value={sex ?? ""}
+            onChange={(e) => setSex(e.target.value ? (e.target.value as Sex) : null)}
+          >
+            <option value="">Select sex</option>
+            {SEX_OPTIONS.map((entry) => (
+              <option key={entry} value={entry}>
+                {formatEnumLabel(entry)}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <div>
           <label className="text-xs uppercase tracking-[0.14em] text-muted">Date Elected</label>
           <input
             type="date"
@@ -155,10 +198,6 @@ export default function SKOfficialForm({
             value={dateElected}
             onChange={(e) => setDateElected(e.target.value)}
           />
-        </div>
-        <div>
-          <label className="text-xs uppercase tracking-[0.14em] text-muted">Term End (Auto)</label>
-          <input type="date" className={inputClass} value={termEnd} readOnly disabled />
         </div>
       </div>
 
@@ -176,12 +215,47 @@ export default function SKOfficialForm({
           >
             {OFFICIAL_POSITION_OPTIONS.map((entry) => (
               <option key={entry} value={entry}>
-                {entry.replaceAll("_", " ")}
+                {formatEnumLabel(entry)}
               </option>
             ))}
           </select>
         </div>
+        <div>
+          <label className="flex items-center gap-3 pt-8 text-xs uppercase tracking-[0.14em] text-muted">
+            <input
+              type="checkbox"
+              checked={skFederationOfficer}
+              onChange={(e) => {
+                setSkFederationOfficer(e.target.checked);
+                if (!e.target.checked) setSkFederationPosition(null);
+              }}
+            />
+            SK Federation Officer
+          </label>
+        </div>
       </div>
+
+      {skFederationOfficer ? (
+        <div>
+          <label className="text-xs uppercase tracking-[0.14em] text-muted">SKFED Position</label>
+          <select
+            className={inputClass}
+            value={skFederationPosition ?? ""}
+            onChange={(e) =>
+              setSkFederationPosition(
+                e.target.value ? (e.target.value as SKFederationPosition) : null,
+              )
+            }
+          >
+            <option value="">Select SKFED position</option>
+            {SKFED_POSITION_OPTIONS.map((entry) => (
+              <option key={entry} value={entry}>
+                {formatEnumLabel(entry)}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
 
       <div className="grid gap-4 md:grid-cols-2">
         <div>
@@ -251,6 +325,11 @@ export default function SKOfficialForm({
           <label className="text-xs uppercase tracking-[0.14em] text-muted">Contact Number</label>
           <input className={inputClass} value={contactNo} onChange={(e) => setContactNo(e.target.value)} />
         </div>
+      </div>
+
+      <div>
+        <label className="text-xs uppercase tracking-[0.14em] text-muted">Sitio</label>
+        <input className={inputClass} value={sitio} onChange={(e) => setSitio(e.target.value)} />
       </div>
 
       <div>

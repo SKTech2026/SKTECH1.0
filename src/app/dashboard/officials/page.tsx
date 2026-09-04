@@ -1,12 +1,20 @@
 "use client";
 
-import { AdmissionStatus, OfficialPosition, OfficialStatus } from "@prisma/client";
+import {
+  AdmissionStatus,
+  OfficialPosition,
+  OfficialStatus,
+  SKFederationPosition,
+  Sex,
+} from "@prisma/client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import SKOfficialAdmissionWizard from "@/components/admission/SKOfficialAdmissionWizard";
 import {
   MunicipalityOption,
   SKOfficialAdmissionSubmissionPayload,
+  formatEnumLabel,
+  formatOfficialFullName,
 } from "@/lib/sk-official";
 
 type SKOfficialRecord = {
@@ -14,11 +22,17 @@ type SKOfficialRecord = {
   firstName: string;
   middleName: string | null;
   lastName: string;
+  suffix: string | null;
+  birthDate: string | null;
+  sex: Sex | null;
   municipality: string | null;
   barangay: string | null;
   municipalityId: string | null;
   barangayId: string | null;
+  sitio: string | null;
   position: OfficialPosition | null;
+  skFederationOfficer: boolean;
+  skFederationPosition: SKFederationPosition | null;
   dateElected: string | null;
   termEnd: string | null;
   admissionStatus: AdmissionStatus;
@@ -30,6 +44,7 @@ type SKOfficialRecord = {
 
 type ApiResponse = {
   data: SKOfficialRecord[];
+  viewerRole: "ADMIN" | "STAFF";
   municipalities: MunicipalityOption[];
   pagination: {
     total: number;
@@ -37,15 +52,6 @@ type ApiResponse = {
     skip: number;
     pages: number;
   };
-};
-
-const formatEnumLabel = (value: string | null) => {
-  if (!value) return "N/A";
-  return value
-    .toLowerCase()
-    .split("_")
-    .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
-    .join(" ");
 };
 
 const formatDate = (value: string | null) => {
@@ -64,14 +70,18 @@ export default function OfficialsPage() {
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submissionMode, setSubmissionMode] = useState<"ACCOUNT" | "WALK_IN">("ACCOUNT");
+  const [editingOfficial, setEditingOfficial] = useState<SKOfficialRecord | null>(null);
+  const [savingOfficialId, setSavingOfficialId] = useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [municipalityFilter, setMunicipalityFilter] = useState("");
   const [admissionFilter, setAdmissionFilter] = useState<"" | AdmissionStatus>("");
   const [currentPage, setCurrentPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
+  const [viewerRole, setViewerRole] = useState<"ADMIN" | "STAFF" | null>(null);
 
   const pageSize = 12;
+  const isAdmin = viewerRole === "ADMIN";
 
   const fetchOfficials = useCallback(
     async (page = 0) => {
@@ -96,6 +106,7 @@ export default function OfficialsPage() {
         }
 
         setOfficials(payload.data);
+        setViewerRole(payload.viewerRole);
         setMunicipalities(payload.municipalities);
         setTotalCount(payload.pagination.total);
         setCurrentPage(page);
@@ -143,6 +154,70 @@ export default function OfficialsPage() {
       setError(submitError instanceof Error ? submitError.message : "Failed to create official.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const saveOfficial = async (payload: SKOfficialAdmissionSubmissionPayload) => {
+    if (!editingOfficial) return;
+    setSavingOfficialId(editingOfficial.id);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch(`/api/officials/${editingOfficial.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const body = (await response.json()) as { error?: string; message?: string };
+      if (!response.ok) {
+        throw new Error(body.error ?? "Failed to update official.");
+      }
+
+      setSuccess(body.message ?? "Official record updated.");
+      setEditingOfficial(null);
+      await fetchOfficials(currentPage);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Failed to update official.");
+    } finally {
+      setSavingOfficialId(null);
+    }
+  };
+
+  const setOfficialStatus = async (official: SKOfficialRecord, nextStatus: OfficialStatus) => {
+    setSavingOfficialId(official.id);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch(`/api/officials/${official.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+
+      const body = (await response.json()) as { error?: string; message?: string };
+      if (!response.ok) {
+        throw new Error(body.error ?? "Failed to update official status.");
+      }
+
+      setSuccess(
+        nextStatus === "ACTIVE"
+          ? "Official record reactivated."
+          : "Official record deactivated.",
+      );
+      await fetchOfficials(currentPage);
+    } catch (statusError) {
+      setError(
+        statusError instanceof Error ? statusError.message : "Failed to update official status.",
+      );
+    } finally {
+      setSavingOfficialId(null);
     }
   };
 
@@ -233,6 +308,56 @@ export default function OfficialsPage() {
         </section>
       ) : null}
 
+      {editingOfficial ? (
+        <section className="rounded-2xl border border-glass-border bg-surface p-5 shadow-xl backdrop-blur-md">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">Edit Official Profile</h3>
+              <p className="mt-1 text-sm text-muted">
+                Admin-only updates use the same canonical profile fields.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setEditingOfficial(null)}
+              className="rounded-lg border border-glass-border px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-elevated/70"
+            >
+              Cancel
+            </button>
+          </div>
+          <div className="mt-5">
+            <SKOfficialAdmissionWizard
+              municipalities={municipalities}
+              includeEmail
+              requireEmail={false}
+              initialStep={1}
+              profileOnly
+              submitLabel="Save Official Profile"
+              submitting={savingOfficialId === editingOfficial.id}
+              initialValues={{
+                firstName: editingOfficial.firstName,
+                middleName: editingOfficial.middleName,
+                lastName: editingOfficial.lastName,
+                suffix: editingOfficial.suffix,
+                birthDate: editingOfficial.birthDate?.slice(0, 10) ?? "",
+                sex: editingOfficial.sex,
+                province: "Oriental Mindoro",
+                municipalityId: editingOfficial.municipalityId ?? "",
+                barangayId: editingOfficial.barangayId ?? "",
+                sitio: editingOfficial.sitio,
+                position: editingOfficial.position ?? "SK_CHAIRPERSON",
+                skFederationOfficer: editingOfficial.skFederationOfficer,
+                skFederationPosition: editingOfficial.skFederationPosition,
+                dateElected: editingOfficial.dateElected?.slice(0, 10) ?? "",
+                termEnd: editingOfficial.termEnd?.slice(0, 10) ?? null,
+                email: editingOfficial.email ?? "",
+              }}
+              onSubmit={saveOfficial}
+            />
+          </div>
+        </section>
+      ) : null}
+
       <section className="rounded-2xl border border-glass-border bg-surface p-5 shadow-xl backdrop-blur-md">
         <h3 className="text-lg font-semibold text-foreground">Search & Filters</h3>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -317,6 +442,7 @@ export default function OfficialsPage() {
                   <th className="px-5 py-4">Term End</th>
                   <th className="px-5 py-4">Admission</th>
                   <th className="px-5 py-4">Status</th>
+                  {isAdmin ? <th className="px-5 py-4">Actions</th> : null}
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/10 text-foreground">
@@ -324,15 +450,18 @@ export default function OfficialsPage() {
                   <tr key={official.id}>
                     <td className="px-5 py-4">
                       <p className="font-medium">
-                        {[official.firstName, official.middleName, official.lastName]
-                          .filter(Boolean)
-                          .join(" ")}
+                        {formatOfficialFullName(official)}
                       </p>
                       <p className="text-xs text-muted">{official.email ?? "No email"}</p>
                     </td>
                     <td className="px-5 py-4">{formatEnumLabel(official.position)}</td>
                     <td className="px-5 py-4 text-muted">{official.municipality ?? "N/A"}</td>
-                    <td className="px-5 py-4 text-muted">{official.barangay ?? "N/A"}</td>
+                    <td className="px-5 py-4 text-muted">
+                      {official.barangay ?? "N/A"}
+                      {official.sitio ? (
+                        <span className="block text-xs">Sitio {official.sitio}</span>
+                      ) : null}
+                    </td>
                     <td className="px-5 py-4 text-muted">{formatDate(official.dateElected)}</td>
                     <td className="px-5 py-4 text-muted">{formatDate(official.termEnd)}</td>
                     <td className="px-5 py-4">
@@ -359,6 +488,32 @@ export default function OfficialsPage() {
                         {official.status}
                       </span>
                     </td>
+                    {isAdmin ? (
+                      <td className="px-5 py-4">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setEditingOfficial(official)}
+                            className="rounded-lg border border-glass-border px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-surface-elevated/70"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            disabled={savingOfficialId === official.id}
+                            onClick={() =>
+                              void setOfficialStatus(
+                                official,
+                                official.status === "ACTIVE" ? "INACTIVE" : "ACTIVE",
+                              )
+                            }
+                            className="rounded-lg border border-glass-border px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-surface-elevated/70 disabled:opacity-60"
+                          >
+                            {official.status === "ACTIVE" ? "Deactivate" : "Reactivate"}
+                          </button>
+                        </div>
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>

@@ -1,4 +1,4 @@
-import { OfficialPosition, Role } from "@prisma/client";
+import { OfficialPosition, Role, SKFederationPosition, Sex } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
@@ -10,7 +10,7 @@ import {
   OFFICIAL_PHOTO_MIME_TYPES,
   saveOfficialProfilePhoto,
 } from "@/lib/official-photo-storage";
-import { positionToLegacyRole, toTermEndDate } from "@/lib/sk-official";
+import { formatOfficialFullName, positionToLegacyRole } from "@/lib/sk-official";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +19,20 @@ const parseDate = (value: string) => new Date(`${value}T00:00:00`);
 function parsePosition(value: string): OfficialPosition | null {
   if (Object.values(OfficialPosition).includes(value as OfficialPosition)) {
     return value as OfficialPosition;
+  }
+  return null;
+}
+
+function parseSex(value: string): Sex | null {
+  if (Object.values(Sex).includes(value as Sex)) {
+    return value as Sex;
+  }
+  return null;
+}
+
+function parseSKFedPosition(value: string): SKFederationPosition | null {
+  if (Object.values(SKFederationPosition).includes(value as SKFederationPosition)) {
+    return value as SKFederationPosition;
   }
   return null;
 }
@@ -39,11 +53,19 @@ export async function PATCH(request: Request) {
     const firstName = String(formData.get("firstName") ?? "").trim();
     const middleNameRaw = String(formData.get("middleName") ?? "").trim();
     const lastName = String(formData.get("lastName") ?? "").trim();
+    const suffixRaw = String(formData.get("suffix") ?? "").trim();
+    const birthDate = String(formData.get("birthDate") ?? "").trim();
+    const sexValue = String(formData.get("sex") ?? "").trim();
     const dateElected = String(formData.get("dateElected") ?? "").trim();
     const termEndRaw = String(formData.get("termEnd") ?? "").trim();
     const municipalityId = String(formData.get("municipalityId") ?? "").trim();
     const barangayId = String(formData.get("barangayId") ?? "").trim();
+    const sitioRaw = String(formData.get("sitio") ?? "").trim();
     const positionValue = String(formData.get("position") ?? "").trim();
+    const skFederationOfficer = String(formData.get("skFederationOfficer") ?? "") === "true";
+    const skFederationPositionValue = String(
+      formData.get("skFederationPosition") ?? "",
+    ).trim();
     const contactNoRaw = String(formData.get("contactNo") ?? "").trim();
     const addressRaw = String(formData.get("address") ?? "").trim();
     const photo = formData.get("photo");
@@ -64,10 +86,33 @@ export async function PATCH(request: Request) {
     if (!dateElected) {
       return NextResponse.json({ error: "Date elected is required." }, { status: 400 });
     }
+    if (!birthDate) {
+      return NextResponse.json({ error: "Birth date is required." }, { status: 400 });
+    }
+
+    const sex = parseSex(sexValue);
+    if (!sex) {
+      return NextResponse.json({ error: "Sex is required." }, { status: 400 });
+    }
 
     const position = parsePosition(positionValue);
     if (!position) {
       return NextResponse.json({ error: "Invalid position." }, { status: 400 });
+    }
+
+    const skFederationPosition = skFederationOfficer
+      ? parseSKFedPosition(skFederationPositionValue)
+      : null;
+    if (skFederationOfficer && !skFederationPosition) {
+      return NextResponse.json(
+        { error: "SKFED position is required for SK Federation Officers." },
+        { status: 400 },
+      );
+    }
+
+    const parsedBirthDate = parseDate(birthDate);
+    if (Number.isNaN(parsedBirthDate.getTime())) {
+      return NextResponse.json({ error: "Invalid birth date." }, { status: 400 });
     }
 
     const parsedDateElected = parseDate(dateElected);
@@ -75,16 +120,15 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Invalid elected date." }, { status: 400 });
     }
 
-    const computedTermEnd = termEndRaw || toTermEndDate(dateElected);
-    const parsedTermEnd = parseDate(computedTermEnd);
-    if (Number.isNaN(parsedTermEnd.getTime())) {
+    const parsedTermEnd = termEndRaw ? parseDate(termEndRaw) : null;
+    if (parsedTermEnd && Number.isNaN(parsedTermEnd.getTime())) {
       return NextResponse.json({ error: "Invalid term end date." }, { status: 400 });
     }
 
     const [officialRecord, municipality, barangay] = await Promise.all([
       prisma.sKOfficial.findUnique({
         where: { userId: session.user.id },
-        select: { id: true },
+        select: { id: true, termEnd: true },
       }),
       prisma.municipality.findUnique({
         where: { id: municipalityId },
@@ -142,16 +186,22 @@ export async function PATCH(request: Request) {
           firstName,
           middleName: middleNameRaw || null,
           lastName,
+          suffix: suffixRaw || null,
+          birthDate: parsedBirthDate,
+          sex,
           province: municipality.province || "Oriental Mindoro",
           municipalityId: municipality.id,
           municipality: municipality.name,
           barangayId: barangay.id,
           barangay: barangay.name,
+          sitio: sitioRaw || null,
           position,
+          skFederationOfficer,
+          skFederationPosition,
           role: positionToLegacyRole(position),
           dateElected: parsedDateElected,
           termStart: parsedDateElected,
-          termEnd: parsedTermEnd,
+          termEnd: parsedTermEnd ?? officialRecord.termEnd,
           contactNo: contactNoRaw || null,
           address: addressRaw || null,
         },
@@ -160,11 +210,17 @@ export async function PATCH(request: Request) {
           firstName: true,
           middleName: true,
           lastName: true,
+          suffix: true,
+          birthDate: true,
+          sex: true,
           position: true,
+          skFederationOfficer: true,
+          skFederationPosition: true,
           municipality: true,
           barangay: true,
           municipalityId: true,
           barangayId: true,
+          sitio: true,
           dateElected: true,
           termEnd: true,
           contactNo: true,
@@ -176,7 +232,12 @@ export async function PATCH(request: Request) {
       const user = await tx.user.update({
         where: { id: session.user.id },
         data: {
-          name: `${firstName} ${lastName}`.trim(),
+          name: formatOfficialFullName({
+            firstName,
+            middleName: middleNameRaw || null,
+            lastName,
+            suffix: suffixRaw || null,
+          }),
           ...(photoUrl ? { image: photoUrl } : {}),
         },
         select: {

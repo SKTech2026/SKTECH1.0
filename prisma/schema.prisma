@@ -52,6 +52,20 @@ enum OfficialPosition {
   SK_COUNCILOR
 }
 
+enum Sex {
+  MALE
+  FEMALE
+}
+
+enum SKFederationPosition {
+  VICE_PRESIDENT
+  SECRETARY
+  TREASURER
+  AUDITOR
+  PUBLIC_RELATIONS_OFFICER
+  SERGEANT_AT_ARMS
+}
+
 enum OfficialOtpPurpose {
   LOGIN
   REGISTER
@@ -113,35 +127,40 @@ model SKOfficialProfile {
 }
 
 model SKOfficial {
-  id                String            @id @default(uuid())
-  userId            String?           @unique
-  firstName         String
-  middleName        String?
-  lastName          String
-  birthDate         DateTime?
-  province          String?
-  municipality      String?
-  barangay          String?
-  municipalityId    String?
-  barangayId        String?
-  position          OfficialPosition?
-  dateElected       DateTime?
-  termStart         DateTime
-  termEnd           DateTime?
-  admissionStatus   AdmissionStatus   @default(PENDING)
-  rejectionReason   String?
-  approvedBy        String?
-  approvedAt        DateTime?
-  role              OfficialRole
-  status            OfficialStatus    @default(INACTIVE)
-  email             String?
-  contactNo         String?
-  address           String?
-  proofDocumentUrl  String?
-  proofDocumentName String?
-  proofDocumentType String?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  id                   String                @id @default(uuid())
+  userId               String?               @unique
+  firstName            String
+  middleName           String?
+  lastName             String
+  suffix               String?
+  birthDate            DateTime?
+  sex                  Sex?
+  province             String?
+  municipality         String?
+  barangay             String?
+  municipalityId       String?
+  barangayId           String?
+  sitio                String?
+  position             OfficialPosition?
+  skFederationOfficer  Boolean               @default(false)
+  skFederationPosition SKFederationPosition?
+  dateElected          DateTime?
+  termStart            DateTime
+  termEnd              DateTime?
+  admissionStatus      AdmissionStatus       @default(PENDING)
+  rejectionReason      String?
+  approvedBy           String?
+  approvedAt           DateTime?
+  role                 OfficialRole
+  status               OfficialStatus        @default(INACTIVE)
+  email                String?
+  contactNo            String?
+  address              String?
+  proofDocumentUrl     String?
+  proofDocumentName    String?
+  proofDocumentType    String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
 
   attendances     OfficialAttendance[]
   user            User?                @relation(fields: [userId], references: [id])

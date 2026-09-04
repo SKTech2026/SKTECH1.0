@@ -1,11 +1,17 @@
 "use client";
 
-import { OfficialPosition } from "@prisma/client";
+import { OfficialPosition, SKFederationPosition, Sex } from "@prisma/client";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
-import { toTermEndDate } from "@/lib/sk-official";
+import {
+  OFFICIAL_POSITION_OPTIONS,
+  SEX_OPTIONS,
+  SKFED_POSITION_OPTIONS,
+  calculateAge,
+  formatEnumLabel,
+} from "@/lib/sk-official";
 
 type MunicipalityOption = {
   id: string;
@@ -22,9 +28,15 @@ type InitialProfile = {
   firstName: string;
   middleName: string;
   lastName: string;
+  suffix: string;
+  birthDate: string;
+  sex: Sex | null;
   position: OfficialPosition;
+  skFederationOfficer: boolean;
+  skFederationPosition: SKFederationPosition | null;
   municipalityId: string;
   barangayId: string;
+  sitio: string;
   dateElected: string;
   termEnd: string;
   contactNo: string;
@@ -36,13 +48,6 @@ type ProfileFormProps = {
   initial: InitialProfile;
   municipalities: MunicipalityOption[];
 };
-
-const POSITION_OPTIONS: { value: OfficialPosition; label: string }[] = [
-  { value: "SK_CHAIRPERSON", label: "SK Chairperson" },
-  { value: "SK_SECRETARY", label: "SK Secretary" },
-  { value: "SK_TREASURER", label: "SK Treasurer" },
-  { value: "SK_COUNCILOR", label: "SK Councilor" },
-];
 
 const inputClass =
   "mt-1.5 w-full rounded-lg border border-glass-border bg-surface-elevated/60 px-3 py-2 text-sm text-foreground outline-none transition focus:border-accent/40";
@@ -61,11 +66,17 @@ export default function OfficialProfileForm({ initial, municipalities }: Profile
   const [firstName, setFirstName] = useState(initial.firstName);
   const [middleName, setMiddleName] = useState(initial.middleName);
   const [lastName, setLastName] = useState(initial.lastName);
+  const [suffix, setSuffix] = useState(initial.suffix);
+  const [birthDate, setBirthDate] = useState(initial.birthDate);
+  const [sex, setSex] = useState<Sex | null>(initial.sex);
   const [position, setPosition] = useState<OfficialPosition>(initial.position);
+  const [skFederationOfficer, setSkFederationOfficer] = useState(initial.skFederationOfficer);
+  const [skFederationPosition, setSkFederationPosition] =
+    useState<SKFederationPosition | null>(initial.skFederationPosition);
   const [municipalityId, setMunicipalityId] = useState(initial.municipalityId);
   const [barangayId, setBarangayId] = useState(initial.barangayId);
+  const [sitio, setSitio] = useState(initial.sitio);
   const [dateElected, setDateElected] = useState(initial.dateElected);
-  const [termEnd, setTermEnd] = useState(initial.termEnd);
   const [contactNo, setContactNo] = useState(initial.contactNo);
   const [address, setAddress] = useState(initial.address);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -85,14 +96,11 @@ export default function OfficialProfileForm({ initial, municipalities }: Profile
     return selectedMunicipality.barangays.slice().sort((a, b) => a.name.localeCompare(b.name));
   }, [selectedMunicipality]);
 
+  const age = useMemo(() => calculateAge(birthDate), [birthDate]);
+
   const handleMunicipalityChange = (value: string) => {
     setMunicipalityId(value);
     setBarangayId("");
-  };
-
-  const handleDateElectedChange = (value: string) => {
-    setDateElected(value);
-    setTermEnd(toTermEndDate(value));
   };
 
   const handlePhotoChange = (file: File | null) => {
@@ -125,11 +133,16 @@ export default function OfficialProfileForm({ initial, municipalities }: Profile
       payload.set("firstName", firstName.trim());
       payload.set("middleName", middleName.trim());
       payload.set("lastName", lastName.trim());
+      payload.set("suffix", suffix.trim());
+      payload.set("birthDate", birthDate);
+      payload.set("sex", sex ?? "");
       payload.set("position", position);
+      payload.set("skFederationOfficer", String(skFederationOfficer));
+      payload.set("skFederationPosition", skFederationOfficer ? (skFederationPosition ?? "") : "");
       payload.set("municipalityId", municipalityId);
       payload.set("barangayId", barangayId);
+      payload.set("sitio", sitio.trim());
       payload.set("dateElected", dateElected);
-      payload.set("termEnd", termEnd);
       payload.set("contactNo", contactNo.trim());
       payload.set("address", address.trim());
       if (photoFile) {
@@ -207,7 +220,7 @@ export default function OfficialProfileForm({ initial, municipalities }: Profile
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-4">
           <label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
             First Name
             <input className={inputClass} value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
@@ -220,19 +233,91 @@ export default function OfficialProfileForm({ initial, municipalities }: Profile
             Last Name
             <input className={inputClass} value={lastName} onChange={(e) => setLastName(e.target.value)} required />
           </label>
+          <label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+            Suffix
+            <input className={inputClass} value={suffix} onChange={(e) => setSuffix(e.target.value)} />
+          </label>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-3">
+          <label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+            Birth Date
+            <input
+              type="date"
+              className={inputClass}
+              value={birthDate}
+              onChange={(e) => setBirthDate(e.target.value)}
+              required
+            />
+          </label>
+          <label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+            Age
+            <input className={`${inputClass} opacity-80`} value={age ?? ""} readOnly />
+          </label>
+          <label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+            Sex
+            <select
+              className={inputClass}
+              value={sex ?? ""}
+              onChange={(e) => setSex(e.target.value ? (e.target.value as Sex) : null)}
+              required
+            >
+              <option value="">Select sex</option>
+              {SEX_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {formatEnumLabel(option)}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
             Position
             <select className={inputClass} value={position} onChange={(e) => setPosition(e.target.value as OfficialPosition)} required>
-              {POSITION_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
+              {OFFICIAL_POSITION_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {formatEnumLabel(option)}
                 </option>
               ))}
             </select>
           </label>
+          <div className="rounded-lg border border-glass-border bg-surface-elevated/30 px-3 py-2">
+            <label className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+              <input
+                type="checkbox"
+                checked={skFederationOfficer}
+                onChange={(e) => {
+                  setSkFederationOfficer(e.target.checked);
+                  if (!e.target.checked) setSkFederationPosition(null);
+                }}
+              />
+              SK Federation Officer
+            </label>
+            {skFederationOfficer ? (
+              <select
+                className={inputClass}
+                value={skFederationPosition ?? ""}
+                onChange={(e) =>
+                  setSkFederationPosition(
+                    e.target.value ? (e.target.value as SKFederationPosition) : null,
+                  )
+                }
+                required
+              >
+                <option value="">Select SKFED position</option>
+                {SKFED_POSITION_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {formatEnumLabel(option)}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
           <label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
             Municipality
             <select
@@ -277,22 +362,16 @@ export default function OfficialProfileForm({ initial, municipalities }: Profile
 
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+            Sitio
+            <input className={inputClass} value={sitio} onChange={(e) => setSitio(e.target.value)} />
+          </label>
+          <label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
             Date Elected
             <input
               type="date"
               className={inputClass}
               value={dateElected}
-              onChange={(e) => handleDateElectedChange(e.target.value)}
-              required
-            />
-          </label>
-          <label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-            Term End
-            <input
-              type="date"
-              className={inputClass}
-              value={termEnd}
-              onChange={(e) => setTermEnd(e.target.value)}
+              onChange={(e) => setDateElected(e.target.value)}
               required
             />
           </label>

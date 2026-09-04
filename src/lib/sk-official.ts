@@ -1,16 +1,26 @@
-import { OfficialPosition, OfficialRole } from "@prisma/client";
+import {
+  OfficialPosition,
+  OfficialRole,
+  SKFederationPosition,
+  Sex,
+} from "@prisma/client";
 
 export type SKOfficialFormPayload = {
   firstName: string;
   middleName: string | null;
   lastName: string;
+  suffix: string | null;
   birthDate: string;
+  sex: Sex | null;
   province: string;
   municipalityId: string;
   barangayId: string;
+  sitio: string | null;
   position: OfficialPosition;
+  skFederationOfficer: boolean;
+  skFederationPosition: SKFederationPosition | null;
   dateElected: string;
-  termEnd: string;
+  termEnd?: string | null;
   email: string;
   contactNo: string | null;
   address: string | null;
@@ -45,6 +55,43 @@ export type MunicipalityOption = {
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const OFFICIAL_POSITION_OPTIONS = Object.values(OfficialPosition);
+export const SEX_OPTIONS = Object.values(Sex);
+export const SKFED_POSITION_OPTIONS = Object.values(SKFederationPosition);
+
+export function calculateAge(birthDate: string | Date | null | undefined): number | null {
+  if (!birthDate) return null;
+  const birth = birthDate instanceof Date ? birthDate : new Date(`${birthDate}T00:00:00`);
+  if (Number.isNaN(birth.getTime())) return null;
+
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDelta = today.getMonth() - birth.getMonth();
+  if (monthDelta < 0 || (monthDelta === 0 && today.getDate() < birth.getDate())) {
+    age -= 1;
+  }
+  return age >= 0 ? age : null;
+}
+
+export function formatOfficialFullName(profile: {
+  firstName: string | null;
+  middleName?: string | null;
+  lastName: string | null;
+  suffix?: string | null;
+}): string {
+  return [profile.firstName, profile.middleName, profile.lastName, profile.suffix]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(" ");
+}
+
+export function formatEnumLabel(value: string | null | undefined): string {
+  if (!value) return "N/A";
+  return value
+    .toLowerCase()
+    .split("_")
+    .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
+    .join(" ");
+}
 
 export function toTermEndDate(dateElected: string): string {
   if (!dateElected) {
@@ -82,12 +129,22 @@ export function validateSKOfficialPayload(
   if (!payload.firstName.trim()) return "First name is required.";
   if (!payload.lastName.trim()) return "Last name is required.";
   if (!isValidDate(payload.birthDate)) return "Birth date is required.";
+  if (!payload.sex || !SEX_OPTIONS.includes(payload.sex)) return "Sex is required.";
   if (!payload.province.trim()) return "Province is required.";
   if (!payload.municipalityId.trim()) return "Municipality is required.";
   if (!payload.barangayId.trim()) return "Barangay is required.";
   if (!OFFICIAL_POSITION_OPTIONS.includes(payload.position)) return "Invalid position.";
+  if (payload.skFederationOfficer && !payload.skFederationPosition) {
+    return "SKFED position is required for SK Federation Officers.";
+  }
+  if (
+    payload.skFederationPosition &&
+    !SKFED_POSITION_OPTIONS.includes(payload.skFederationPosition)
+  ) {
+    return "Invalid SKFED position.";
+  }
   if (!isValidDate(payload.dateElected)) return "Date elected is required.";
-  if (!isValidDate(payload.termEnd)) return "Term end date is invalid.";
+  if (payload.termEnd && !isValidDate(payload.termEnd)) return "Term end date is invalid.";
 
   if (options?.requireEmail && !payload.email.trim()) {
     return "Email is required.";

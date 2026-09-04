@@ -17,7 +17,9 @@ export default async function AdminIdProductionPage() {
       select: {
         id: true,
         firstName: true,
+        middleName: true,
         lastName: true,
+        suffix: true,
         role: true,
         status: true,
         admissionStatus: true,
@@ -69,7 +71,9 @@ export default async function AdminIdProductionPage() {
         officials={officials.map((official) => ({
           id: official.id,
           firstName: official.firstName,
+          middleName: official.middleName,
           lastName: official.lastName,
+          suffix: official.suffix,
           role: official.role,
           status: official.status,
           admissionStatus: official.admissionStatus,

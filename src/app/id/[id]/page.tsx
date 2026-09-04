@@ -1,6 +1,7 @@
 import FlippablePortraitID from "@/components/id/FlippablePortraitID";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/db";
+import { formatOfficialFullName } from "@/lib/sk-official";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,7 @@ export default async function IDPage({
       firstName: true,
       middleName: true,
       lastName: true,
+      suffix: true,
       role: true,
       position: true,
       municipality: true,
@@ -77,9 +79,7 @@ export default async function IDPage({
       ? official.user.image
       : "/images/default-official.svg";
 
-  const fullName = [official.firstName, official.middleName, official.lastName]
-    .filter(Boolean)
-    .join(" ");
+  const fullName = formatOfficialFullName(official);
   const position = formatEnumLabel((official.position ?? "SK_COUNCILOR").toString());
   const barangay = official.barangay ?? fallbackBarangay ?? "Not specified";
   const municipality = official.municipality ?? fallbackMunicipality ?? "Not specified";

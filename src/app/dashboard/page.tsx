@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { Prisma, Role } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
@@ -17,14 +17,68 @@ const hourToLabel = (hour: number) => {
 
 const dateToKey = (value: Date) => value.toISOString().slice(0, 10);
 
+const calculateAge = (birthDate: Date | null) => {
+  if (!birthDate) return null;
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDelta = today.getMonth() - birthDate.getMonth();
+  if (monthDelta < 0 || (monthDelta === 0 && today.getDate() < birthDate.getDate())) {
+    age -= 1;
+  }
+  return age >= 0 ? age : null;
+};
+
+const ageGroupFor = (birthDate: Date | null) => {
+  const age = calculateAge(birthDate);
+  if (age === null) return "Unknown";
+  if (age <= 17) return "15-17";
+  if (age <= 21) return "18-21";
+  if (age <= 24) return "22-24";
+  return "25+";
+};
+
+const addBreakdown = (map: Map<string, number>, key: string | null | undefined) => {
+  const label = key || "Unspecified";
+  map.set(label, (map.get(label) ?? 0) + 1);
+};
+
+const mapToBreakdown = (map: Map<string, number>) =>
+  Array.from(map.entries())
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
-  requireRole(session, [Role.ADMIN, Role.STAFF]);
+  const authorizedSession = requireRole(session, [Role.ADMIN, Role.STAFF]);
+  const isStaff = authorizedSession.user.role === Role.STAFF;
+  const staffMunicipalityId =
+    isStaff
+      ? (authorizedSession.user.municipalityPresidentId ?? null)
+      : null;
+  const scopedStaffMunicipalityId = staffMunicipalityId ?? "__unassigned_staff__";
+  const officialWhere: Prisma.SKOfficialWhereInput = isStaff
+    ? { municipalityId: scopedStaffMunicipalityId }
+    : {};
+  const attendanceWhere: Prisma.OfficialAttendanceWhereInput = isStaff
+    ? { official: { municipalityId: scopedStaffMunicipalityId } }
+    : {};
+  const eventWhere: Prisma.EventWhereInput = isStaff
+    ? {
+        officialAttendances: {
+          some: {
+            official: {
+              municipalityId: scopedStaffMunicipalityId,
+            },
+          },
+        },
+      }
+    : {};
 
   const [events, attendanceRecords, officials] = await Promise.all([
     prisma.event.findMany({
+      where: eventWhere,
       select: {
         id: true,
         title: true,
@@ -35,6 +89,7 @@ export default async function DashboardPage() {
       },
     }),
     prisma.officialAttendance.findMany({
+      where: attendanceWhere,
       include: {
         official: {
           select: {
@@ -46,8 +101,19 @@ export default async function DashboardPage() {
       },
     }),
     prisma.sKOfficial.findMany({
+      where: officialWhere,
       select: {
         id: true,
+        birthDate: true,
+        sex: true,
+        municipality: true,
+        barangay: true,
+        sitio: true,
+        position: true,
+        skFederationOfficer: true,
+        skFederationPosition: true,
+        status: true,
+        admissionStatus: true,
       },
     }),
   ]);
@@ -164,6 +230,31 @@ export default async function DashboardPage() {
       }
     : null;
 
+  const sexMap = new Map<string, number>();
+  const ageMap = new Map<string, number>();
+  const municipalityMap = new Map<string, number>();
+  const barangayMap = new Map<string, number>();
+  const sitioMap = new Map<string, number>();
+  const positionMap = new Map<string, number>();
+  const skfedMap = new Map<string, number>();
+  const lifecycleMap = new Map<string, number>();
+
+  for (const official of officials) {
+    addBreakdown(sexMap, official.sex);
+    addBreakdown(ageMap, ageGroupFor(official.birthDate));
+    addBreakdown(municipalityMap, official.municipality);
+    addBreakdown(barangayMap, official.barangay);
+    addBreakdown(sitioMap, official.sitio);
+    addBreakdown(positionMap, official.position);
+    addBreakdown(
+      skfedMap,
+      official.skFederationOfficer
+        ? (official.skFederationPosition ?? "SKFED Officer")
+        : "Not SKFED",
+    );
+    addBreakdown(lifecycleMap, `${official.admissionStatus}/${official.status}`);
+  }
+
   const analytics: DashboardAnalytics = {
     totals: {
       totalEvents,
@@ -180,6 +271,17 @@ export default async function DashboardPage() {
     mostActiveOfficial,
     highestAttendanceEvent,
     peakCheckInHour,
+    profile: {
+      sexBreakdown: mapToBreakdown(sexMap),
+      ageBreakdown: mapToBreakdown(ageMap),
+      municipalityBreakdown: mapToBreakdown(municipalityMap),
+      barangayBreakdown: mapToBreakdown(barangayMap),
+      sitioBreakdown: mapToBreakdown(sitioMap),
+      positionBreakdown: mapToBreakdown(positionMap),
+      skFederationBreakdown: mapToBreakdown(skfedMap),
+      lifecycleBreakdown: mapToBreakdown(lifecycleMap),
+      missingOptionalDimensions: ["education", "employment", "ip affiliation"],
+    },
   };
 
   return (

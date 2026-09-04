@@ -2,14 +2,18 @@ import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 import {
   OfficialRole,
+  OfficialPosition,
   OfficialStatus,
   Prisma,
   Role,
+  SKFederationPosition,
+  Sex,
   UserStatus,
 } from "@prisma/client";
 
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { formatOfficialFullName, positionToLegacyRole } from "@/lib/sk-official";
 
 export const dynamic = "force-dynamic";
 
@@ -117,6 +121,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (guard.error) {
       return guard.error;
     }
+    if (guard.session.user.role !== Role.ADMIN) {
+      return NextResponse.json({ error: "Only admins can manage official records." }, { status: 403 });
+    }
 
     const { id } = await params;
     if (!id || typeof id !== "string") {
@@ -133,8 +140,18 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       firstName,
       lastName,
       middleName,
+      suffix,
+      birthDate,
+      sex,
       role,
       status,
+      position,
+      municipalityId,
+      barangayId,
+      sitio,
+      skFederationOfficer,
+      skFederationPosition,
+      dateElected,
       termStart,
       termEnd,
       email,
@@ -142,7 +159,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       address,
     } = body;
 
-    const updateData: Prisma.SKOfficialUpdateInput = {};
+    const updateData: Prisma.SKOfficialUncheckedUpdateInput = {};
 
     if (firstName !== undefined) {
       if (typeof firstName !== "string" || !firstName.trim()) {
@@ -168,6 +185,28 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       updateData.middleName = middleName?.trim() || null;
     }
 
+    if (suffix !== undefined) {
+      updateData.suffix = suffix?.trim() || null;
+    }
+
+    if (birthDate !== undefined) {
+      const birthDateValue = new Date(`${birthDate}T00:00:00`);
+      if (Number.isNaN(birthDateValue.getTime())) {
+        return NextResponse.json({ error: "birthDate must be a valid date" }, { status: 400 });
+      }
+      updateData.birthDate = birthDateValue;
+    }
+
+    if (sex !== undefined) {
+      if (!Object.values(Sex).includes(sex as Sex)) {
+        return NextResponse.json(
+          { error: `sex must be one of: ${Object.values(Sex).join(", ")}` },
+          { status: 400 },
+        );
+      }
+      updateData.sex = sex as Sex;
+    }
+
     if (role !== undefined) {
       if (!Object.values(OfficialRole).includes(role as OfficialRole)) {
         return NextResponse.json(
@@ -178,6 +217,95 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         );
       }
       updateData.role = role as OfficialRole;
+    }
+
+    if (position !== undefined) {
+      if (!Object.values(OfficialPosition).includes(position as OfficialPosition)) {
+        return NextResponse.json(
+          { error: `position must be one of: ${Object.values(OfficialPosition).join(", ")}` },
+          { status: 400 },
+        );
+      }
+      updateData.position = position as OfficialPosition;
+      updateData.role = positionToLegacyRole(position as OfficialPosition);
+    }
+
+    if (municipalityId !== undefined || barangayId !== undefined) {
+      const nextMunicipalityId = municipalityId ?? existing.municipalityId;
+      const nextBarangayId = barangayId ?? existing.barangayId;
+
+      if (!nextMunicipalityId || !nextBarangayId) {
+        return NextResponse.json(
+          { error: "municipalityId and barangayId are required" },
+          { status: 400 },
+        );
+      }
+
+      const [municipality, barangay] = await Promise.all([
+        prisma.municipality.findUnique({
+          where: { id: nextMunicipalityId },
+          select: { id: true, name: true, province: true },
+        }),
+        prisma.barangay.findUnique({
+          where: { id: nextBarangayId },
+          select: { id: true, name: true, municipalityId: true },
+        }),
+      ]);
+
+      if (!municipality) {
+        return NextResponse.json({ error: "Selected municipality was not found." }, { status: 404 });
+      }
+      if (!barangay || barangay.municipalityId !== municipality.id) {
+        return NextResponse.json(
+          { error: "Selected barangay does not belong to selected municipality." },
+          { status: 400 },
+        );
+      }
+
+      updateData.province = municipality.province || existing.province || "Oriental Mindoro";
+      updateData.municipalityId = municipality.id;
+      updateData.municipality = municipality.name;
+      updateData.barangayId = barangay.id;
+      updateData.barangay = barangay.name;
+    }
+
+    if (sitio !== undefined) {
+      updateData.sitio = sitio?.trim() || null;
+    }
+
+    if (skFederationOfficer !== undefined) {
+      updateData.skFederationOfficer = skFederationOfficer === true;
+      if (skFederationOfficer !== true) {
+        updateData.skFederationPosition = null;
+      }
+    }
+
+    if (skFederationPosition !== undefined) {
+      if (skFederationPosition === null || skFederationPosition === "") {
+        updateData.skFederationPosition = null;
+      } else if (
+        !Object.values(SKFederationPosition).includes(
+          skFederationPosition as SKFederationPosition,
+        )
+      ) {
+        return NextResponse.json(
+          {
+            error: `skFederationPosition must be one of: ${Object.values(SKFederationPosition).join(", ")}`,
+          },
+          { status: 400 },
+        );
+      } else {
+        updateData.skFederationPosition = skFederationPosition as SKFederationPosition;
+      }
+    }
+
+    if (dateElected !== undefined) {
+      const dateElectedValue = new Date(`${dateElected}T00:00:00`);
+      if (Number.isNaN(dateElectedValue.getTime())) {
+        return NextResponse.json({ error: "dateElected must be a valid date" }, { status: 400 });
+      }
+      updateData.dateElected = dateElectedValue;
+      updateData.termStart = dateElectedValue;
     }
 
     if (status !== undefined) {
@@ -193,7 +321,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     if (termStart !== undefined) {
-      const termStartDate = new Date(termStart);
+      const termStartDate = new Date(`${termStart}T00:00:00`);
       if (Number.isNaN(termStartDate.getTime())) {
         return NextResponse.json({ error: "termStart must be a valid date" }, { status: 400 });
       }
@@ -204,7 +332,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       if (termEnd === null) {
         updateData.termEnd = null;
       } else {
-        const termEndDate = new Date(termEnd);
+        const termEndDate = new Date(`${termEnd}T00:00:00`);
         if (Number.isNaN(termEndDate.getTime())) {
           return NextResponse.json({ error: "termEnd must be a valid date" }, { status: 400 });
         }
@@ -228,9 +356,42 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json(existing, { status: 200 });
     }
 
-    const official = await prisma.sKOfficial.update({
-      where: { id },
-      data: updateData,
+    const official = await prisma.$transaction(async (tx) => {
+      const updated = await tx.sKOfficial.update({
+        where: { id },
+        data: updateData,
+      });
+
+      if (updated.userId) {
+        await tx.user.update({
+          where: { id: updated.userId },
+          data: {
+            name: formatOfficialFullName(updated),
+            ...(status !== undefined
+              ? {
+                  status:
+                    updated.status === OfficialStatus.ACTIVE
+                      ? UserStatus.APPROVED
+                      : UserStatus.INACTIVE,
+                }
+              : {}),
+            ...(municipalityId !== undefined
+              ? { municipalityOfficerId: updated.municipalityId }
+              : {}),
+          },
+        });
+      }
+
+      await tx.auditLog.create({
+        data: {
+          action: status !== undefined ? `SET_OFFICIAL_${updated.status}` : "UPDATE_OFFICIAL_PROFILE",
+          model: "SKOfficial",
+          recordId: updated.id,
+          userId: guard.session.user.id,
+        },
+      });
+
+      return updated;
     });
 
     return NextResponse.json(official, { status: 200 });
@@ -251,6 +412,9 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     if (guard.error) {
       return guard.error;
     }
+    if (guard.session.user.role !== Role.ADMIN) {
+      return NextResponse.json({ error: "Only admins can manage official records." }, { status: 403 });
+    }
 
     const { id } = await params;
     if (!id || typeof id !== "string") {
@@ -262,11 +426,13 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Official not found" }, { status: 404 });
     }
 
-    await prisma.sKOfficial.delete({
-      where: { id },
-    });
-
-    return NextResponse.json({ message: "Official deleted successfully" }, { status: 200 });
+    return NextResponse.json(
+      {
+        error:
+          "Hard delete is disabled because official records may be tied to attendance and history. Use deactivate instead.",
+      },
+      { status: 409 },
+    );
   } catch (error) {
     if (error instanceof Error && error.message.includes("not assigned")) {
       return NextResponse.json({ error: error.message }, { status: 403 });

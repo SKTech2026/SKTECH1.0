@@ -15,11 +15,16 @@ type ExistingProfile = {
   firstName: string;
   middleName: string | null;
   lastName: string;
+  suffix: string | null;
   birthDate: string;
+  sex: SKOfficialFormPayload["sex"];
   province: string;
   municipalityId: string;
   barangayId: string;
+  sitio: string | null;
   position: SKOfficialFormPayload["position"];
+  skFederationOfficer: boolean;
+  skFederationPosition: SKOfficialFormPayload["skFederationPosition"];
   dateElected: string;
   termEnd: string;
   status: AdmissionStatus;
@@ -116,11 +121,16 @@ export default function OfficialAdmissionForm({
                 firstName: initialProfile.firstName,
                 middleName: initialProfile.middleName,
                 lastName: initialProfile.lastName,
+                suffix: initialProfile.suffix,
                 birthDate: initialProfile.birthDate,
+                sex: initialProfile.sex,
                 province: initialProfile.province,
                 municipalityId: initialProfile.municipalityId,
                 barangayId: initialProfile.barangayId,
+                sitio: initialProfile.sitio,
                 position: initialProfile.position,
+                skFederationOfficer: initialProfile.skFederationOfficer,
+                skFederationPosition: initialProfile.skFederationPosition,
                 dateElected: initialProfile.dateElected,
                 termEnd: initialProfile.termEnd,
                 email: initialProfile.email,
