@@ -60,10 +60,6 @@ export default function FlippablePortraitID({
   dateElected,
   termPeriod,
   registryStatus = "ACTIVE",
-  logoUrl,
-  sktechLogoUrl,
-  skfedLogoUrl,
-  provincialSealUrl,
   provinceName = "Province of Oriental Mindoro",
   contactInfo = "SK Provincial Federation Registry | Oriental Mindoro",
   issuedDate,
@@ -77,9 +73,9 @@ export default function FlippablePortraitID({
   const targetRef = useRef({ x: 0, y: 0 });
   const currentRef = useRef({ x: 0, y: 0 });
 
-  const sktechLogo = sktechLogoUrl ?? logoUrl ?? "/sk-tech-logo.png";
-  const federationLogo = skfedLogoUrl ?? "/login-logo.png";
-  const sealLogo = provincialSealUrl ?? "/images/provincial-seal-logo.png";
+  const sktechLogo = "/assets/logos/sktech-logo-enhance.png";
+  const officialLogo = "/assets/logos/official-logo-enhance.png";
+  const skLogo = "/assets/logos/sk-logo-enhance.png";
   const displayPhotoUrl = failedPhotoUrl === photoUrl ? DEFAULT_PHOTO_URL : photoUrl;
   const displayName = compact(fullName.toUpperCase(), 42);
   const documentId = compact(idNumber, 18);
@@ -183,7 +179,7 @@ export default function FlippablePortraitID({
                     <p className="mt-1 text-[10px] font-semibold text-[#f2d786]">SK Federation Digital Credential</p>
                   </div>
                   <div className="relative h-11 w-11 rounded-md bg-white p-1.5">
-                    <Image src={sealLogo} alt="Oriental Mindoro logo placeholder" fill className="object-contain p-1" sizes="44px" />
+                    <Image src={officialLogo} alt="Oriental Mindoro official seal" fill className="object-contain p-1" sizes="44px" />
                   </div>
                 </header>
 
@@ -251,8 +247,8 @@ export default function FlippablePortraitID({
                     <p className="text-[9px] font-semibold uppercase text-[#102b56]">Issued</p>
                     <p className="text-[10px] text-[#4b5872]">{issued}</p>
                   </div>
-                  <div className="relative h-10 w-10 opacity-35">
-                    <Image src={federationLogo} alt="SK Federation logo placeholder" fill className="object-contain" sizes="40px" />
+                  <div className="relative h-9 w-9 opacity-70">
+                    <Image src={skLogo} alt="SK logo" fill className="object-contain" sizes="36px" />
                   </div>
                 </footer>
               </div>
@@ -264,8 +260,11 @@ export default function FlippablePortraitID({
               <div className="absolute inset-x-0 top-[5.9rem] h-1.5 bg-[#c8a24a]" />
 
               <div className="relative z-10 flex h-full flex-col p-4">
-                <header className="flex items-center justify-between gap-3 text-white">
-                  <div>
+                <header className="grid grid-cols-[44px_1fr_44px] items-center gap-3 text-white">
+                  <div className="relative h-11 w-11 rounded-md bg-white p-1.5">
+                    <Image src={officialLogo} alt="Oriental Mindoro official seal" fill className="object-contain p-1" sizes="44px" />
+                  </div>
+                  <div className="text-center">
                     <p className="text-xs font-black uppercase tracking-wide">Credential Verification</p>
                     <p className="mt-1 text-[10px] font-semibold text-[#f2d786]">SKTECH secure registry record</p>
                   </div>
@@ -308,13 +307,16 @@ export default function FlippablePortraitID({
                   </dl>
                 </div>
 
-                <div className="mt-auto grid grid-cols-[1fr_88px] items-end gap-4">
+                <div className="mt-auto grid grid-cols-[1fr_36px_72px] items-end gap-3">
                   <div>
                     <div className="h-9 border-b border-[#12213b]" />
                     <p className="mt-1 text-[9px] text-[#44516a]">Authorized registry officer</p>
                   </div>
-                  <div className="relative h-16">
-                    <Image src={sealLogo} alt="Oriental Mindoro logo placeholder" fill className="object-contain opacity-55" sizes="88px" />
+                  <div className="relative h-9 w-9 opacity-70">
+                    <Image src={skLogo} alt="SK logo" fill className="object-contain" sizes="36px" />
+                  </div>
+                  <div className="relative h-14">
+                    <Image src={officialLogo} alt="Oriental Mindoro official seal" fill className="object-contain opacity-70" sizes="72px" />
                   </div>
                 </div>
               </div>
