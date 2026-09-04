@@ -5,115 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import {
-  BarChart3,
-  Bell,
-  CalendarDays,
-  CheckCircle2,
-  IdCard,
-  MessageSquareLock,
-  QrCode,
-  ShieldCheck,
-  Smartphone,
-  UsersRound,
-} from "lucide-react";
 
 import ThemeToggle from "@/components/ThemeToggle";
-
-const coreFeatures = [
-  {
-    title: "SK Official Profiling",
-    description:
-      "Keeps verified official records organized for faster review, updates, and accountability.",
-    Icon: UsersRound,
-  },
-  {
-    title: "Digital ID",
-    description:
-      "Provides a consistent credential view for approved officials using the existing SKTECH record.",
-    Icon: IdCard,
-  },
-  {
-    title: "QR / Face Attendance",
-    description:
-      "Supports event attendance workflows with QR scanning and face verification where enabled.",
-    Icon: QrCode,
-  },
-  {
-    title: "Announcements",
-    description:
-      "Publishes federation and municipal updates in one accessible channel for officials and staff.",
-    Icon: Bell,
-  },
-  {
-    title: "Event Management",
-    description:
-      "Helps manage activities, schedules, participation, and supporting event details.",
-    Icon: CalendarDays,
-  },
-  {
-    title: "Municipality-Restricted Chat",
-    description:
-      "Keeps coordination focused within the appropriate municipality and authorized users.",
-    Icon: MessageSquareLock,
-  },
-  {
-    title: "Mobile / PWA Access",
-    description:
-      "Gives officials and staff a phone-ready experience for field and on-site workflows.",
-    Icon: Smartphone,
-  },
-  {
-    title: "Analytics",
-    description:
-      "Turns program data into clearer activity, attendance, and participation summaries.",
-    Icon: BarChart3,
-  },
-];
-
-const howItWorks = [
-  "Register",
-  "Verification",
-  "Official Dashboard",
-  "Digital ID",
-  "Announcements / Events",
-  "Attendance",
-  "Secure Municipality Communication",
-];
-
-const intendedUsers = [
-  "SK Officials",
-  "Municipal Staff",
-  "SK Provincial Federation / Authorized Administrators",
-];
-
-const objectives = [
-  "Reduce manual processes in SK records and activity tracking.",
-  "Centralize official profiles, announcements, events, and attendance.",
-  "Support transparency through cleaner records and consistent access.",
-  "Improve coordination among SK councils and municipal staff.",
-  "Make key workflows more accessible through mobile-ready tools.",
-  "Advance youth governance digital transformation through a practical prototype.",
-];
-
-const technologies = [
-  "Next.js",
-  "PostgreSQL / Supabase",
-  "QR Technology",
-  "Facial Recognition / Liveness",
-  "Mobile PWA",
-  "Cloud Deployment",
-  "Secure Document Sharing",
-];
-
-const securityHighlights = [
-  "Role-based access",
-  "Municipality restrictions",
-  "Encrypted facial embeddings",
-  "Secure authentication",
-  "Private document storage",
-  "Server-side authorization",
-];
 
 export default function HomePage() {
   const router = useRouter();
@@ -129,15 +22,6 @@ export default function HomePage() {
   }, []);
 
   const isDarkTheme = mounted ? resolvedTheme === "dark" : false;
-  const panelClass = isDarkTheme
-    ? "bg-slate-900/68 text-slate-100 shadow-[0_22px_80px_-26px_rgba(56,189,248,0.55)] backdrop-blur-xl"
-    : "bg-white/88 text-slate-900 shadow-[0_30px_70px_-36px_rgba(15,23,42,0.45)] backdrop-blur-sm";
-  const mutedTextClass = isDarkTheme ? "text-slate-300" : "text-slate-600";
-  const subtleTextClass = isDarkTheme ? "text-slate-400" : "text-slate-500";
-  const borderClass = isDarkTheme ? "border-white/10" : "border-slate-200/80";
-  const chipClass = isDarkTheme
-    ? "border-cyan-300/20 bg-cyan-300/10 text-cyan-100"
-    : "border-blue-200 bg-blue-50 text-blue-800";
 
   const onGetStarted = () => {
     setShowLoginActions(true);
@@ -167,7 +51,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-slate-950 transition-colors duration-500">
+    <div className="relative min-h-screen overflow-hidden bg-slate-950 transition-colors duration-500">
       <Image
         src="/illustrations/light.svg"
         alt="SKTech landing background light"
@@ -214,7 +98,11 @@ export default function HomePage() {
 
       <main className="relative z-20 flex min-h-screen items-center px-4 py-10 sm:px-8 lg:px-16">
         <article
-          className={`w-full max-w-xl rounded-[28px] p-6 transition-all duration-500 sm:p-8 ${panelClass}`}
+          className={`w-full max-w-xl rounded-[28px] p-6 transition-all duration-500 sm:p-8 ${
+            isDarkTheme
+              ? "bg-slate-900/68 text-slate-100 shadow-[0_22px_80px_-26px_rgba(56,189,248,0.55)] backdrop-blur-xl"
+              : "bg-white/88 text-slate-900 shadow-[0_30px_70px_-36px_rgba(15,23,42,0.45)] backdrop-blur-sm"
+          }`}
         >
           <div className="text-center">
             <div className="group relative mx-auto mb-4 w-fit">
@@ -246,25 +134,15 @@ export default function HomePage() {
             </h1>
           </div>
 
-          <p className={`mt-4 text-sm leading-6 sm:text-base ${mutedTextClass}`}>
-            A digital coordination platform for verified SK officials, helping
-            councils manage records, IDs, events, attendance, and local
-            communication with clearer accountability.
+          <p
+            className={`mt-4 text-sm sm:text-base ${
+              isDarkTheme ? "text-slate-300" : "text-slate-600"
+            }`}
+          >
+            SK Provincial Federation Integrated E-Governance System
           </p>
 
-          <div className="mt-5 grid gap-2 text-left sm:grid-cols-3">
-            {["Secure access", "Mobile ready", "Council focused"].map((item) => (
-              <span
-                key={item}
-                className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold ${chipClass}`}
-              >
-                <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
-                {item}
-              </span>
-            ))}
-          </div>
-
-          <div className="mt-6">
+          <div className="mt-6 grid gap-3">
             {!showLoginActions ? (
               <button
                 type="button"
@@ -278,6 +156,16 @@ export default function HomePage() {
                 Get Started
               </button>
             ) : null}
+            <Link
+              href="/about"
+              className={`inline-flex items-center justify-center rounded-xl border px-4 py-3 text-sm font-semibold transition ${
+                isDarkTheme
+                  ? "border-cyan-300/30 text-cyan-100 hover:bg-cyan-300/10"
+                  : "border-blue-200 text-blue-700 hover:bg-blue-50"
+              }`}
+            >
+              About SKTECH
+            </Link>
           </div>
 
           <div
@@ -297,223 +185,6 @@ export default function HomePage() {
           </div>
         </article>
       </main>
-
-      <section className="relative z-20 px-4 pb-10 sm:px-8 lg:px-16">
-        <div className="mx-auto grid w-full max-w-6xl gap-6">
-          <article className={`rounded-[28px] p-6 sm:p-8 ${panelClass}`}>
-            <p
-              className={`text-[11px] font-semibold uppercase tracking-[0.26em] ${
-                isDarkTheme ? "text-cyan-300" : "text-blue-700"
-              }`}
-            >
-              About SKTECH
-            </p>
-            <h2 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">
-              Built for clearer youth governance workflows.
-            </h2>
-            <p className={`mt-4 max-w-4xl text-sm leading-7 sm:text-base ${mutedTextClass}`}>
-              SKTECH is an integrated e-governance platform designed to help SK
-              councils organize official records, improve transparency, and make
-              federation coordination more accessible. It brings profiling,
-              identity, events, attendance, announcements, and secure
-              municipality communication into one consistent experience.
-            </p>
-          </article>
-
-          <article className={`rounded-[28px] p-6 sm:p-8 ${panelClass}`}>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <p
-                  className={`text-[11px] font-semibold uppercase tracking-[0.26em] ${
-                    isDarkTheme ? "text-cyan-300" : "text-blue-700"
-                  }`}
-                >
-                  Core Features
-                </p>
-                <h2 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">
-                  One portal for the work SK teams repeat every week.
-                </h2>
-              </div>
-            </div>
-            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {coreFeatures.map(({ title, description, Icon }) => (
-                <div
-                  key={title}
-                  className={`rounded-2xl border p-4 ${borderClass} ${
-                    isDarkTheme ? "bg-white/5" : "bg-slate-50/80"
-                  }`}
-                >
-                  <Icon
-                    className={isDarkTheme ? "h-5 w-5 text-cyan-300" : "h-5 w-5 text-blue-700"}
-                    aria-hidden="true"
-                  />
-                  <h3 className="mt-3 text-sm font-bold">{title}</h3>
-                  <p className={`mt-2 text-xs leading-5 ${subtleTextClass}`}>
-                    {description}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </article>
-
-          <article className={`rounded-[28px] p-6 sm:p-8 ${panelClass}`}>
-            <p
-              className={`text-[11px] font-semibold uppercase tracking-[0.26em] ${
-                isDarkTheme ? "text-cyan-300" : "text-blue-700"
-              }`}
-            >
-              How It Works
-            </p>
-            <div className="mt-6 grid gap-3 md:grid-cols-7">
-              {howItWorks.map((step, index) => (
-                <div
-                  key={step}
-                  className={`rounded-2xl border p-4 ${borderClass} ${
-                    isDarkTheme ? "bg-slate-950/35" : "bg-white/70"
-                  }`}
-                >
-                  <span
-                    className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-xs font-black ${
-                      isDarkTheme ? "bg-cyan-300 text-slate-950" : "bg-blue-600 text-white"
-                    }`}
-                  >
-                    {index + 1}
-                  </span>
-                  <p className="mt-3 text-sm font-bold leading-5">{step}</p>
-                </div>
-              ))}
-            </div>
-          </article>
-
-          <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-            <article className={`rounded-[28px] p-6 sm:p-8 ${panelClass}`}>
-              <p
-                className={`text-[11px] font-semibold uppercase tracking-[0.26em] ${
-                  isDarkTheme ? "text-cyan-300" : "text-blue-700"
-                }`}
-              >
-                Intended Users
-              </p>
-              <div className="mt-5 grid gap-3">
-                {intendedUsers.map((user) => (
-                  <div
-                    key={user}
-                    className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${borderClass} ${
-                      isDarkTheme ? "bg-white/5" : "bg-slate-50/80"
-                    }`}
-                  >
-                    {user}
-                  </div>
-                ))}
-              </div>
-            </article>
-
-            <article className={`rounded-[28px] p-6 sm:p-8 ${panelClass}`}>
-              <p
-                className={`text-[11px] font-semibold uppercase tracking-[0.26em] ${
-                  isDarkTheme ? "text-cyan-300" : "text-blue-700"
-                }`}
-              >
-                Project Objectives
-              </p>
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                {objectives.map((objective) => (
-                  <p
-                    key={objective}
-                    className={`rounded-2xl border p-4 text-sm leading-6 ${borderClass} ${
-                      isDarkTheme ? "bg-white/5" : "bg-slate-50/80"
-                    }`}
-                  >
-                    {objective}
-                  </p>
-                ))}
-              </div>
-            </article>
-          </div>
-
-          <div className="grid gap-6 lg:grid-cols-2">
-            <article className={`rounded-[28px] p-6 sm:p-8 ${panelClass}`}>
-              <p
-                className={`text-[11px] font-semibold uppercase tracking-[0.26em] ${
-                  isDarkTheme ? "text-cyan-300" : "text-blue-700"
-                }`}
-              >
-                Technology / Innovation
-              </p>
-              <div className="mt-5 flex flex-wrap gap-2">
-                {technologies.map((item) => (
-                  <span
-                    key={item}
-                    className={`rounded-full border px-3 py-2 text-xs font-semibold ${chipClass}`}
-                  >
-                    {item}
-                  </span>
-                ))}
-              </div>
-            </article>
-
-            <article className={`rounded-[28px] p-6 sm:p-8 ${panelClass}`}>
-              <p
-                className={`text-[11px] font-semibold uppercase tracking-[0.26em] ${
-                  isDarkTheme ? "text-cyan-300" : "text-blue-700"
-                }`}
-              >
-                Security & Privacy
-              </p>
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                {securityHighlights.map((item) => (
-                  <div
-                    key={item}
-                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-semibold ${borderClass} ${
-                      isDarkTheme ? "bg-white/5" : "bg-slate-50/80"
-                    }`}
-                  >
-                    <ShieldCheck
-                      className={isDarkTheme ? "h-4 w-4 text-cyan-300" : "h-4 w-4 text-blue-700"}
-                      aria-hidden="true"
-                    />
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <footer className="relative z-20 px-4 pb-8 sm:px-8 lg:px-16">
-        <div className={`mx-auto w-full max-w-6xl rounded-[28px] p-6 sm:p-8 ${panelClass}`}>
-          <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-            <div>
-              <h2 className="text-xl font-black tracking-tight">SKTECH</h2>
-              <p className={`mt-3 max-w-3xl text-sm leading-6 ${mutedTextClass}`}>
-                SK Provincial Federation Integrated E-Governance System for
-                coordinated profiling, identity, announcements, events,
-                attendance, and secure municipal communication.
-              </p>
-              <p className={`mt-4 text-xs leading-5 ${subtleTextClass}`}>
-                SKTECH is currently a capstone project and prototype
-                e-governance platform. It is not an official government system
-                unless formally adopted and authorized by the appropriate
-                government agency or local government unit.
-              </p>
-            </div>
-            <div className={`rounded-2xl border p-4 ${borderClass} ${isDarkTheme ? "bg-white/5" : "bg-slate-50/80"}`}>
-              <p className="text-sm font-bold">Project Links</p>
-              <div className={`mt-3 grid gap-2 text-sm ${mutedTextClass}`}>
-                <Link href="/official/auth" className="font-semibold hover:underline">
-                  Official Login
-                </Link>
-                <span>Privacy and Terms placeholder</span>
-                <span>About SKTECH</span>
-              </div>
-              <p className={`mt-5 text-xs ${subtleTextClass}`}>
-                Copyright 2026 SKTECH. All rights reserved.
-              </p>
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
