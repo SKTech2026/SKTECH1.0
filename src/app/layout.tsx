@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider as NextThemeProvider } from "next-themes";
 
+import MobileAutoRedirect from "@/components/mobile/MobileAutoRedirect";
 import { ThemeProvider } from "@/context/ThemeContext";
 
 import "./globals.css";
@@ -61,7 +62,10 @@ export default function RootLayout({
           enableSystem={false}
           storageKey="sktech.ui.theme"
         >
-          <ThemeProvider>{children}</ThemeProvider>
+          <ThemeProvider>
+            <MobileAutoRedirect />
+            {children}
+          </ThemeProvider>
         </NextThemeProvider>
       </body>
     </html>
