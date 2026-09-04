@@ -141,7 +141,7 @@ export default async function MobileOfficialPage() {
             Open ID
           </Link>
           <Link
-            href="/dashboard/official/facial-registration"
+            href="/mobile/official/facial-registration"
             className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/20 bg-slate-800/80 px-3 text-sm font-semibold text-slate-100"
           >
             <RefreshCcw className="h-4 w-4" />
