@@ -60,6 +60,8 @@ type QueueItem = {
 };
 
 const SCAN_INTERVAL_MS = 500;
+const VERIFICATION_FRAME_COUNT = 4;
+const VERIFICATION_FRAME_DELAY_MS = 180;
 const MAX_CAPTURE_WIDTH = 640;
 const INACTIVITY_TIMEOUT_MS = 5 * 60_000;
 const QUEUE_DUPLICATE_WINDOW_MS = 30_000;
@@ -282,20 +284,34 @@ export default function MobileStaffScannerClient() {
     const video = videoRef.current;
     if (!video || busyRef.current || !cameraEnabled) return;
 
-    const frame = captureFrame(video);
-    if (!frame) return;
-
     busyRef.current = true;
     setScanBusy(true);
-    setFrameSize({ width: frame.width, height: frame.height });
 
     try {
+      const frames: NonNullable<ReturnType<typeof captureFrame>>[] = [];
+      for (let index = 0; index < VERIFICATION_FRAME_COUNT; index += 1) {
+        const frame = captureFrame(video);
+        if (frame) {
+          frames.push(frame);
+        }
+        if (index < VERIFICATION_FRAME_COUNT - 1) {
+          await new Promise((resolve) => setTimeout(resolve, VERIFICATION_FRAME_DELAY_MS));
+        }
+      }
+
+      if (frames.length < 2) {
+        throw new Error("Insufficient camera frames for liveness check.");
+      }
+
+      const primary = frames[frames.length - 1];
+      setFrameSize({ width: primary.width, height: primary.height });
+
       const response = await fetch("/api/face/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          imageBase64: frame.data,
-          livenessFrames: [frame.data],
+          imageBase64: primary.data,
+          livenessFrames: frames.map((frame) => frame.data),
           eventId: eventId.trim() || undefined,
           autoRecord: true,
         }),

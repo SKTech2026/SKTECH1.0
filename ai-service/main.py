@@ -6,6 +6,7 @@ import hmac
 import io
 import logging
 import os
+import sys
 import time
 from math import ceil
 from collections import defaultdict, deque
@@ -32,6 +33,11 @@ APP_VERSION = "1.1.0"
 DEFAULT_THRESHOLD = 0.60
 DEFAULT_MATCH_MARGIN = 0.05
 DEFAULT_MIN_FACE_AREA_RATIO = 0.015
+MIN_REGISTRATION_EMBEDDINGS = 2
+MIN_REGISTRATION_BRIGHTNESS = 35.0
+MAX_REGISTRATION_BRIGHTNESS = 225.0
+MIN_REGISTRATION_SHARPNESS = 8.0
+MAX_FACE_CENTER_OFFSET_RATIO = 0.35
 RATE_LIMIT_WINDOW_SECONDS = 60
 MAX_FAILED_ATTEMPTS_PER_WINDOW = 3
 
@@ -139,11 +145,11 @@ LOGGER = setup_logger()
 
 FERNET_KEY = os.getenv("AI_EMBEDDING_FERNET_KEY")
 if not FERNET_KEY:
+    if os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RENDER") or os.getenv("NODE_ENV") == "production":
+        LOGGER.error("AI_EMBEDDING_FERNET_KEY is required in production.")
+        sys.exit("AI_EMBEDDING_FERNET_KEY is required in production.")
     FERNET_KEY = Fernet.generate_key().decode("utf-8")
-    LOGGER.warning(
-        "AI_EMBEDDING_FERNET_KEY is not set. Using ephemeral key. "
-        "Set a stable key in production."
-    )
+    LOGGER.warning("AI_EMBEDDING_FERNET_KEY is not set. Using local development key.")
 
 FERNET = Fernet(FERNET_KEY.encode("utf-8"))
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -254,6 +260,91 @@ def _extract_face_embeddings(
     embeddings = face_recognition.face_encodings(image, locations, model="small")
     vectors = [np.asarray(embedding, dtype=np.float32) for embedding in embeddings]
     return vectors, locations
+
+
+def _to_grayscale(image: np.ndarray) -> np.ndarray:
+    if image.ndim == 2:
+        return image.astype(np.float32)
+    return (
+        (image[:, :, 0].astype(np.float32) * 0.299)
+        + (image[:, :, 1].astype(np.float32) * 0.587)
+        + (image[:, :, 2].astype(np.float32) * 0.114)
+    )
+
+
+def _face_quality_message(
+    image: np.ndarray,
+    location: Tuple[int, int, int, int],
+) -> Optional[str]:
+    top, right, bottom, left = location
+    image_height, image_width = image.shape[:2]
+    face_width = max(1, right - left)
+    face_height = max(1, bottom - top)
+    face_area_ratio = (face_width * face_height) / max(1, image_width * image_height)
+    if face_area_ratio < MIN_FACE_AREA_RATIO:
+        return "Face is too small. Move closer and keep your face inside the guide."
+
+    face_center_x = left + (face_width / 2)
+    face_center_y = top + (face_height / 2)
+    offset_x = abs(face_center_x - (image_width / 2)) / max(1, image_width)
+    offset_y = abs(face_center_y - (image_height / 2)) / max(1, image_height)
+    if max(offset_x, offset_y) > MAX_FACE_CENTER_OFFSET_RATIO:
+        return "Face is not centered. Keep your face inside the guide and retry."
+
+    crop = image[max(0, top):min(image_height, bottom), max(0, left):min(image_width, right)]
+    if crop.size == 0:
+        return "Unable to read the detected face area. Retry with your face centered."
+
+    gray = _to_grayscale(crop)
+    brightness = float(gray.mean())
+    if brightness < MIN_REGISTRATION_BRIGHTNESS:
+        return "Face is too dark. Move to better lighting and retry."
+    if brightness > MAX_REGISTRATION_BRIGHTNESS:
+        return "Face is overexposed. Reduce glare and retry."
+
+    if gray.shape[0] > 2 and gray.shape[1] > 2:
+        sharpness = float(np.var(np.diff(gray, axis=0)) + np.var(np.diff(gray, axis=1)))
+        if sharpness < MIN_REGISTRATION_SHARPNESS:
+            return "Face image is too blurry. Hold still and retry."
+
+    return None
+
+
+def _extract_registration_embedding_from_base64(payload: str) -> Tuple[np.ndarray, int]:
+    image = _load_image_from_base64(payload)
+    embeddings, locations = _extract_face_embeddings(image)
+    if not embeddings:
+        raise ValueError("No face detected in one or more registration frames.")
+    if len(embeddings) > 1:
+        raise ValueError("Multiple faces detected. Register with only one face in view.")
+
+    quality_message = _face_quality_message(image, locations[0])
+    if quality_message:
+        raise ValueError(quality_message)
+
+    return embeddings[0], len(embeddings)
+
+
+def _build_registration_template(frame_payloads: List[str]) -> Tuple[np.ndarray, int]:
+    embeddings: List[np.ndarray] = []
+    detected_faces = 0
+    last_error = "Unable to generate a valid face embedding from the registration frames."
+
+    for payload in frame_payloads:
+        try:
+            embedding, face_count = _extract_registration_embedding_from_base64(payload)
+            embeddings.append(embedding)
+            detected_faces = max(detected_faces, face_count)
+        except ValueError as error:
+            last_error = str(error)
+
+    if len(embeddings) < MIN_REGISTRATION_EMBEDDINGS:
+        raise ValueError(
+            f"{last_error} Capture at least {MIN_REGISTRATION_EMBEDDINGS} clear live frames."
+        )
+
+    averaged_embedding = np.mean(np.stack(embeddings).astype(np.float32), axis=0)
+    return averaged_embedding.astype(np.float32), detected_faces
 
 
 def _largest_face_index(locations: List[Tuple[int, int, int, int]]) -> int:
@@ -693,27 +784,24 @@ async def register_face(payload: RegisterFaceRequest, request: Request) -> Regis
     if not liveness_ok:
         raise HTTPException(status_code=400, detail=liveness_message)
 
-    image = await asyncio.get_running_loop().run_in_executor(
-        EXECUTOR, _load_image_from_base64, payload.imageBase64
-    )
-    embeddings, locations = await asyncio.get_running_loop().run_in_executor(
-        EXECUTOR, _extract_face_embeddings, image
-    )
+    registration_frames = liveness_payloads if liveness_payloads else [payload.imageBase64]
+    try:
+        averaged_embedding, detected_faces = await asyncio.get_running_loop().run_in_executor(
+            EXECUTOR, _build_registration_template, registration_frames
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
 
-    if not embeddings:
-        raise HTTPException(status_code=400, detail="No face detected in the registration image.")
-
-    selected_index = _largest_face_index(locations)
     encrypted_embedding = await asyncio.get_running_loop().run_in_executor(
-        EXECUTOR, _encrypt_embedding, embeddings[selected_index]
+        EXECUTOR, _encrypt_embedding, averaged_embedding
     )
 
     return RegisterFaceResponse(
         userId=payload.userId,
         encryptedEmbedding=encrypted_embedding,
-        detectedFaces=len(embeddings),
+        detectedFaces=detected_faces,
         livenessPassed=True,
-        message="Face embedding generated and encrypted successfully.",
+        message="Face embedding generated from multiple clear frames and encrypted successfully.",
     )
 
 

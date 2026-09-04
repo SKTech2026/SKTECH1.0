@@ -79,6 +79,8 @@ type TrackedFace = {
 };
 
 const KIOSK_INTERVAL_MS = 350;
+const VERIFICATION_FRAME_COUNT = 4;
+const VERIFICATION_FRAME_DELAY_MS = 180;
 const MAX_CAPTURE_WIDTH = 640;
 const RATE_LIMIT_COOLDOWN_MS = 60_000;
 const ERROR_RETRY_COOLDOWN_MS = 2_500;
@@ -383,12 +385,14 @@ export default function EventKioskClient() {
     setScanBusy(true);
     try {
       const frames: CapturedFrame[] = [];
-      for (let index = 0; index < 2; index += 1) {
+      for (let index = 0; index < VERIFICATION_FRAME_COUNT; index += 1) {
         const frame = captureFrame(videoRef.current);
         if (frame) {
           frames.push(frame);
         }
-        await new Promise((resolve) => setTimeout(resolve, 90));
+        if (index < VERIFICATION_FRAME_COUNT - 1) {
+          await new Promise((resolve) => setTimeout(resolve, VERIFICATION_FRAME_DELAY_MS));
+        }
       }
 
       if (frames.length < 2) {
