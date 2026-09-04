@@ -118,6 +118,12 @@ export function registerFaceEmbedding(
   return postToAiService<RegisterFaceResult>("/register-face", payload);
 }
 
+export function registerFaceEmbeddingFromReferenceImage(
+  payload: Pick<RegisterFacePayload, "userId" | "imageBase64">,
+): Promise<RegisterFaceResult> {
+  return postToAiService<RegisterFaceResult>("/register-face-reference", payload);
+}
+
 export function verifyFaceAgainstEmbeddings(
   payload: VerifyFacePayload,
 ): Promise<VerifyFacesResult> {

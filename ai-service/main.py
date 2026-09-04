@@ -347,6 +347,10 @@ def _build_registration_template(frame_payloads: List[str]) -> Tuple[np.ndarray,
     return averaged_embedding.astype(np.float32), detected_faces
 
 
+def _build_registration_template_from_reference(payload: str) -> Tuple[np.ndarray, int]:
+    return _extract_registration_embedding_from_base64(payload)
+
+
 def _largest_face_index(locations: List[Tuple[int, int, int, int]]) -> int:
     largest_index = 0
     largest_area = -1
@@ -802,6 +806,32 @@ async def register_face(payload: RegisterFaceRequest, request: Request) -> Regis
         detectedFaces=detected_faces,
         livenessPassed=True,
         message="Face embedding generated from multiple clear frames and encrypted successfully.",
+    )
+
+
+@app.post("/register-face-reference", response_model=RegisterFaceResponse)
+async def register_face_reference(
+    payload: RegisterFaceRequest, request: Request
+) -> RegisterFaceResponse:
+    _verify_service_secret(request)
+
+    try:
+        embedding, detected_faces = await asyncio.get_running_loop().run_in_executor(
+            EXECUTOR, _build_registration_template_from_reference, payload.imageBase64
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+    encrypted_embedding = await asyncio.get_running_loop().run_in_executor(
+        EXECUTOR, _encrypt_embedding, embedding
+    )
+
+    return RegisterFaceResponse(
+        userId=payload.userId,
+        encryptedEmbedding=encrypted_embedding,
+        detectedFaces=detected_faces,
+        livenessPassed=True,
+        message="Face embedding generated from AWS liveness reference image and encrypted successfully.",
     )
 
 
