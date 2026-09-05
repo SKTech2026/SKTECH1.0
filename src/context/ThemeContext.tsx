@@ -11,6 +11,7 @@ import {
 import type { ReactNode } from "react";
 
 export type ThemeName =
+  | "system"
   | "government-dark"
   | "emerald-authority"
   | "royal-purple"
@@ -24,6 +25,11 @@ export type ThemePreset = {
 };
 
 export const THEME_PRESETS: ThemePreset[] = [
+  {
+    id: "system",
+    name: "System Default",
+    tagline: "Follow the light or dark appearance selected by your device.",
+  },
   {
     id: "government-dark",
     name: "Government Dark",
@@ -60,6 +66,7 @@ const ALL_THEME_CLASSES = THEME_PRESETS.map(
 
 type ThemeContextValue = {
   theme: ThemeName;
+  effectiveTheme: "dark" | "light";
   setTheme: (theme: ThemeName) => void;
   presets: ThemePreset[];
 };
@@ -67,47 +74,65 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
 const isThemeName = (value: string): value is ThemeName =>
-  THEME_PRESETS.some((preset) => preset.id === value);
+  value === "system" || THEME_PRESETS.some((preset) => preset.id === value);
 
-const resolveInitialTheme = (): ThemeName => {
-  if (typeof window === "undefined") {
-    return DEFAULT_THEME;
-  }
-
-  const savedTheme = window.localStorage.getItem(STORAGE_KEY);
-  if (savedTheme && isThemeName(savedTheme)) {
-    return savedTheme;
-  }
-
-  return DEFAULT_THEME;
-};
-
-const applyThemeClass = (theme: ThemeName) => {
+const applyThemeClass = (theme: ThemeName, systemTheme: "dark" | "light") => {
   const root = document.documentElement;
   root.classList.remove(...ALL_THEME_CLASSES);
-  root.classList.add(`${THEME_CLASS_PREFIX}${theme}`);
-  root.style.colorScheme = theme === "minimal-light" ? "light" : "dark";
+  const effectiveTheme = theme === "system" ? systemTheme : theme === "minimal-light" ? "light" : "dark";
+  root.classList.add(`${THEME_CLASS_PREFIX}${theme === "system" ? (effectiveTheme === "light" ? "minimal-light" : "government-dark") : theme}`);
+  root.style.colorScheme = effectiveTheme;
 };
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeName>(resolveInitialTheme);
+  const [themeState, setThemeState] = useState({
+    theme: DEFAULT_THEME,
+    systemTheme: "dark" as "dark" | "light",
+    hydrated: false,
+  });
 
   useEffect(() => {
-    applyThemeClass(theme);
-    window.localStorage.setItem(STORAGE_KEY, theme);
-  }, [theme]);
+    const savedTheme = window.localStorage.getItem(STORAGE_KEY);
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: light)");
+    const savedThemeName = savedTheme && isThemeName(savedTheme) ? savedTheme : DEFAULT_THEME;
+    const systemTheme = mediaQuery.matches ? "light" : "dark";
+
+    queueMicrotask(() => {
+      setThemeState({
+        theme: savedThemeName,
+        systemTheme,
+        hydrated: true,
+      });
+    });
+
+    const updateSystemTheme = () => {
+      setThemeState((current) => ({
+        ...current,
+        systemTheme: mediaQuery.matches ? "light" : "dark",
+      }));
+    };
+    mediaQuery.addEventListener("change", updateSystemTheme);
+    return () => mediaQuery.removeEventListener("change", updateSystemTheme);
+  }, []);
+
+  useEffect(() => {
+    if (!themeState.hydrated) return;
+    applyThemeClass(themeState.theme, themeState.systemTheme);
+    window.localStorage.setItem(STORAGE_KEY, themeState.theme);
+  }, [themeState]);
 
   const setTheme = useCallback((nextTheme: ThemeName) => {
-    setThemeState(nextTheme);
+    setThemeState((current) => ({ ...current, theme: nextTheme }));
   }, []);
 
   const value = useMemo<ThemeContextValue>(
     () => ({
-      theme,
+      theme: themeState.theme,
+      effectiveTheme: themeState.theme === "system" ? themeState.systemTheme : themeState.theme === "minimal-light" ? "light" : "dark",
       setTheme,
       presets: THEME_PRESETS,
     }),
-    [setTheme, theme],
+    [setTheme, themeState],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

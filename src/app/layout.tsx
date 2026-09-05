@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { ThemeProvider as NextThemeProvider } from "next-themes";
 
 import MobileAutoRedirect from "@/components/mobile/MobileAutoRedirect";
 import { ThemeProvider } from "@/context/ThemeContext";
@@ -49,6 +48,26 @@ export default function RootLayout({
   return (
     <html lang="en" className="theme-government-dark" suppressHydrationWarning>
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function () {
+                try {
+                  var saved = localStorage.getItem("sktech.theme");
+                  var systemLight = window.matchMedia("(prefers-color-scheme: light)").matches;
+                  var theme = saved === "system"
+                    ? (systemLight ? "minimal-light" : "government-dark")
+                    : saved === "minimal-light" || saved === "emerald-authority" || saved === "royal-purple" || saved === "midnight-elite" || saved === "government-dark"
+                      ? saved
+                      : "government-dark";
+                  document.documentElement.classList.remove("theme-system", "theme-government-dark", "theme-emerald-authority", "theme-royal-purple", "theme-minimal-light", "theme-midnight-elite");
+                  document.documentElement.classList.add("theme-" + theme);
+                  document.documentElement.style.colorScheme = theme === "minimal-light" ? "light" : "dark";
+                } catch (error) {}
+              })();
+            `,
+          }}
+        />
         <meta name="theme-color" content="#b91c1c" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -57,17 +76,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <NextThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          enableSystem={false}
-          storageKey="sktech.ui.theme"
-        >
-          <ThemeProvider>
-            <MobileAutoRedirect />
-            {children}
-          </ThemeProvider>
-        </NextThemeProvider>
+        <ThemeProvider>
+          <MobileAutoRedirect />
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );
