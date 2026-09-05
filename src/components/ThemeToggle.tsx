@@ -1,15 +1,16 @@
 "use client";
 
 import { Moon, Sun } from "lucide-react";
-import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
+
+import { useTheme } from "@/context/ThemeContext";
 
 type ThemeToggleProps = {
   className?: string;
 };
 
 export default function ThemeToggle({ className = "" }: ThemeToggleProps) {
-  const { resolvedTheme, setTheme } = useTheme();
+  const { effectiveTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -17,13 +18,13 @@ export default function ThemeToggle({ className = "" }: ThemeToggleProps) {
     return () => cancelAnimationFrame(frame);
   }, []);
 
-  const isDark = mounted && resolvedTheme === "dark";
+  const isDark = mounted && effectiveTheme === "dark";
 
   return (
     <button
       type="button"
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      onClick={() => setTheme(isDark ? "light" : "dark")}
+      onClick={() => setTheme(isDark ? "minimal-light" : "government-dark")}
       className={`group relative inline-flex items-center gap-1 overflow-hidden rounded-full border px-1 py-0.5 text-[10px] font-semibold tracking-[0.08em] transition-all duration-500 ${
         isDark
           ? "border-cyan-300/30 bg-slate-900/80 text-slate-100 shadow-[0_0_20px_rgba(56,189,248,0.35)]"

@@ -248,6 +248,8 @@ export default function HomePage() {
     setChatOpen(true);
   };
 
+  const isLandingDark = effectiveTheme === "dark";
+
   return (
     <div className={`landing-page min-h-screen overflow-x-hidden bg-[#f6f9ff] text-[#06132d] ${effectiveTheme === "dark" ? "landing-page-dark" : ""}`}>
       <audio ref={getStartedAudioRef} preload="auto" src="/sounds/e-1.mp3" />
@@ -255,7 +257,11 @@ export default function HomePage() {
 
       <header
         aria-hidden={showFloatingMenu}
-        className={`sticky top-0 z-40 overflow-hidden border-b border-[#dbe7ff] bg-white/90 px-4 shadow-[0_10px_30px_-26px_rgba(6,19,45,0.75)] backdrop-blur transition-[max-height,opacity,transform,padding] duration-300 sm:px-8 lg:px-10 ${
+        className={`sticky top-0 z-40 overflow-hidden border-b px-4 shadow-[0_10px_30px_-26px_rgba(6,19,45,0.75)] backdrop-blur transition-[max-height,opacity,transform,padding] duration-300 sm:px-8 lg:px-10 ${
+          isLandingDark
+            ? "border-cyan-300/20 bg-[#071632]/95 text-slate-100"
+            : "border-[#dbe7ff] bg-white/90 text-[#06132d]"
+        } ${
           showFloatingMenu
             ? "pointer-events-none max-h-0 -translate-y-full border-transparent py-0 opacity-0"
             : "max-h-24 py-2.5 opacity-100 md:py-4"
@@ -274,12 +280,12 @@ export default function HomePage() {
                 priority
               />
             </span>
-            <span className="truncate text-sm font-black uppercase text-[#06132d]">
+            <span className={`truncate text-sm font-black uppercase ${isLandingDark ? "text-slate-100" : "text-[#06132d]"}`}>
               SKTECH
             </span>
           </Link>
 
-          <nav className="hidden items-center gap-7 text-sm font-semibold text-[#24385f]/70 md:flex">
+          <nav className={`hidden items-center gap-7 text-sm font-semibold md:flex ${isLandingDark ? "text-slate-300" : "text-[#24385f]/70"}`}>
             {navItems.map(([label, href]) => (
               <a key={href} href={href} className="transition hover:text-[#1452d9]">
                 {label}
@@ -294,7 +300,11 @@ export default function HomePage() {
               type="button"
               aria-label="Toggle navigation"
               onClick={() => setMenuOpen((open) => !open)}
-              className="rounded-lg border border-[#dbe7ff] p-2 text-[#06132d]"
+              className={`rounded-lg border p-2 ${
+                isLandingDark
+                  ? "border-cyan-300/25 text-slate-100 hover:bg-white/10"
+                  : "border-[#dbe7ff] text-[#06132d] hover:bg-[#eef4ff]"
+              }`}
             >
               {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
@@ -302,13 +312,17 @@ export default function HomePage() {
         </div>
 
         {menuOpen ? (
-          <nav className="mx-auto mt-2 grid max-w-7xl gap-1 rounded-xl border border-[#dbe7ff] bg-white p-2 text-sm font-semibold text-[#06132d] shadow-lg md:hidden">
+          <nav className={`mx-auto mt-2 grid max-w-7xl gap-1 rounded-xl border p-2 text-sm font-semibold shadow-lg md:hidden ${
+            isLandingDark
+              ? "border-cyan-300/20 bg-[#071632] text-slate-100"
+              : "border-[#dbe7ff] bg-white text-[#06132d]"
+          }`}>
             {navItems.map(([label, href]) => (
               <a
                 key={href}
                 href={href}
                 onClick={() => setMenuOpen(false)}
-                className="rounded-lg px-3 py-2.5 hover:bg-[#eef4ff]"
+                className={`rounded-lg px-3 py-2.5 ${isLandingDark ? "hover:bg-white/10" : "hover:bg-[#eef4ff]"}`}
               >
                 {label}
               </a>
