@@ -15,13 +15,16 @@ import FlippablePortraitID from "@/components/id/FlippablePortraitID";
 import { authOptions } from "@/lib/auth";
 import { getActiveAnnouncements } from "@/lib/announcements";
 import { prisma } from "@/lib/db";
-import { requireRole } from "@/lib/roleGuard";
+import { requireDashboardRole } from "@/lib/roleGuard";
 
 export const dynamic = "force-dynamic";
 
 export default async function MobileOfficialPage() {
   const session = await getServerSession(authOptions);
-  const authorized = requireRole(session, [Role.OFFICIAL]);
+  const authorized = requireDashboardRole(session, [Role.OFFICIAL], {
+    unauthenticatedRedirect: "/official/auth",
+    requireApproved: false,
+  });
 
   const user = await prisma.user.findUnique({
     where: { id: authorized.user.id },

@@ -3,13 +3,16 @@ import { getServerSession } from "next-auth";
 
 import ChatClient from "@/components/chat/ChatClient";
 import { authOptions } from "@/lib/auth";
-import { requireRole } from "@/lib/roleGuard";
+import { requireDashboardRole } from "@/lib/roleGuard";
 
 export const dynamic = "force-dynamic";
 
 export default async function MobileOfficialChatPage() {
   const session = await getServerSession(authOptions);
-  requireRole(session, [Role.OFFICIAL]);
+  requireDashboardRole(session, [Role.OFFICIAL], {
+    unauthenticatedRedirect: "/official/auth",
+    requireApproved: false,
+  });
 
   return <ChatClient title="Official Chat" compact />;
 }
