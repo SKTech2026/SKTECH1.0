@@ -75,7 +75,7 @@ export default async function AdminDashboardLayout({
   children: ReactNode;
 }) {
   const session = await getServerSession(authOptions);
-  requireDashboardRole(session, [Role.ADMIN], {
+  const authorizedSession = requireDashboardRole(session, [Role.ADMIN], {
     unauthenticatedRedirect: "/login?role=ADMIN",
   });
 
@@ -86,6 +86,10 @@ export default async function AdminDashboardLayout({
       subheading="Administrative workspace for governance, identity, and attendance oversight."
       items={adminItems}
       variant="adminCn"
+      account={{
+        name: authorizedSession.user.name,
+        email: authorizedSession.user.email,
+      }}
     >
       {children}
     </RoleShell>
