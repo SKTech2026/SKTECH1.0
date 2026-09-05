@@ -1,7 +1,8 @@
-import { Role, UserStatus } from "@prisma/client";
+import { AdmissionStatus, OfficialStatus, Role, UserStatus } from "@prisma/client";
+import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 
-import { requireApiRole } from "@/lib/api-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import {
   buildOfficialPhotoUrl,
@@ -14,42 +15,27 @@ import { createSupabaseAdminClient } from "@/utils/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
-const unavailableResponse = (message: string) => {
+const imageErrorResponse = (message: string, status = 404) => {
   console.error(`[PHOTO] photo serve failed: ${message}`);
-  return NextResponse.json({ error: "Official photo is unavailable." }, { status: 404 });
+  return new NextResponse(null, {
+    status,
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
 };
 
 export async function GET(request: NextRequest) {
   try {
     console.info("[PHOTO] serve request received");
-    const guard = await requireApiRole([Role.ADMIN, Role.STAFF, Role.OFFICIAL], {
-      requireApproved: false,
-    });
-    if (guard.error) {
-      return guard.error;
-    }
-
-    if (
-      (guard.session.user.role === Role.ADMIN || guard.session.user.role === Role.STAFF) &&
-      guard.session.user.status !== UserStatus.APPROVED
-    ) {
-      return NextResponse.json({ error: "Account is not approved." }, { status: 403 });
-    }
-
-    if (guard.session.user.role === Role.STAFF && !guard.session.user.municipalityPresidentId) {
-      return NextResponse.json(
-        { error: "Staff account is not assigned to a municipality." },
-        { status: 403 },
-      );
-    }
-
     const objectPath = request.nextUrl.searchParams.get("path")?.trim() ?? "";
     if (!isOfficialPhotoObjectPath(objectPath)) {
-      console.error("[PHOTO] photo serve failed: Invalid official photo path.");
-      return NextResponse.json({ error: "Invalid official photo path." }, { status: 400 });
+      return imageErrorResponse("Invalid official photo path.", 400);
     }
     console.info("[PHOTO] requested object path valid");
 
+    const session = await getServerSession(authOptions);
     const photoUrl = buildOfficialPhotoUrl(objectPath);
     const official = await prisma.sKOfficial.findFirst({
       where: {
@@ -62,30 +48,50 @@ export async function GET(request: NextRequest) {
         id: true,
         userId: true,
         municipalityId: true,
+        admissionStatus: true,
+        status: true,
+        user: {
+          select: {
+            status: true,
+          },
+        },
       },
     });
 
     if (!official) {
-      return unavailableResponse("No Official database reference found.");
+      return imageErrorResponse("No Official database reference found.");
     }
 
-    if (guard.session.user.role === Role.OFFICIAL && official.userId !== guard.session.user.id) {
-      return NextResponse.json({ error: "Forbidden." }, { status: 403 });
-    }
-
-    if (
-      guard.session.user.role === Role.STAFF &&
-      official.municipalityId !== guard.session.user.municipalityPresidentId
+    if (!session?.user?.id) {
+      if (
+        official.admissionStatus !== AdmissionStatus.APPROVED ||
+        official.status !== OfficialStatus.ACTIVE ||
+        official.user?.status !== UserStatus.APPROVED
+      ) {
+        return imageErrorResponse("Unauthenticated photo request is not for an active public credential.");
+      }
+    } else if (![Role.ADMIN, Role.STAFF, Role.OFFICIAL].includes(session.user.role)) {
+      return imageErrorResponse("Photo request role is forbidden.", 403);
+    } else if (
+      (session.user.role === Role.ADMIN || session.user.role === Role.STAFF) &&
+      session.user.status !== UserStatus.APPROVED
     ) {
-      return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+      return imageErrorResponse("Photo request account is not approved.", 403);
+    } else if (session.user.role === Role.STAFF && !session.user.municipalityPresidentId) {
+      return imageErrorResponse("Staff account is not assigned to a municipality.", 403);
+    } else if (session.user.role === Role.OFFICIAL && official.userId !== session.user.id) {
+      return imageErrorResponse("Official photo request is not owned by the session user.", 403);
+    } else if (
+      session.user.role === Role.STAFF &&
+      official.municipalityId !== session.user.municipalityPresidentId
+    ) {
+      return imageErrorResponse("Staff photo request is outside assigned municipality.", 403);
     }
-
     console.info("[PHOTO] database ownership/reference found");
 
     const contentType = getOfficialPhotoContentType(objectPath);
     if (!contentType) {
-      console.error("[PHOTO] photo serve failed: Invalid official photo type.");
-      return NextResponse.json({ error: "Invalid official photo type." }, { status: 400 });
+      return imageErrorResponse("Invalid official photo type.", 400);
     }
 
     console.info("[PHOTO] downloading from Supabase");
@@ -95,24 +101,29 @@ export async function GET(request: NextRequest) {
       .download(objectPath);
 
     if (error || !data) {
-      return unavailableResponse(
+      return imageErrorResponse(
         error ? getSafePhotoErrorMessage(error) : "Supabase returned no photo data.",
       );
     }
     console.info("[PHOTO] download success");
 
     const imageBytes = await data.arrayBuffer();
+    if (imageBytes.byteLength === 0) {
+      return imageErrorResponse("Supabase returned an empty photo object.");
+    }
+
     console.info("[PHOTO] response returning");
-    return new NextResponse(imageBytes, {
+    return new NextResponse(Buffer.from(imageBytes), {
       status: 200,
       headers: {
         "Cache-Control": "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400",
         "Content-Type": contentType,
+        "Content-Length": String(imageBytes.byteLength),
         "X-Content-Type-Options": "nosniff",
       },
     });
   } catch (error) {
     console.error(`[PHOTO] photo serve failed: ${getSafePhotoErrorMessage(error)}`);
-    return NextResponse.json({ error: "Failed to load official photo." }, { status: 500 });
+    return imageErrorResponse("Failed to load official photo.", 500);
   }
 }

@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { QRCodeSVG } from "qrcode.react";
+import { useState } from "react";
 
 type OfficialIDCardProps = {
   fullName: string;
@@ -32,6 +33,7 @@ const formatDate = (value: Date | string) => {
 
 const compactText = (value: string, maxLength: number) =>
   value.length > maxLength ? `${value.slice(0, maxLength - 1)}.` : value;
+const DEFAULT_PHOTO_URL = "/images/default-official.svg";
 
 export default function OfficialIDCard({
   fullName,
@@ -49,9 +51,11 @@ export default function OfficialIDCard({
   contactInfo = "SK Provincial Federation, Oriental Mindoro | support@skpf.gov.ph | (043) 000-0000",
   className,
 }: OfficialIDCardProps) {
+  const [failedPhotoUrl, setFailedPhotoUrl] = useState<string | null>(null);
   const resolvedId = idNumber ?? qrValue.slice(-12).toUpperCase();
   const termPeriod = `${formatDate(termStart)} - ${formatDate(termEnd)}`;
   const seal = watermarkUrl ?? federationLogoUrl;
+  const displayPhotoUrl = failedPhotoUrl === photoUrl ? DEFAULT_PHOTO_URL : photoUrl;
 
   return (
     <div className={className ?? ""}>
@@ -96,11 +100,13 @@ export default function OfficialIDCard({
               <div>
                 <div className="relative h-[122px] w-[94px] overflow-hidden rounded border border-[#b89d52]/55 bg-[#10234a] sm:h-[136px] sm:w-[108px]">
                   <Image
-                    src={photoUrl}
+                    src={displayPhotoUrl}
                     alt={`${fullName} photo`}
                     fill
                     className="object-cover"
                     sizes="108px"
+                    unoptimized={displayPhotoUrl.startsWith("/api/official/photo")}
+                    onError={() => setFailedPhotoUrl(photoUrl)}
                   />
                 </div>
 

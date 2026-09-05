@@ -192,6 +192,7 @@ export default function FlippablePortraitID({
                       className="object-cover"
                       sizes="112px"
                       priority
+                      unoptimized={displayPhotoUrl.startsWith("/api/official/photo")}
                       onError={() => setFailedPhotoUrl(photoUrl)}
                     />
                   </div>

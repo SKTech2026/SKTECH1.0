@@ -205,6 +205,10 @@ export default function OfficialProfileForm({ initial, municipalities }: Profile
                 fill
                 className="object-cover"
                 sizes="96px"
+                unoptimized={
+                  photoPreview.startsWith("/api/official/photo") ||
+                  photoPreview.startsWith("blob:")
+                }
                 onError={() => setPhotoPreview(DEFAULT_PHOTO_URL)}
               />
             </div>
