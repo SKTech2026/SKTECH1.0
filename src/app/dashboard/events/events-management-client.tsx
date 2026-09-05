@@ -16,6 +16,7 @@ export type EventManagementItem = {
 
 type EventsManagementClientProps = {
   initialEvents: EventManagementItem[];
+  eventBasePath?: string;
 };
 
 const formatDateTime = (value: string) => {
@@ -35,6 +36,7 @@ const formatDateTime = (value: string) => {
 
 export default function EventsManagementClient({
   initialEvents,
+  eventBasePath = "/dashboard/events",
 }: EventsManagementClientProps) {
   const [events, setEvents] = useState<EventManagementItem[]>(initialEvents);
   const [isLoadingEvents, setIsLoadingEvents] = useState(
@@ -307,7 +309,7 @@ export default function EventsManagementClient({
                           {deletingEventId === event.id ? "Deleting..." : "Delete"}
                         </button>
                         <Link
-                          href={`/dashboard/events/${event.id}`}
+                          href={`${eventBasePath}/${event.id}`}
                           className="rounded-md bg-surface-elevated px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-surface-elevated/80"
                         >
                           View Attendance
