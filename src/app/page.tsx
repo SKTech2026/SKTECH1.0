@@ -258,19 +258,19 @@ export default function HomePage() {
         className={`sticky top-0 z-40 overflow-hidden border-b border-[#dbe7ff] bg-white/90 px-4 shadow-[0_10px_30px_-26px_rgba(6,19,45,0.75)] backdrop-blur transition-[max-height,opacity,transform,padding] duration-300 sm:px-8 lg:px-10 ${
           showFloatingMenu
             ? "pointer-events-none max-h-0 -translate-y-full border-transparent py-0 opacity-0"
-            : "max-h-32 py-4 opacity-100"
+            : "max-h-24 py-2.5 opacity-100 md:py-4"
         }`}
       >
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
           <Link href="/" className="flex min-w-0 items-center gap-3">
-            <span className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center">
+            <span className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center md:h-11 md:w-11">
               <span className="absolute inset-0 rounded-xl bg-[linear-gradient(135deg,#cf2638,#1c5bd8,#f3c72b)] opacity-35 blur" />
               <Image
                 src={logoPath}
                 alt="SKTECH"
                 width={44}
                 height={44}
-                className="relative h-11 w-11 object-contain"
+                className="relative h-9 w-9 object-contain md:h-11 md:w-11"
                 priority
               />
             </span>
@@ -302,13 +302,13 @@ export default function HomePage() {
         </div>
 
         {menuOpen ? (
-          <nav className="mx-auto mt-4 grid max-w-7xl gap-2 rounded-xl border border-[#dbe7ff] bg-white p-3 text-sm font-semibold text-[#06132d] shadow-lg md:hidden">
+          <nav className="mx-auto mt-2 grid max-w-7xl gap-1 rounded-xl border border-[#dbe7ff] bg-white p-2 text-sm font-semibold text-[#06132d] shadow-lg md:hidden">
             {navItems.map(([label, href]) => (
               <a
                 key={href}
                 href={href}
                 onClick={() => setMenuOpen(false)}
-                className="rounded-lg px-3 py-3 hover:bg-[#eef4ff]"
+                className="rounded-lg px-3 py-2.5 hover:bg-[#eef4ff]"
               >
                 {label}
               </a>
@@ -386,13 +386,13 @@ export default function HomePage() {
       <main>
         <section
           id="about"
-          className="relative isolate overflow-hidden px-4 pb-16 pt-10 sm:px-8 sm:pb-20 lg:px-10"
+          className="relative isolate overflow-hidden px-4 pb-10 pt-6 sm:px-8 sm:pb-16 sm:pt-10 lg:px-10"
         >
           <div className="landing-hero-backdrop absolute inset-0 -z-20 bg-[radial-gradient(circle_at_20%_10%,#fff2b8_0,#fff8dd_18%,transparent_34%),radial-gradient(circle_at_75%_25%,#dce8ff_0,#eaf2ff_24%,transparent_44%),linear-gradient(145deg,#ffffff_0%,#eef5ff_44%,#dce8ff_100%)]" />
           <div className="absolute left-0 top-0 -z-10 h-1.5 w-full bg-[linear-gradient(90deg,#cf2638,#f3c72b,#1452d9)]" />
 
-          <div className="mx-auto grid max-w-7xl items-center gap-10 md:grid-cols-[0.88fr_1.12fr]">
-            <div className="pt-4 md:pt-10">
+          <div className="mx-auto grid max-w-7xl items-center gap-6 sm:gap-10 md:grid-cols-[0.88fr_1.12fr]">
+            <div className="pt-2 md:pt-10">
               <motion.h1
                 {...(reducedMotion
                   ? {}
@@ -401,7 +401,7 @@ export default function HomePage() {
                       animate: { opacity: 1, y: 0 },
                       transition: { duration: 0.62, ease: "easeOut" },
                     })}
-                className="max-w-3xl text-5xl font-black leading-[0.98] text-[#0a3aa2] sm:text-6xl lg:text-7xl"
+                className="max-w-3xl text-[2.35rem] font-black leading-[0.98] text-[#0a3aa2] sm:text-5xl md:text-6xl lg:text-7xl"
               >
                 Oriental Mindoro
                 <span className="relative mt-2 block text-[#06132d]">
@@ -421,21 +421,14 @@ export default function HomePage() {
                       animate: { opacity: 1, y: 0 },
                       transition: { delay: 0.12, duration: 0.5 },
                     })}
-                className="mt-8 flex flex-col gap-3 sm:flex-row"
+                className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row"
               >
                 <button
                   type="button"
                   onClick={onGetStarted}
-                  className="inline-flex items-center justify-center rounded-full bg-[#06132d] px-6 py-3 text-sm font-bold text-white shadow-[0_18px_32px_-26px_rgba(6,19,45,0.95)] transition hover:bg-[#0a3aa2]"
+                  className="inline-flex items-center justify-center rounded-full bg-[#06132d] px-5 py-2.5 text-sm font-bold text-white shadow-[0_18px_32px_-26px_rgba(6,19,45,0.95)] transition hover:bg-[#0a3aa2] sm:px-6 sm:py-3"
                 >
                   Official Access <ArrowRight className="ml-2 h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setChatOpen(true)}
-                  className="inline-flex items-center justify-center rounded-full border border-[#bfd1f8] bg-white/70 px-6 py-3 text-sm font-bold text-[#0a3aa2] backdrop-blur transition hover:bg-white"
-                >
-                  Ask SKTECH <MessageCircle className="ml-2 h-4 w-4" />
                 </button>
               </motion.div>
             </div>
@@ -448,22 +441,22 @@ export default function HomePage() {
                     animate: { opacity: 1, scale: 1, y: 0 },
                     transition: { delay: 0.08, duration: 0.7 },
                   })}
-              className="relative mx-auto min-h-[360px] w-full max-w-[560px] sm:min-h-[500px] md:min-h-[610px]"
+              className="relative mx-auto min-h-[295px] w-full max-w-[560px] sm:min-h-[430px] md:min-h-[610px]"
             >
-              <div className="landing-hero-orbit absolute left-1/2 top-6 h-[300px] w-[300px] -translate-x-1/2 rounded-full bg-[#06132d] shadow-[0_35px_90px_-42px_rgba(6,19,45,0.9)] sm:h-[440px] sm:w-[440px] md:top-12 md:h-[530px] md:w-[530px]" />
-              <div className="landing-hero-circle absolute left-1/2 top-12 h-[250px] w-[250px] -translate-x-1/2 rounded-full border border-white/50 bg-[linear-gradient(135deg,#ffffff_0%,#edf4ff_42%,#f6d654_70%,#1452d9_100%)] shadow-[inset_0_0_70px_rgba(20,82,217,0.22)] sm:h-[370px] sm:w-[370px] md:top-24 md:h-[450px] md:w-[450px]" />
+              <div className="landing-hero-orbit absolute left-1/2 top-4 h-[238px] w-[238px] -translate-x-1/2 rounded-full bg-[#06132d] shadow-[0_35px_90px_-42px_rgba(6,19,45,0.9)] sm:h-[380px] sm:w-[380px] md:top-12 md:h-[530px] md:w-[530px]" />
+              <div className="landing-hero-circle absolute left-1/2 top-9 h-[200px] w-[200px] -translate-x-1/2 rounded-full border border-white/50 bg-[linear-gradient(135deg,#ffffff_0%,#edf4ff_42%,#f6d654_70%,#1452d9_100%)] shadow-[inset_0_0_70px_rgba(20,82,217,0.22)] sm:h-[320px] sm:w-[320px] md:top-24 md:h-[450px] md:w-[450px]" />
               <Image
                 src={logoPath}
                 alt="SKTECH platform logo"
                 width={520}
                 height={520}
-                className="absolute left-1/2 top-20 h-[220px] w-[220px] -translate-x-1/2 object-contain drop-shadow-2xl sm:top-28 sm:h-[360px] sm:w-[360px] md:top-40 md:h-[390px] md:w-[390px]"
+                className="absolute left-1/2 top-16 h-[168px] w-[168px] -translate-x-1/2 object-contain drop-shadow-2xl sm:top-24 sm:h-[300px] sm:w-[300px] md:top-40 md:h-[390px] md:w-[390px]"
                 priority
               />
               <motion.div
                 animate={reducedMotion ? undefined : { y: [-8, 10, -8] }}
                 transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
-                className="landing-status absolute right-2 top-8 rounded-full border border-[#f3c72b]/50 bg-white/90 px-3 py-2 text-xs font-black uppercase text-[#0a3aa2] shadow-[0_18px_36px_-26px_rgba(6,19,45,0.85)] backdrop-blur sm:right-0 sm:top-24 sm:px-4"
+                className="landing-status absolute right-1 top-5 rounded-full border border-[#f3c72b]/50 bg-white/90 px-2.5 py-1.5 text-[11px] font-black uppercase text-[#0a3aa2] shadow-[0_18px_36px_-26px_rgba(6,19,45,0.85)] backdrop-blur sm:right-0 sm:top-20 sm:px-4 sm:py-2 sm:text-xs"
               >
                 <span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#cf2638]" />
                 Chat Feature
@@ -471,7 +464,7 @@ export default function HomePage() {
               <motion.div
                 animate={reducedMotion ? undefined : { y: [12, -10, 12] }}
                 transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
-                className="landing-status absolute bottom-10 left-2 max-w-[150px] rounded-2xl border border-white/40 bg-white/85 p-4 shadow-[0_18px_42px_-28px_rgba(6,19,45,0.8)] backdrop-blur sm:bottom-16 sm:left-0"
+                className="landing-status absolute bottom-5 left-1 max-w-[130px] rounded-2xl border border-white/40 bg-white/85 p-3 shadow-[0_18px_42px_-28px_rgba(6,19,45,0.8)] backdrop-blur sm:bottom-12 sm:left-0 sm:max-w-[150px] sm:p-4"
               >
                 <p className="text-xs font-bold uppercase text-[#cf2638]">QR + Face</p>
                 <p className="mt-2 text-sm font-black leading-tight text-[#06132d]">Attendance ready</p>
@@ -808,13 +801,6 @@ export default function HomePage() {
               >
                 Get Official Access <ArrowRight className="ml-2 h-4 w-4" />
               </button>
-              <button
-                type="button"
-                onClick={() => setChatOpen(true)}
-                className="inline-flex items-center justify-center rounded-full border border-[#bfd1f8] bg-white px-6 py-3 text-sm font-bold text-[#0a3aa2]"
-              >
-                Ask SKTECH <MessageCircle className="ml-2 h-4 w-4" />
-              </button>
             </motion.div>
 
             {showLoginActions ? (
@@ -996,6 +982,25 @@ export default function HomePage() {
           color: var(--foreground);
         }
 
+        .landing-page-dark header [class*="text-[#06132d]"],
+        .landing-page-dark header [class*="text-[#24385f]"],
+        .landing-page-dark footer,
+        .landing-page-dark .landing-chat-panel [class*="text-[#06132d]"],
+        .landing-page-dark .landing-chat-panel [class*="text-[#24385f]"] {
+          color: var(--foreground);
+        }
+
+        .landing-page-dark header nav,
+        .landing-page-dark header nav a,
+        .landing-page-dark footer nav a {
+          color: #cbd5e1;
+        }
+
+        .landing-page-dark header nav a:hover,
+        .landing-page-dark footer nav a:hover {
+          color: #ffffff;
+        }
+
         .landing-page-dark .landing-secondary {
           color: #cbd5e1;
         }
@@ -1022,6 +1027,21 @@ export default function HomePage() {
           border-color: var(--glass-border);
           background: var(--surface-elevated);
           color: var(--foreground);
+        }
+
+        .landing-page-dark .landing-chat-panel [class*="bg-[#eef4ff]"],
+        .landing-page-dark .landing-chat-panel [class*="bg-[#f6f9ff]"] {
+          background-color: rgba(15, 23, 42, 0.82);
+        }
+
+        .landing-page-dark .landing-chat-panel input {
+          color: var(--foreground);
+        }
+
+        @media (max-width: 430px) {
+          .landing-launcher {
+            max-width: calc(100vw - 2rem);
+          }
         }
       `}</style>
     </div>
