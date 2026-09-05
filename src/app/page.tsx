@@ -6,6 +6,7 @@ import {
   BarChart3,
   CalendarDays,
   Check,
+  Compass,
   Fingerprint,
   IdCard,
   LockKeyhole,
@@ -22,9 +23,10 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import ThemeToggle from "@/components/ThemeToggle";
+import { useTheme } from "@/context/ThemeContext";
 
 type ChatMessage = {
   role: "bot" | "user";
@@ -150,10 +152,14 @@ function answerQuestion(question: string) {
 
 export default function HomePage() {
   const router = useRouter();
+  const { effectiveTheme } = useTheme();
   const reducedMotion = useReducedMotion();
   const [menuOpen, setMenuOpen] = useState(false);
   const [showLoginActions, setShowLoginActions] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [floatingMenuOpen, setFloatingMenuOpen] = useState(false);
+  const [showFloatingMenu, setShowFloatingMenu] = useState(false);
+  const [activeSection, setActiveSection] = useState("about");
   const [chatInput, setChatInput] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
@@ -163,6 +169,30 @@ export default function HomePage() {
   ]);
   const getStartedAudioRef = useRef<HTMLAudioElement | null>(null);
   const loginSelectAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    const sections = ["about", "platform", "features", "security"]
+      .map((id) => document.getElementById(id))
+      .filter((section): section is HTMLElement => Boolean(section));
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (visible) setActiveSection(visible.target.id);
+      },
+      { rootMargin: "-18% 0px -62% 0px", threshold: [0.05, 0.2, 0.5] },
+    );
+    sections.forEach((section) => observer.observe(section));
+
+    const onScroll = () => setShowFloatingMenu(window.scrollY > 420);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, []);
 
   const reveal = reducedMotion
     ? {}
@@ -219,11 +249,18 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#f6f9ff] text-[#06132d]">
+    <div className={`landing-page min-h-screen overflow-x-hidden bg-[#f6f9ff] text-[#06132d] ${effectiveTheme === "dark" ? "landing-page-dark" : ""}`}>
       <audio ref={getStartedAudioRef} preload="auto" src="/sounds/e-1.mp3" />
       <audio ref={loginSelectAudioRef} preload="auto" src="/sounds/e-2.mp3" />
 
-      <header className="sticky top-0 z-40 border-b border-[#dbe7ff] bg-white/90 px-4 py-4 shadow-[0_10px_30px_-26px_rgba(6,19,45,0.75)] backdrop-blur sm:px-8 lg:px-10">
+      <header
+        aria-hidden={showFloatingMenu}
+        className={`sticky top-0 z-40 overflow-hidden border-b border-[#dbe7ff] bg-white/90 px-4 shadow-[0_10px_30px_-26px_rgba(6,19,45,0.75)] backdrop-blur transition-[max-height,opacity,transform,padding] duration-300 sm:px-8 lg:px-10 ${
+          showFloatingMenu
+            ? "pointer-events-none max-h-0 -translate-y-full border-transparent py-0 opacity-0"
+            : "max-h-32 py-4 opacity-100"
+        }`}
+      >
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
           <Link href="/" className="flex min-w-0 items-center gap-3">
             <span className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center">
@@ -249,26 +286,10 @@ export default function HomePage() {
               </a>
             ))}
             <ThemeToggle />
-            <button
-              type="button"
-              onClick={() => setChatOpen(true)}
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-[#0a3aa2] px-4 py-2 font-bold text-white shadow-[0_14px_28px_-22px_rgba(10,58,162,0.95)] transition hover:bg-[#06132d]"
-            >
-              <MessageCircle className="h-4 w-4" />
-              Ask SKTECH
-            </button>
           </nav>
 
           <div className="flex items-center gap-2 md:hidden">
             <ThemeToggle />
-            <button
-              type="button"
-              aria-label="Ask SKTECH"
-              onClick={() => setChatOpen(true)}
-              className="rounded-full bg-[#0a3aa2] p-2.5 text-white"
-            >
-              <MessageCircle className="h-5 w-5" />
-            </button>
             <button
               type="button"
               aria-label="Toggle navigation"
@@ -292,27 +313,82 @@ export default function HomePage() {
                 {label}
               </a>
             ))}
-            <button
-              type="button"
-              onClick={() => {
-                setMenuOpen(false);
-                setChatOpen(true);
-              }}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#0a3aa2] px-4 py-3 text-white"
-            >
-              <MessageCircle className="h-4 w-4" />
-              Ask SKTECH
-            </button>
           </nav>
         ) : null}
       </header>
+
+      {showFloatingMenu ? (
+        <motion.div
+          initial={reducedMotion ? false : { opacity: 0, x: -12 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="fixed left-3 top-20 z-50 sm:left-5"
+        >
+          <button
+            type="button"
+            aria-label="Open section navigation"
+            aria-expanded={floatingMenuOpen}
+            onClick={() => setFloatingMenuOpen((open) => !open)}
+            className={`rounded-2xl border p-3 shadow-[0_18px_40px_-24px_rgba(6,19,45,0.8)] backdrop-blur-md transition ${
+              effectiveTheme === "dark"
+                ? "border-cyan-300/25 bg-slate-900/90 text-cyan-200 hover:bg-slate-800"
+                : "border-[#bfd1f8] bg-white/90 text-[#0a3aa2] hover:bg-white"
+            }`}
+          >
+            <Compass className="h-5 w-5" />
+          </button>
+          {floatingMenuOpen ? (
+            <motion.nav
+              initial={reducedMotion ? false : { opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              aria-label="Landing page sections"
+              className={`mt-2 w-40 rounded-2xl border p-2 shadow-[0_20px_50px_-26px_rgba(6,19,45,0.8)] backdrop-blur-md ${
+                effectiveTheme === "dark"
+                  ? "border-cyan-300/20 bg-slate-900/95"
+                  : "border-[#dbe7ff] bg-white/95"
+              }`}
+            >
+              {navItems.map(([label, href]) => {
+                const sectionId = href.slice(1);
+                const active = activeSection === sectionId;
+                return (
+                  <a
+                    key={href}
+                    href={href}
+                    aria-current={active ? "location" : undefined}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      document.getElementById(sectionId)?.scrollIntoView({
+                        behavior: reducedMotion ? "auto" : "smooth",
+                        block: "start",
+                      });
+                      setFloatingMenuOpen(false);
+                    }}
+                    className={`block rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
+                      active
+                        ? effectiveTheme === "dark"
+                          ? "bg-cyan-300/15 text-cyan-200"
+                          : "bg-[#eaf2ff] text-[#0a3aa2]"
+                        : effectiveTheme === "dark"
+                          ? "text-slate-300 hover:bg-white/10 hover:text-white"
+                          : "text-[#24385f]/70 hover:bg-[#f6f9ff] hover:text-[#0a3aa2]"
+                    }`}
+                  >
+                    <span className="mr-2 inline-block h-1.5 w-1.5 rounded-full bg-[#cf2638] align-middle" />
+                    {label}
+                  </a>
+                );
+              })}
+            </motion.nav>
+          ) : null}
+        </motion.div>
+      ) : null}
 
       <main>
         <section
           id="about"
           className="relative isolate overflow-hidden px-4 pb-16 pt-10 sm:px-8 sm:pb-20 lg:px-10"
         >
-          <div className="absolute inset-0 -z-20 bg-[radial-gradient(circle_at_20%_10%,#fff2b8_0,#fff8dd_18%,transparent_34%),radial-gradient(circle_at_75%_25%,#dce8ff_0,#eaf2ff_24%,transparent_44%),linear-gradient(145deg,#ffffff_0%,#eef5ff_44%,#dce8ff_100%)]" />
+          <div className="landing-hero-backdrop absolute inset-0 -z-20 bg-[radial-gradient(circle_at_20%_10%,#fff2b8_0,#fff8dd_18%,transparent_34%),radial-gradient(circle_at_75%_25%,#dce8ff_0,#eaf2ff_24%,transparent_44%),linear-gradient(145deg,#ffffff_0%,#eef5ff_44%,#dce8ff_100%)]" />
           <div className="absolute left-0 top-0 -z-10 h-1.5 w-full bg-[linear-gradient(90deg,#cf2638,#f3c72b,#1452d9)]" />
 
           <div className="mx-auto grid max-w-7xl items-center gap-10 md:grid-cols-[0.88fr_1.12fr]">
@@ -374,8 +450,8 @@ export default function HomePage() {
                   })}
               className="relative mx-auto min-h-[360px] w-full max-w-[560px] sm:min-h-[500px] md:min-h-[610px]"
             >
-              <div className="absolute left-1/2 top-6 h-[300px] w-[300px] -translate-x-1/2 rounded-full bg-[#06132d] shadow-[0_35px_90px_-42px_rgba(6,19,45,0.9)] sm:h-[440px] sm:w-[440px] md:top-12 md:h-[530px] md:w-[530px]" />
-              <div className="absolute left-1/2 top-12 h-[250px] w-[250px] -translate-x-1/2 rounded-full border border-white/50 bg-[linear-gradient(135deg,#ffffff_0%,#edf4ff_42%,#f6d654_70%,#1452d9_100%)] shadow-[inset_0_0_70px_rgba(20,82,217,0.22)] sm:h-[370px] sm:w-[370px] md:top-24 md:h-[450px] md:w-[450px]" />
+              <div className="landing-hero-orbit absolute left-1/2 top-6 h-[300px] w-[300px] -translate-x-1/2 rounded-full bg-[#06132d] shadow-[0_35px_90px_-42px_rgba(6,19,45,0.9)] sm:h-[440px] sm:w-[440px] md:top-12 md:h-[530px] md:w-[530px]" />
+              <div className="landing-hero-circle absolute left-1/2 top-12 h-[250px] w-[250px] -translate-x-1/2 rounded-full border border-white/50 bg-[linear-gradient(135deg,#ffffff_0%,#edf4ff_42%,#f6d654_70%,#1452d9_100%)] shadow-[inset_0_0_70px_rgba(20,82,217,0.22)] sm:h-[370px] sm:w-[370px] md:top-24 md:h-[450px] md:w-[450px]" />
               <Image
                 src={logoPath}
                 alt="SKTECH platform logo"
@@ -387,7 +463,7 @@ export default function HomePage() {
               <motion.div
                 animate={reducedMotion ? undefined : { y: [-8, 10, -8] }}
                 transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
-                className="absolute right-2 top-8 rounded-full border border-[#f3c72b]/50 bg-white/90 px-3 py-2 text-xs font-black uppercase text-[#0a3aa2] shadow-[0_18px_36px_-26px_rgba(6,19,45,0.85)] backdrop-blur sm:right-0 sm:top-24 sm:px-4"
+                className="landing-status absolute right-2 top-8 rounded-full border border-[#f3c72b]/50 bg-white/90 px-3 py-2 text-xs font-black uppercase text-[#0a3aa2] shadow-[0_18px_36px_-26px_rgba(6,19,45,0.85)] backdrop-blur sm:right-0 sm:top-24 sm:px-4"
               >
                 <span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#cf2638]" />
                 Chat Feature
@@ -395,7 +471,7 @@ export default function HomePage() {
               <motion.div
                 animate={reducedMotion ? undefined : { y: [12, -10, 12] }}
                 transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
-                className="absolute bottom-10 left-2 max-w-[150px] rounded-2xl border border-white/40 bg-white/85 p-4 shadow-[0_18px_42px_-28px_rgba(6,19,45,0.8)] backdrop-blur sm:bottom-16 sm:left-0"
+                className="landing-status absolute bottom-10 left-2 max-w-[150px] rounded-2xl border border-white/40 bg-white/85 p-4 shadow-[0_18px_42px_-28px_rgba(6,19,45,0.8)] backdrop-blur sm:bottom-16 sm:left-0"
               >
                 <p className="text-xs font-bold uppercase text-[#cf2638]">QR + Face</p>
                 <p className="mt-2 text-sm font-black leading-tight text-[#06132d]">Attendance ready</p>
@@ -404,7 +480,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="bg-white px-4 py-7 sm:px-8 lg:px-10">
+        <section className="landing-light-surface bg-white px-4 py-7 sm:px-8 lg:px-10">
           <div
             className="mx-auto flex max-w-7xl overflow-hidden"
             style={{ maskImage: "linear-gradient(to right, transparent, black 12%, black 88%, transparent)" }}
@@ -417,7 +493,7 @@ export default function HomePage() {
               {[...tickerItems, ...tickerItems].map(([label, Icon], index) => (
                 <div
                   key={`${label}-${index}`}
-                  className="flex items-center gap-2 whitespace-nowrap text-sm font-semibold text-[#24385f]/55"
+                    className="landing-secondary flex items-center gap-2 whitespace-nowrap text-sm font-semibold text-[#24385f]/55"
                 >
                   <Icon className="h-5 w-5 text-[#1452d9]" />
                   {label}
@@ -433,7 +509,7 @@ export default function HomePage() {
         >
           <div className="mx-auto max-w-7xl">
             <motion.div {...reveal} className="mx-auto max-w-[620px] text-center">
-              <div className="inline-flex rounded-lg border border-[#bfd1f8] bg-white px-3 py-1 text-sm font-semibold text-[#0a3aa2]">
+              <div className="landing-light-surface inline-flex rounded-lg border border-[#bfd1f8] bg-white px-3 py-1 text-sm font-semibold text-[#0a3aa2]">
                 SKTECH Platform
               </div>
               <h2 className="mt-5 text-4xl font-black leading-tight text-[#06132d] sm:text-5xl">
@@ -795,12 +871,12 @@ export default function HomePage() {
         </div>
       </footer>
 
-      <div className="fixed bottom-4 right-4 z-50 md:bottom-auto md:top-24">
+      <div className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-50 md:bottom-6 md:right-6">
         {chatOpen ? (
           <motion.div
             initial={reducedMotion ? false : { opacity: 0, y: 16, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            className="w-[calc(100vw-2rem)] max-w-[380px] overflow-hidden rounded-3xl border border-[#dbe7ff] bg-white shadow-[0_24px_70px_-34px_rgba(6,19,45,0.9)]"
+            className="landing-chat-panel w-[calc(100vw-2rem)] max-w-[380px] overflow-hidden rounded-3xl border border-[#dbe7ff] bg-white shadow-[0_24px_70px_-34px_rgba(6,19,45,0.9)]"
           >
             <div className="flex items-center justify-between bg-[#06132d] px-4 py-4 text-white">
               <div className="flex items-center gap-3">
@@ -883,13 +959,71 @@ export default function HomePage() {
             initial={reducedMotion ? false : { opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             onClick={() => setChatOpen(true)}
-            className="inline-flex items-center gap-2 rounded-full bg-[#0a3aa2] px-4 py-3 text-sm font-black text-white shadow-[0_20px_45px_-24px_rgba(6,19,45,0.95)]"
+            aria-label="Chat Bot"
+            className="landing-launcher inline-flex min-h-12 items-center gap-2 rounded-full border border-[#f3c72b]/50 bg-[#0a3aa2] px-3 py-2 text-sm font-black text-white shadow-[0_20px_45px_-24px_rgba(6,19,45,0.95)] transition hover:bg-[#06132d] sm:px-4"
           >
-            <MessageCircle className="h-5 w-5" />
-            <span className="hidden sm:inline">Ask SKTECH</span>
+            <Image src={logoPath} alt="SKTECH chat bot" width={30} height={30} className="h-8 w-8 rounded-full object-contain" />
+            <span>Chat Bot</span>
           </motion.button>
         )}
       </div>
+
+      <style>{`
+        .landing-page-dark .landing-hero-backdrop {
+          background: radial-gradient(circle at 20% 10%, rgba(243, 199, 43, 0.12), transparent 30%), radial-gradient(circle at 75% 25%, rgba(20, 82, 217, 0.2), transparent 42%), linear-gradient(145deg, #071632 0%, #0b2855 54%, #102f62 100%);
+        }
+
+        .landing-page-dark .landing-hero-orbit {
+          background: #020b1d;
+          box-shadow: 0 35px 90px -42px rgba(0, 0, 0, 0.9);
+        }
+
+        .landing-page-dark .landing-hero-circle {
+          border-color: rgba(191, 219, 254, 0.35);
+          background: linear-gradient(135deg, #102448 0%, #123d79 42%, #8d731e 70%, #1452d9 100%);
+          box-shadow: inset 0 0 70px rgba(56, 189, 248, 0.2);
+        }
+
+        .landing-page-dark .landing-status {
+          border-color: rgba(243, 199, 43, 0.55);
+          background: rgba(15, 32, 65, 0.94);
+          color: #dbeafe;
+        }
+
+        .landing-page-dark .landing-light-surface {
+          border-color: var(--glass-border);
+          background-color: var(--surface);
+          color: var(--foreground);
+        }
+
+        .landing-page-dark .landing-secondary {
+          color: #cbd5e1;
+        }
+
+        .landing-page-dark main > section {
+          color: var(--foreground);
+        }
+
+        .landing-page-dark main > section [class*="text-[#24385f]"] {
+          color: #cbd5e1;
+        }
+
+        .landing-page-dark main > section [class*="border-[#e4ecff]"],
+        .landing-page-dark main > section [class*="border-[#dbe7ff]"] {
+          border-color: var(--glass-border);
+        }
+
+        .landing-page-dark main > section [class*="bg-[#f6f9ff]"],
+        .landing-page-dark main > section [class*="bg-[#eef4ff]"] {
+          background-color: var(--surface-elevated);
+        }
+
+        .landing-page-dark .landing-chat-panel {
+          border-color: var(--glass-border);
+          background: var(--surface-elevated);
+          color: var(--foreground);
+        }
+      `}</style>
     </div>
   );
 }
