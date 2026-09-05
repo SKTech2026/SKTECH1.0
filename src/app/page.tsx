@@ -257,7 +257,9 @@ export default function HomePage() {
 
       <header
         aria-hidden={showFloatingMenu}
-        className={`sticky top-0 z-40 overflow-hidden border-b px-4 shadow-[0_10px_30px_-26px_rgba(6,19,45,0.75)] backdrop-blur transition-[max-height,opacity,transform,padding] duration-300 sm:px-8 lg:px-10 ${
+        className={`sticky top-0 z-40 border-b px-4 shadow-[0_10px_30px_-26px_rgba(6,19,45,0.75)] backdrop-blur transition-[max-height,opacity,transform,padding] duration-300 sm:px-8 lg:px-10 ${
+          menuOpen ? "overflow-visible" : "overflow-hidden"
+        } ${
           isLandingDark
             ? "border-cyan-300/20 bg-[#071632]/95 text-slate-100"
             : "border-[#dbe7ff] bg-white/90 text-[#06132d]"
@@ -312,7 +314,7 @@ export default function HomePage() {
         </div>
 
         {menuOpen ? (
-          <nav className={`mx-auto mt-2 grid max-w-7xl gap-1 rounded-xl border p-2 text-sm font-semibold shadow-lg md:hidden ${
+          <nav className={`absolute left-4 right-4 top-[calc(100%+0.35rem)] mx-auto grid max-w-md gap-1 rounded-xl border p-2 text-sm font-semibold shadow-lg md:hidden ${
             isLandingDark
               ? "border-cyan-300/20 bg-[#071632] text-slate-100"
               : "border-[#dbe7ff] bg-white text-[#06132d]"
