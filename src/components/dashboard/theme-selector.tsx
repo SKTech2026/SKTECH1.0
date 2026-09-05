@@ -8,6 +8,11 @@ const THEME_PREVIEW: Record<
   ThemeName,
   { background: string; accent: string; surface: string }
 > = {
+  system: {
+    background: "from-slate-200 to-slate-900",
+    accent: "bg-sky-500",
+    surface: "bg-white/70",
+  },
   "government-dark": {
     background: "from-[#0a1f47] to-[#030817]",
     accent: "bg-blue-500",
