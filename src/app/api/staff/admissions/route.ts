@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { sendEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,27 @@ type UpdateAdmissionBody = {
   action?: "APPROVE" | "REJECT";
   reason?: string | null;
 };
+
+const OFFICIAL_PORTAL_URL = "https://sktech-ormin.com/official/auth";
+
+function getOfficialFullName(official: {
+  firstName: string;
+  middleName: string | null;
+  lastName: string;
+}) {
+  return [official.firstName, official.middleName, official.lastName]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
 
 const requireStaffSession = async () => {
   const session = await getServerSession(authOptions);
@@ -175,7 +197,17 @@ export async function PATCH(request: NextRequest) {
       select: {
         id: true,
         userId: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        email: true,
+        municipality: true,
         admissionStatus: true,
+        user: {
+          select: {
+            email: true,
+          },
+        },
       },
     });
 
@@ -235,10 +267,73 @@ export async function PATCH(request: NextRequest) {
       return official;
     });
 
+    let notificationSent = false;
+    if (approved) {
+      const recipient = existing.email ?? existing.user?.email;
+      if (recipient) {
+        const officialName = getOfficialFullName(existing);
+        const escapedName = escapeHtml(officialName);
+        const escapedMunicipality = existing.municipality
+          ? escapeHtml(existing.municipality)
+          : null;
+
+        try {
+          await sendEmail({
+            to: recipient,
+            subject: "SKTECH Official Admission Approved",
+            text: `Good day, ${officialName},
+
+Your Official Admission has been approved by your Municipal SK Federation Staff.
+
+You may now access the full SKTECH Official Dashboard, including your Digital ID, announcements, attendance records, chat, and other approved features.
+
+You can sign in at:
+${OFFICIAL_PORTAL_URL}
+
+Thank you,
+SKTECH
+Oriental Mindoro SK Federation E-Governance`,
+            html: `
+              <div style="font-family: Arial, sans-serif; background: #f6f9ff; padding: 24px; color: #06132d;">
+                <div style="max-width: 560px; margin: 0 auto; background: #ffffff; border: 1px solid #dbe7ff; border-radius: 16px; overflow: hidden;">
+                  <div style="background: #06132d; color: #ffffff; padding: 20px 24px;">
+                    <p style="margin: 0; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #f3c72b;">SKTECH</p>
+                    <h1 style="margin: 8px 0 0; font-size: 22px;">Official Admission Approved</h1>
+                  </div>
+                  <div style="padding: 24px;">
+                    <p style="margin: 0 0 14px;">Good day, <strong>${escapedName}</strong>,</p>
+                    <p style="margin: 0 0 14px;">Your Official Admission has been approved by your Municipal SK Federation Staff.</p>
+                    ${
+                      escapedMunicipality
+                        ? `<p style="margin: 0 0 14px;">Municipality: <strong>${escapedMunicipality}</strong></p>`
+                        : ""
+                    }
+                    <p style="margin: 0 0 20px;">You may now access the full SKTECH Official Dashboard, including your Digital ID, announcements, attendance records, chat, and other approved features.</p>
+                    <a href="${OFFICIAL_PORTAL_URL}" style="display: inline-block; background: #1452d9; color: #ffffff; text-decoration: none; font-weight: 700; padding: 12px 18px; border-radius: 10px;">Open SKTECH Official Portal</a>
+                    <p style="margin: 24px 0 0; color: #5b6478; font-size: 13px;">Thank you,<br />SKTECH<br />Oriental Mindoro SK Federation E-Governance</p>
+                  </div>
+                </div>
+              </div>
+            `,
+          });
+          notificationSent = true;
+        } catch (emailError) {
+          console.warn("Official admission approval email failed.", {
+            officialId: existing.id,
+            error:
+              emailError instanceof Error
+                ? emailError.message
+                : "Unknown email error",
+          });
+        }
+      }
+    }
+
     return NextResponse.json(
       {
         message: approved ? "Admission approved." : "Admission rejected.",
         data: updated,
+        notificationSent,
       },
       { status: 200 },
     );

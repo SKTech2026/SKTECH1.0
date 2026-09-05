@@ -1,15 +1,14 @@
-import { Role } from "@prisma/client";
 import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { requireRole } from "@/lib/roleGuard";
+import { requireOfficialFeatureAccess } from "@/lib/roleGuard";
 
 export const dynamic = "force-dynamic";
 
 export default async function OfficialAttendanceLogsPage() {
   const session = await getServerSession(authOptions);
-  const authorizedSession = requireRole(session, [Role.OFFICIAL]);
+  const authorizedSession = await requireOfficialFeatureAccess(session);
 
   const user = await prisma.user.findUnique({
     where: { id: authorizedSession.user.id },

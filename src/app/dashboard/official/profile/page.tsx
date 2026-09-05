@@ -1,11 +1,10 @@
 import Link from "next/link";
-import { Role } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { requireRole } from "@/lib/roleGuard";
+import { requireOfficialFeatureAccess } from "@/lib/roleGuard";
 
 import OfficialProfileForm from "./profile-form";
 
@@ -13,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 export default async function OfficialProfilePage() {
   const session = await getServerSession(authOptions);
-  const authorizedSession = requireRole(session, [Role.OFFICIAL], false);
+  const authorizedSession = await requireOfficialFeatureAccess(session);
 
   const [user, municipalities] = await Promise.all([
     prisma.user.findUnique({
@@ -62,7 +61,7 @@ export default async function OfficialProfilePage() {
   ]);
 
   if (!user) {
-    redirect("/login");
+    redirect("/official/auth");
   }
 
   if (!user.official) {

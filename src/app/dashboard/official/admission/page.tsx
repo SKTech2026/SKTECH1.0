@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { requireRole } from "@/lib/roleGuard";
+import { requireDashboardRole } from "@/lib/roleGuard";
 
 import OfficialAdmissionForm from "./OfficialAdmissionForm";
 
@@ -16,7 +16,10 @@ export default async function OfficialAdmissionPage({
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const session = await getServerSession(authOptions);
-  const authorizedSession = requireRole(session, [Role.OFFICIAL], false);
+  const authorizedSession = requireDashboardRole(session, [Role.OFFICIAL], {
+    unauthenticatedRedirect: "/official/auth",
+    requireApproved: false,
+  });
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const stepParam = resolvedSearchParams.step;
   const parsedStep = Number(Array.isArray(stepParam) ? stepParam[0] : stepParam ?? "1");
@@ -75,7 +78,7 @@ export default async function OfficialAdmissionPage({
   ]);
 
   if (!user) {
-    redirect("/login");
+    redirect("/official/auth");
   }
 
   if (

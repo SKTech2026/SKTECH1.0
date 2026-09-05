@@ -1,4 +1,3 @@
-import { Role } from "@prisma/client";
 import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
@@ -7,13 +6,13 @@ import {
   getActiveAnnouncements,
   getArchivedAnnouncements,
 } from "@/lib/announcements";
-import { requireRole } from "@/lib/roleGuard";
+import { requireOfficialFeatureAccess } from "@/lib/roleGuard";
 
 export const dynamic = "force-dynamic";
 
 export default async function OfficialAnnouncementsPage() {
   const session = await getServerSession(authOptions);
-  requireRole(session, [Role.OFFICIAL]);
+  await requireOfficialFeatureAccess(session);
 
   const [events, archivedEvents] = await Promise.all([
     getActiveAnnouncements(),

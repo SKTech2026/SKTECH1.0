@@ -7,14 +7,26 @@ import FlippablePortraitID from "@/components/id/FlippablePortraitID";
 import { authOptions } from "@/lib/auth";
 import { getActiveAnnouncements } from "@/lib/announcements";
 import { prisma } from "@/lib/db";
-import { requireRole } from "@/lib/roleGuard";
+import { requireDashboardRole } from "@/lib/roleGuard";
 import { formatEnumLabel, formatOfficialFullName } from "@/lib/sk-official";
 
 export const dynamic = "force-dynamic";
 
-export default async function OfficialDashboardHomePage() {
+export default async function OfficialDashboardHomePage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const session = await getServerSession(authOptions);
-  const authorizedSession = requireRole(session, [Role.OFFICIAL], false);
+  const authorizedSession = requireDashboardRole(session, [Role.OFFICIAL], {
+    unauthenticatedRedirect: "/official/auth",
+    requireApproved: false,
+  });
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const accessParam = resolvedSearchParams.access;
+  const admissionRequired =
+    (Array.isArray(accessParam) ? accessParam[0] : accessParam) ===
+    "admission_required";
 
   const currentUser = await prisma.user.findUnique({
     where: { id: authorizedSession.user.id },
@@ -49,12 +61,13 @@ export default async function OfficialDashboardHomePage() {
   });
 
   if (!currentUser) {
-    redirect("/login");
+    redirect("/official/auth");
   }
 
   if (currentUser.status !== UserStatus.APPROVED) {
     const profileStatus = currentUser.official?.admissionStatus ?? AdmissionStatus.PENDING;
     const waitingForApproval = profileStatus === AdmissionStatus.PENDING;
+    const rejected = profileStatus === AdmissionStatus.REJECTED;
 
     return (
       <div className="space-y-6">
@@ -63,15 +76,34 @@ export default async function OfficialDashboardHomePage() {
             Official Admission Required
           </p>
           <h2 className="mt-3 text-3xl font-bold text-foreground">
-            {waitingForApproval
-              ? "Waiting for Staff Approval"
-              : "Complete Your Official Admission"}
+            {rejected
+              ? "Admission Requires Resubmission"
+              : waitingForApproval && currentUser.official?.updatedAt
+                ? "Admission Under Review"
+                : "Official Admission Required"}
           </h2>
           <p className="mt-2 max-w-3xl text-sm text-muted">
-            {waitingForApproval
-              ? "Your submission is under review. Staff will approve your account before full dashboard access is enabled."
-              : "Submit your complete official details so staff can validate your provincial profile."}
+            {rejected
+              ? "Your Official Admission was rejected. Please review the status below and resubmit your admission details according to the existing workflow."
+              : waitingForApproval && currentUser.official?.updatedAt
+                ? "Your Official Admission has been submitted and is currently under review by your Municipal SK Federation Staff. You will receive an email notification once your account is approved."
+                : "You cannot access this section yet. Please submit your Official Admission first and wait for approval from your Municipal SK Federation Staff before accessing dashboard features."}
           </p>
+          {admissionRequired ? (
+            <p className="mt-3 rounded-xl border border-amber-300/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+              Full dashboard features unlock after your Official Admission is approved.
+            </p>
+          ) : null}
+          {rejected ? (
+            <p className="mt-3 rounded-xl border border-rose-300/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+              Current status: Rejected. Please update and resubmit your admission details.
+            </p>
+          ) : null}
+          {!rejected && !currentUser.official?.updatedAt ? (
+            <p className="mt-3 rounded-xl border border-sky-300/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
+              Start with the admission form so your Municipal SK Federation Staff can review your record.
+            </p>
+          ) : null}
           <div className="mt-5 flex flex-wrap gap-3">
             <Link
               href="/dashboard/official/admission"

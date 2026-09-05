@@ -2,6 +2,8 @@ import { Role, UserStatus } from "@prisma/client";
 import type { Session } from "next-auth";
 import { redirect } from "next/navigation";
 
+import { prisma } from "@/lib/db";
+
 export function isRoleAllowed(
   role: Role | null | undefined,
   allowedRoles: Role[],
@@ -58,6 +60,29 @@ export function requireDashboardRole(
 
   if (requireApproved && session.user.status !== UserStatus.APPROVED) {
     redirect("/login?error=account_not_approved");
+  }
+
+  return session;
+}
+
+export async function requireOfficialFeatureAccess(
+  session: Session | null,
+): Promise<Session> {
+  if (!session?.user?.id) {
+    redirect("/official/auth");
+  }
+
+  if (!isRoleAllowed(session.user.role, [Role.OFFICIAL])) {
+    redirect(dashboardPathByRole[session.user.role] ?? "/unauthorized");
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { status: true },
+  });
+
+  if (!user || user.status !== UserStatus.APPROVED) {
+    redirect("/dashboard/official?access=admission_required");
   }
 
   return session;

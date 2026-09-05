@@ -3,11 +3,14 @@ import { getServerSession } from "next-auth";
 
 import SettingsPanel from "@/components/dashboard/settings-panel";
 import { authOptions } from "@/lib/auth";
-import { requireRole } from "@/lib/roleGuard";
+import { requireDashboardRole } from "@/lib/roleGuard";
 
 export default async function OfficialSettingsPage() {
   const session = await getServerSession(authOptions);
-  const authorizedSession = requireRole(session, [Role.OFFICIAL]);
+  const authorizedSession = requireDashboardRole(session, [Role.OFFICIAL], {
+    unauthenticatedRedirect: "/official/auth",
+    requireApproved: false,
+  });
 
   return (
     <SettingsPanel

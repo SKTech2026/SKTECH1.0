@@ -1,18 +1,17 @@
 import Link from "next/link";
-import { Role } from "@prisma/client";
 import { getServerSession } from "next-auth";
 
 import FlippablePortraitID from "@/components/id/FlippablePortraitID";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { requireRole } from "@/lib/roleGuard";
+import { requireOfficialFeatureAccess } from "@/lib/roleGuard";
 import { formatEnumLabel, formatOfficialFullName } from "@/lib/sk-official";
 
 export const dynamic = "force-dynamic";
 
 export default async function OfficialDigitalIdPage() {
   const session = await getServerSession(authOptions);
-  const authorizedSession = requireRole(session, [Role.OFFICIAL]);
+  const authorizedSession = await requireOfficialFeatureAccess(session);
 
   const user = await prisma.user.findUnique({
     where: { id: authorizedSession.user.id },

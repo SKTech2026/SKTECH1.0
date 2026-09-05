@@ -3,13 +3,13 @@ import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { requireRole } from "@/lib/roleGuard";
+import { requireOfficialFeatureAccess } from "@/lib/roleGuard";
 
 export const dynamic = "force-dynamic";
 
 export default async function OfficialAccomplishmentsPage() {
   const session = await getServerSession(authOptions);
-  requireRole(session, [Role.OFFICIAL]);
+  await requireOfficialFeatureAccess(session);
 
   const [eventCount, attendanceCount, registeredOfficials, latestEvents] = await Promise.all([
     prisma.event.count(),
