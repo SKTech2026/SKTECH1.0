@@ -14,7 +14,7 @@ export default async function OfficialProfilePage() {
   const session = await getServerSession(authOptions);
   const authorizedSession = await requireOfficialFeatureAccess(session);
 
-  const [user, municipalities] = await Promise.all([
+  const [user, municipalities, pendingRequest, rejectedRequest] = await Promise.all([
     prisma.user.findUnique({
       where: { id: authorizedSession.user.id },
       select: {
@@ -58,6 +58,32 @@ export default async function OfficialProfilePage() {
         },
       },
     }),
+    prisma.officialProfileChangeRequest.findFirst({
+      where: {
+        requestedByUserId: authorizedSession.user.id,
+        status: "PENDING",
+      },
+      orderBy: { createdAt: "desc" },
+      select: {
+        status: true,
+        createdAt: true,
+        faceCheckStatus: true,
+        rejectionReason: true,
+      },
+    }),
+    prisma.officialProfileChangeRequest.findFirst({
+      where: {
+        requestedByUserId: authorizedSession.user.id,
+        status: "REJECTED",
+      },
+      orderBy: { createdAt: "desc" },
+      select: {
+        status: true,
+        createdAt: true,
+        faceCheckStatus: true,
+        rejectionReason: true,
+      },
+    }),
   ]);
 
   if (!user) {
@@ -89,10 +115,31 @@ export default async function OfficialProfilePage() {
         </p>
         <h2 className="mt-3 text-3xl font-bold text-foreground">Edit SK Official Profile</h2>
         <p className="mt-2 max-w-3xl text-sm text-muted">
-          Keep your profile details updated so your digital ID always shows the latest
-          official information.
+          Profile and photo changes are reviewed by Municipal Staff before they appear on your
+          Digital ID.
         </p>
       </section>
+
+      {(pendingRequest ?? rejectedRequest) ? (
+        <section className="rounded-2xl border border-amber-300/30 bg-amber-500/10 p-4 text-sm text-amber-100">
+          <p className="font-semibold">
+            {(pendingRequest ?? rejectedRequest)?.status === "PENDING"
+              ? "Profile update awaiting Municipal Staff review"
+              : "Profile update was rejected by Municipal Staff"}
+          </p>
+          <p className="mt-1 text-amber-100/80">
+            Your Digital ID continues to show the last approved information. Submitted {(pendingRequest ?? rejectedRequest)?.createdAt.toLocaleString()}.
+            {(pendingRequest ?? rejectedRequest)?.status === "REJECTED" && (pendingRequest ?? rejectedRequest)?.rejectionReason
+              ? ` Reason: ${(pendingRequest ?? rejectedRequest)?.rejectionReason}`
+              : ""}
+          </p>
+          {(pendingRequest ?? rejectedRequest)?.status === "PENDING" && (pendingRequest ?? rejectedRequest)?.faceCheckStatus === "UNAVAILABLE" ? (
+            <p className="mt-2 text-xs text-amber-100/80">
+              Face comparison unavailable. Staff must manually verify the requested photo against the registered photo.
+            </p>
+          ) : null}
+        </section>
+      ) : null}
 
       <OfficialProfileForm
         initial={{

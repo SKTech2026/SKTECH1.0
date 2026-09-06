@@ -3,6 +3,8 @@
 import { AdmissionStatus, OfficialPosition } from "@prisma/client";
 import { useEffect, useMemo, useState } from "react";
 
+import ProfileChangeRequests from "./profile-change-requests";
+
 type AdmissionRecord = {
   id: string;
   userId: string | null;
@@ -172,6 +174,8 @@ export default function StaffAdmissionsPage() {
           {success}
         </p>
       ) : null}
+
+      <ProfileChangeRequests />
 
       <section className="rounded-2xl border border-glass-border bg-surface p-5 shadow-xl backdrop-blur-md">
         <h3 className="text-lg font-semibold text-foreground">Search & Filters</h3>

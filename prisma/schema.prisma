@@ -38,6 +38,19 @@ enum AdmissionStatus {
   REJECTED
 }
 
+enum ProfileChangeRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum FaceCheckStatus {
+  NOT_CHECKED
+  MATCHED
+  MISMATCHED
+  UNAVAILABLE
+}
+
 enum Position {
   SK_CHAIRPERSON
   SK_SECRETARY
@@ -92,6 +105,8 @@ model User {
   admissions              OfficialAdmission[]
   skOfficialProfile       SKOfficialProfile?
   auditLogs               AuditLog[]
+  requestedProfileChanges OfficialProfileChangeRequest[] @relation("ProfileChangeRequestedBy")
+  reviewedProfileChanges  OfficialProfileChangeRequest[] @relation("ProfileChangeReviewedBy")
   chatParticipants        ChatParticipant[]
   chatMessages            ChatMessage[]       @relation("ChatMessageSender")
   municipalityAsPresident Municipality?       @relation("MunicipalPresident", fields: [municipalityPresidentId], references: [id], onDelete: SetNull)
@@ -166,11 +181,39 @@ model SKOfficial {
   user            User?                @relation(fields: [userId], references: [id])
   municipalityRef Municipality?        @relation("MunicipalityOfficialsRecords", fields: [municipalityId], references: [id], onDelete: SetNull)
   barangayRef     Barangay?            @relation("BarangayOfficialsRecords", fields: [barangayId], references: [id], onDelete: SetNull)
+  profileChangeRequests OfficialProfileChangeRequest[]
 
   @@index([admissionStatus])
   @@index([municipalityId])
   @@index([barangayId])
   @@index([userId])
+}
+
+model OfficialProfileChangeRequest {
+  id                String                    @id @default(cuid())
+  officialId        String
+  requestedByUserId String
+  municipalityId    String
+  status            ProfileChangeRequestStatus @default(PENDING)
+  requestedChanges  Json
+  currentSnapshot   Json
+  requestedPhotoUrl String?
+  faceMatchScore    Float?
+  faceCheckStatus   FaceCheckStatus           @default(NOT_CHECKED)
+  staffReviewerId   String?
+  reviewedAt        DateTime?
+  rejectionReason   String?
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+
+  official        SKOfficial  @relation(fields: [officialId], references: [id], onDelete: Cascade)
+  requestedBy     User        @relation("ProfileChangeRequestedBy", fields: [requestedByUserId], references: [id], onDelete: Cascade)
+  municipality    Municipality @relation(fields: [municipalityId], references: [id], onDelete: Cascade)
+  staffReviewer   User?       @relation("ProfileChangeReviewedBy", fields: [staffReviewerId], references: [id], onDelete: SetNull)
+
+  @@index([officialId, status])
+  @@index([municipalityId, status, createdAt])
+  @@index([requestedByUserId, status])
 }
 
 model OfficialAdmission {
@@ -218,6 +261,7 @@ model Municipality {
   municipalPresident User?               @relation("MunicipalPresident")
   officers           User[]              @relation("MunicipalOfficers")
   chatConversations  ChatConversation[]
+  profileChangeRequests OfficialProfileChangeRequest[]
 }
 
 model Barangay {

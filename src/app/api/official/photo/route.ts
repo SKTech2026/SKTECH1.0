@@ -39,10 +39,17 @@ export async function GET(request: NextRequest) {
     const photoUrl = buildOfficialPhotoUrl(objectPath);
     const official = await prisma.sKOfficial.findFirst({
       where: {
-        user: {
-          image: photoUrl,
-          role: Role.OFFICIAL,
-        },
+        OR: [
+          { user: { image: photoUrl, role: Role.OFFICIAL } },
+          {
+            profileChangeRequests: {
+              some: {
+                requestedPhotoUrl: photoUrl,
+                status: "PENDING",
+              },
+            },
+          },
+        ],
       },
       select: {
         id: true,
@@ -52,8 +59,14 @@ export async function GET(request: NextRequest) {
         status: true,
         user: {
           select: {
+            image: true,
             status: true,
           },
+        },
+        profileChangeRequests: {
+          where: { requestedPhotoUrl: photoUrl, status: "PENDING" },
+          select: { municipalityId: true },
+          take: 1,
         },
       },
     });
@@ -64,6 +77,7 @@ export async function GET(request: NextRequest) {
 
     if (!session?.user?.id) {
       if (
+        official.user?.image !== photoUrl ||
         official.admissionStatus !== AdmissionStatus.APPROVED ||
         official.status !== OfficialStatus.ACTIVE ||
         official.user?.status !== UserStatus.APPROVED
@@ -83,7 +97,8 @@ export async function GET(request: NextRequest) {
       return imageErrorResponse("Official photo request is not owned by the session user.", 403);
     } else if (
       session.user.role === Role.STAFF &&
-      official.municipalityId !== session.user.municipalityPresidentId
+      official.municipalityId !== session.user.municipalityPresidentId &&
+      official.profileChangeRequests[0]?.municipalityId !== session.user.municipalityPresidentId
     ) {
       return imageErrorResponse("Staff photo request is outside assigned municipality.", 403);
     }

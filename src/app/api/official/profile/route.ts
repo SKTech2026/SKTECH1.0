@@ -1,4 +1,4 @@
-import { OfficialPosition, Role, SKFederationPosition, Sex } from "@prisma/client";
+import { OfficialPosition, Role, SKFederationPosition, Sex, ProfileChangeRequestStatus } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
@@ -10,7 +10,6 @@ import {
   OFFICIAL_PHOTO_MIME_TYPES,
   saveOfficialProfilePhoto,
 } from "@/lib/official-photo-storage";
-import { formatOfficialFullName, positionToLegacyRole } from "@/lib/sk-official";
 
 export const dynamic = "force-dynamic";
 
@@ -128,7 +127,28 @@ export async function PATCH(request: Request) {
     const [officialRecord, municipality, barangay] = await Promise.all([
       prisma.sKOfficial.findUnique({
         where: { userId: session.user.id },
-        select: { id: true, termEnd: true },
+        select: {
+          id: true,
+          firstName: true,
+          middleName: true,
+          lastName: true,
+          suffix: true,
+          birthDate: true,
+          sex: true,
+          position: true,
+          skFederationOfficer: true,
+          skFederationPosition: true,
+          municipalityId: true,
+          municipality: true,
+          barangayId: true,
+          barangay: true,
+          sitio: true,
+          dateElected: true,
+          termEnd: true,
+          contactNo: true,
+          address: true,
+          user: { select: { image: true } },
+        },
       }),
       prisma.municipality.findUnique({
         where: { id: municipalityId },
@@ -159,6 +179,22 @@ export async function PATCH(request: Request) {
     }
 
     let photoUrl: string | null = null;
+    const activePendingRequest = await prisma.officialProfileChangeRequest.findFirst({
+      where: {
+        officialId: officialRecord.id,
+        requestedByUserId: session.user.id,
+        status: ProfileChangeRequestStatus.PENDING,
+      },
+      select: { id: true },
+    });
+
+    if (activePendingRequest) {
+      return NextResponse.json(
+        { error: "You already have a profile change request awaiting Staff review." },
+        { status: 409 },
+      );
+    }
+
     if (photo instanceof File && photo.size > 0) {
       if (photo.size > MAX_OFFICIAL_PHOTO_BYTES) {
         return NextResponse.json(
@@ -179,95 +215,73 @@ export async function PATCH(request: Request) {
       photoUrl = savedPhoto.photoUrl;
     }
 
-    const updateTransaction = prisma.$transaction(async (tx) => {
-      const official = await tx.sKOfficial.update({
-        where: { id: officialRecord.id },
-        data: {
-          firstName,
-          middleName: middleNameRaw || null,
-          lastName,
-          suffix: suffixRaw || null,
-          birthDate: parsedBirthDate,
-          sex,
-          province: municipality.province || "Oriental Mindoro",
-          municipalityId: municipality.id,
-          municipality: municipality.name,
-          barangayId: barangay.id,
-          barangay: barangay.name,
-          sitio: sitioRaw || null,
-          position,
-          skFederationOfficer,
-          skFederationPosition,
-          role: positionToLegacyRole(position),
-          dateElected: parsedDateElected,
-          termStart: parsedDateElected,
-          termEnd: parsedTermEnd ?? officialRecord.termEnd,
-          contactNo: contactNoRaw || null,
-          address: addressRaw || null,
-        },
-        select: {
-          id: true,
-          firstName: true,
-          middleName: true,
-          lastName: true,
-          suffix: true,
-          birthDate: true,
-          sex: true,
-          position: true,
-          skFederationOfficer: true,
-          skFederationPosition: true,
-          municipality: true,
-          barangay: true,
-          municipalityId: true,
-          barangayId: true,
-          sitio: true,
-          dateElected: true,
-          termEnd: true,
-          contactNo: true,
-          address: true,
-          updatedAt: true,
-        },
-      });
+    const currentSnapshot = {
+      firstName: officialRecord.firstName,
+      middleName: officialRecord.middleName,
+      lastName: officialRecord.lastName,
+      suffix: officialRecord.suffix,
+      birthDate: officialRecord.birthDate?.toISOString() ?? null,
+      sex: officialRecord.sex,
+      position: officialRecord.position,
+      skFederationOfficer: officialRecord.skFederationOfficer,
+      skFederationPosition: officialRecord.skFederationPosition,
+      municipalityId: officialRecord.municipalityId,
+      municipality: officialRecord.municipality,
+      barangayId: officialRecord.barangayId,
+      barangay: officialRecord.barangay,
+      sitio: officialRecord.sitio,
+      dateElected: officialRecord.dateElected?.toISOString() ?? null,
+      termEnd: officialRecord.termEnd?.toISOString() ?? null,
+      contactNo: officialRecord.contactNo,
+      address: officialRecord.address,
+      photoUrl: officialRecord.user?.image ?? null,
+    };
+    const requestedChanges = {
+      firstName,
+      middleName: middleNameRaw || null,
+      lastName,
+      suffix: suffixRaw || null,
+      birthDate: parsedBirthDate.toISOString(),
+      sex,
+      position,
+      skFederationOfficer,
+      skFederationPosition,
+      municipalityId: municipality.id,
+      municipality: municipality.name,
+      province: municipality.province || "Oriental Mindoro",
+      barangayId: barangay.id,
+      barangay: barangay.name,
+      sitio: sitioRaw || null,
+      dateElected: parsedDateElected.toISOString(),
+      termEnd: parsedTermEnd?.toISOString() ?? officialRecord.termEnd?.toISOString() ?? null,
+      contactNo: contactNoRaw || null,
+      address: addressRaw || null,
+    };
 
-      const user = await tx.user.update({
-        where: { id: session.user.id },
-        data: {
-          name: formatOfficialFullName({
-            firstName,
-            middleName: middleNameRaw || null,
-            lastName,
-            suffix: suffixRaw || null,
-          }),
-          ...(photoUrl ? { image: photoUrl } : {}),
-        },
-        select: {
-          image: true,
-        },
-      });
-
-      return {
-        official,
-        photoUrl: user.image,
-      };
+    const requestRecord = await prisma.officialProfileChangeRequest.create({
+      data: {
+        officialId: officialRecord.id,
+        requestedByUserId: session.user.id,
+        municipalityId: officialRecord.municipalityId ?? municipality.id,
+        requestedChanges,
+        currentSnapshot,
+        requestedPhotoUrl: photoUrl,
+        faceCheckStatus: photoUrl ? "UNAVAILABLE" : "NOT_CHECKED",
+      },
+      select: {
+        id: true,
+        status: true,
+        requestedPhotoUrl: true,
+        faceCheckStatus: true,
+        createdAt: true,
+      },
     });
-    const updated = await updateTransaction.catch((error) => {
-      console.error(`[PHOTO] database update failed: ${getSafePhotoErrorMessage(error)}`);
-      throw error;
-    });
-
-    if (photoUrl) {
-      const extension = OFFICIAL_PHOTO_MIME_TYPES[photo instanceof File ? photo.type : ""];
-      console.info("[PHOTO] User.image update success");
-      console.info(
-        `[PHOTO] saved image value: /api/official/photo?path=officials%2F<userId>%2F<uuid>.${extension ?? "<ext>"}`,
-      );
-    }
-    console.info("[PHOTO] profile response returning");
 
     return NextResponse.json(
       {
-        message: "Profile updated successfully.",
-        data: updated,
+        message:
+          "Your profile update has been submitted for Municipal Staff review. Your Digital ID will continue to show your last approved information until the change is approved.",
+        data: requestRecord,
       },
       { status: 200 },
     );

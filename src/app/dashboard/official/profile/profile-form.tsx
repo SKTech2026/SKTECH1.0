@@ -80,7 +80,7 @@ export default function OfficialProfileForm({ initial, municipalities }: Profile
   const [contactNo, setContactNo] = useState(initial.contactNo);
   const [address, setAddress] = useState(initial.address);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [persistedPhotoUrl, setPersistedPhotoUrl] = useState(initial.photoUrl);
+  const [persistedPhotoUrl] = useState(initial.photoUrl);
   const [photoPreview, setPhotoPreview] = useState(initial.photoUrl);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -159,11 +159,8 @@ export default function OfficialProfileForm({ initial, municipalities }: Profile
         throw new Error(body.error ?? "Failed to update profile.");
       }
 
-      if (body.data?.photoUrl) {
-        setPersistedPhotoUrl(body.data.photoUrl);
-        setPhotoPreview(body.data.photoUrl);
-        setPhotoFile(null);
-      }
+      setPhotoPreview(persistedPhotoUrl);
+      setPhotoFile(null);
       setSuccess(body.message ?? "Profile updated.");
     } catch (submitError) {
       setError(
@@ -179,7 +176,8 @@ export default function OfficialProfileForm({ initial, municipalities }: Profile
       <div className="mb-5">
         <h3 className="text-xl font-semibold text-foreground">Profile Details for Digital ID</h3>
         <p className="mt-1 text-sm text-muted">
-          Edit your identity details and photo. Updates reflect on your digital ID card.
+          Edit your identity details and photo. Every change is sent to Municipal Staff for
+          review before it appears on your digital ID.
         </p>
       </div>
 
