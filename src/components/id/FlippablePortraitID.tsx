@@ -85,9 +85,9 @@ export default function FlippablePortraitID({
   admissionStatus,
   registryStatus = "ACTIVE",
   accountStatus,
-  sktechLogoUrl = "/assets/logos/sktech-logo-enhance.png",
-  skfedLogoUrl = "/assets/logos/sk-logo-enhance.png",
-  provincialSealUrl = "/assets/logos/official-logo-enhance.png",
+  sktechLogoUrl = "/assets/logos/sktech-logo-new.png",
+  skfedLogoUrl = "/assets/logos/sk-logo-new.png",
+  provincialSealUrl = "/assets/logos/official-seal-logo-new.png",
   provinceName = "ORIENTAL MINDORO",
   contactInfo = "This digital identification card is part of the SKTECH college capstone prototype. Scan the QR code to verify the holder's information through the SKTECH system.",
   issuedDate,
@@ -118,6 +118,7 @@ export default function FlippablePortraitID({
   const verified = admissionStatus === "APPROVED" || registryStatus === "ACTIVE";
   const statusLabel = verified ? "VERIFIED STATUS" : "PENDING STATUS";
   const issued = issuedDate ?? "Upon registry approval";
+  const verificationNote = compact(contactInfo, 92);
 
   const startTilt = () => {
     if (rafRef.current !== null) return;
@@ -213,35 +214,24 @@ export default function FlippablePortraitID({
   );
 
   const FrontFace = ({ print = false }: { print?: boolean }) => (
-    <section className="official-id-face official-id-front absolute inset-0 overflow-hidden rounded-[0.72rem] border border-[#d7c26c] bg-white text-[#09235d] shadow-[0_28px_70px_-34px_rgba(2,6,23,0.75)] [backface-visibility:hidden]">
-      <div className="official-id-subtle-logo official-id-subtle-logo-left">
-        <Image src={sktechLogoUrl} alt="" fill className="object-contain opacity-20" sizes="380px" />
-      </div>
-      <div className="official-id-corner official-id-corner-top-left" />
-      <div className="official-id-corner official-id-corner-right" />
-      <div className="official-id-dot-grid official-id-dot-grid-front" />
-      <p className="official-id-watermark">{WATERMARK}</p>
+    <section className="official-id-face official-id-front absolute inset-0 overflow-hidden rounded-[0.72rem] border border-[#c9d6e7] bg-[#f7faff] text-[#09235d] shadow-[0_28px_70px_-34px_rgba(2,6,23,0.75)] [backface-visibility:hidden]">
 
       <div className="relative z-10 flex h-full flex-col px-[4.7%] py-[3.2%]">
-        <header className="grid grid-cols-[1fr_1fr_1fr] items-start gap-3">
-          <LogoMark src={sktechLogoUrl} alt="SKTECH logo" className="h-[3.55rem] w-[5.9rem]" />
-          <LogoMark src={provincialSealUrl} alt="Province of Oriental Mindoro official seal" className="mx-auto h-[4.35rem] w-[4.35rem]" />
-          <LogoMark src={skfedLogoUrl} alt="Sangguniang Kabataan logo" className="ml-auto h-[4rem] w-[4.7rem]" />
+        <header className="official-id-topbar grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-lg bg-[#09235d] px-3 py-2.5 text-white">
+          <LogoMark src={sktechLogoUrl} alt="SKTECH logo" className="h-[2.7rem] w-[5.5rem]" />
+          <div className="flex min-w-0 items-center justify-center gap-2 text-center">
+            <LogoMark src={provincialSealUrl} alt="Province of Oriental Mindoro official seal" className="h-8 w-8 shrink-0" />
+            <div className="min-w-0">
+              <p className="truncate text-[0.72rem] font-black uppercase tracking-[0.08em]">{provinceName}</p>
+              <p className="mt-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-[#f6ca4a]">SK Federation Digital ID</p>
+            </div>
+          </div>
+          <LogoMark src={skfedLogoUrl} alt="Sangguniang Kabataan logo" className="h-[3rem] w-[3.6rem]" />
         </header>
 
-        <div className="mt-[0.45rem] text-center">
-          <h2 className="text-[1.05rem] font-black uppercase leading-tight tracking-wide">
-            SK Federation Identification of {provinceName}
-          </h2>
-          <p className="mt-1 text-[0.78rem] font-black uppercase tracking-wide text-[#f2af00]">
-            SKTECH Digital Identification System
-          </p>
-          <div className="mx-auto mt-2 h-[0.14rem] w-[84%] bg-[#f2db84]" />
-        </div>
-
-        <div className="mt-[0.72rem] grid flex-1 grid-cols-[24%_1fr_17%] gap-[2.3%]">
-          <div>
-            <div className="relative aspect-[4/5] overflow-hidden rounded-md border border-[#c9c9c9] bg-[#f8fafc] shadow-[0_10px_18px_-18px_rgba(2,6,23,0.7)]">
+        <div className="mt-3 grid min-h-0 flex-1 grid-cols-[24%_1fr_18%] gap-3">
+          <div className="official-id-photo-panel rounded-lg border border-[#d5e0ed] bg-white p-2">
+            <div className="relative aspect-[4/5] overflow-hidden rounded-md bg-[#e8eef6]">
               <Image
                 src={displayPhotoUrl}
                 alt={`${fullName} official portrait`}
@@ -253,12 +243,10 @@ export default function FlippablePortraitID({
                 onError={() => setFailedPhotoUrl(photoUrl)}
               />
             </div>
-            <p className="mt-1 text-center text-[0.66rem] font-black uppercase leading-tight">
-              Profile Photo
-            </p>
+            <p className="mt-1.5 text-center text-[0.58rem] font-black uppercase tracking-[0.12em] text-[#61728b]">Profile Photo</p>
           </div>
 
-          <dl className="grid content-start gap-[0.66rem] pt-3">
+          <dl className="official-id-detail-panel grid content-start gap-2 rounded-lg border border-[#d5e0ed] bg-white p-3">
             <FieldRow label="Full Name" value={displayName} />
             <FieldRow label="SK Position" value={compact(displayPosition.toUpperCase(), 34)} />
             <FieldRow label="Municipality" value={compact(municipality.toUpperCase(), 24)} />
@@ -273,10 +261,9 @@ export default function FlippablePortraitID({
             </div>
           </dl>
 
-          <div className="flex flex-col items-center justify-center gap-2">
-            <div className="grid w-full grid-cols-[2rem_1fr] items-center gap-1.5">
-              <span className="text-[2.1rem] leading-none text-[#f6c310]">◆</span>
-              <span className="text-[0.68rem] font-black uppercase leading-tight">{statusLabel}</span>
+          <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-[#d5e0ed] bg-white p-2">
+            <div className={`rounded-full px-2 py-1 text-center text-[0.52rem] font-black uppercase tracking-[0.08em] ${verified ? "bg-[#e8f5ef] text-[#167447]" : "bg-[#fff4d6] text-[#946700]"}`}>
+              {statusLabel}
             </div>
             <div className="rounded-md border border-[#d6d6d6] bg-white p-1">
               <QRCodeSVG value={qrValue} size={print ? 84 : 96} level="M" includeMargin />
@@ -284,51 +271,43 @@ export default function FlippablePortraitID({
             <p className="text-center text-[0.62rem] font-black uppercase tracking-wide">Scan to Verify</p>
           </div>
         </div>
+        <p className="official-id-watermark mt-2 text-center">{WATERMARK}</p>
       </div>
     </section>
   );
 
   const BackFace = () => (
-    <section className="official-id-face official-id-back absolute inset-0 overflow-hidden rounded-[0.72rem] border border-[#d7c26c] bg-white text-[#172653] shadow-[0_28px_70px_-34px_rgba(2,6,23,0.75)] [backface-visibility:hidden] [transform:rotateY(180deg)]">
-      <div className="official-id-subtle-logo official-id-subtle-logo-back">
-        <Image src={sktechLogoUrl} alt="" fill className="object-contain opacity-20" sizes="420px" />
-      </div>
-      <div className="official-id-seal-watermark">
-        <Image src={provincialSealUrl} alt="" fill className="object-contain opacity-20" sizes="360px" />
-      </div>
-      <div className="official-id-dot-grid official-id-dot-grid-back" />
-      <div className="official-id-back-divider" />
-      <p className="official-id-watermark official-id-watermark-back">{WATERMARK}</p>
+    <section className="official-id-face official-id-back absolute inset-0 overflow-hidden rounded-[0.72rem] border border-[#c9d6e7] bg-[#f7faff] text-[#172653] shadow-[0_28px_70px_-34px_rgba(2,6,23,0.75)] [backface-visibility:hidden] [transform:rotateY(180deg)]">
 
-      <div className="relative z-10 grid h-full grid-cols-[41%_24%_1fr] gap-[3%] px-[5.2%] py-[3.8%]">
-        <dl className="grid content-start gap-[0.78rem]">
+      <div className="relative z-10 grid h-full grid-cols-[1.1fr_0.9fr_1fr] gap-3 px-[5.2%] py-[4.5%]">
+        <dl className="official-id-detail-panel self-start grid content-start gap-2 rounded-lg border border-[#d5e0ed] bg-white p-3">
           <BackField icon="▣" label="Birth Date" value={formatDisplayDate(birthDate)} />
           <BackField icon="○" label="Contact Number" value={contactNo || "Not recorded"} />
           <BackField icon="✉" label="Email Address" value={email || "Not recorded"} />
           <BackField icon="●" label="Complete Address" value={addressLine || "Not recorded"} />
         </dl>
 
-        <dl className="grid content-start gap-[1.35rem] pt-1">
+        <dl className="official-id-detail-panel self-start grid content-start gap-2 rounded-lg border border-[#d5e0ed] bg-white p-3">
           <BackField icon="▰" label="Date Elected" value={formatDisplayDate(dateElected)} />
           <BackField icon="◷" label="Term Expiration" value={formatDisplayDate(termEnd)} />
           <BackField icon="◆" label="Account Status" value={accountStatus || registryStatus || "Not recorded"} />
         </dl>
 
-        <div className="flex min-w-0 flex-col items-center">
-          <p className="mb-2 text-center text-[0.68rem] font-black uppercase tracking-wide">
+        <div className="self-start flex min-w-0 flex-col items-center rounded-lg border border-[#d5e0ed] bg-white p-3">
+          <p className="mb-2 text-center text-[0.62rem] font-black uppercase tracking-[0.08em]">
             QR Verification Code
           </p>
           <div className="rounded-md bg-white p-1.5">
             <QRCodeSVG value={qrValue} size={128} level="M" includeMargin />
           </div>
-          <p className="mt-2 w-full text-[0.72rem] font-medium leading-tight text-[#172653]">
-            {contactInfo}
+          <p className="mt-2 w-full text-center text-[0.62rem] font-medium leading-tight text-[#61728b]">
+            {verificationNote}
           </p>
         </div>
 
-        <div className="absolute bottom-[22%] left-[5.2%] w-[30%]">
-          <p className="text-center text-[0.68rem] font-black uppercase">Holder&apos;s Signature</p>
-          <div className="mt-2 h-3 border-2 border-[#111827] bg-white" />
+        <div className="absolute bottom-[8%] left-[5.2%] w-[30%]">
+          <p className="text-center text-[0.58rem] font-black uppercase tracking-[0.1em]">Holder&apos;s Signature</p>
+          <div className="mt-1 h-3 border-b-2 border-[#172653]" />
         </div>
 
         <div className="absolute bottom-[5%] left-1/2 flex -translate-x-1/2 items-center gap-3 text-[#172653]">
@@ -508,25 +487,13 @@ export default function FlippablePortraitID({
         }
 
         .official-id-watermark {
-          pointer-events: none;
-          position: absolute;
-          z-index: 2;
-          left: 50%;
-          top: 50%;
-          width: 86%;
-          transform: translate(-50%, -50%) rotate(-12deg);
-          border: 1px solid rgba(9, 35, 93, 0.16);
-          color: rgba(9, 35, 93, 0.2);
-          font-size: 0.92rem;
+          color: rgba(9, 35, 93, 0.42);
+          font-size: 0.48rem;
           font-weight: 900;
-          letter-spacing: 0.06em;
+          letter-spacing: 0.08em;
           text-align: center;
           text-transform: uppercase;
-        }
-
-        .official-id-watermark-back {
-          top: 48%;
-          color: rgba(9, 35, 93, 0.22);
+          white-space: nowrap;
         }
 
         @media (max-width: 640px) {

@@ -33,7 +33,7 @@ type ChatMessage = {
   text: string;
 };
 
-const logoPath = "/assets/logos/sktech-logo-enhance.png";
+const logoPath = "/assets/logos/sktech-logo-new.png";
 
 const navItems = [
   ["Overview", "#about"],

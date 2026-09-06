@@ -110,9 +110,9 @@ export default async function IDPage({
           qrValue={`${baseUrl}/id/${official.id}`}
           idNumber={idNumber}
           provinceName="ORIENTAL MINDORO"
-          skfedLogoUrl="/assets/logos/sk-logo-enhance.png"
-          provincialSealUrl="/assets/logos/official-logo-enhance.png"
-          sktechLogoUrl="/assets/logos/sktech-logo-enhance.png"
+          skfedLogoUrl="/assets/logos/sk-logo-new.png"
+          provincialSealUrl="/assets/logos/official-seal-logo-new.png"
+          sktechLogoUrl="/assets/logos/sktech-logo-new.png"
           issuedDate={new Intl.DateTimeFormat("en-US", {
             month: "long",
             day: "2-digit",
