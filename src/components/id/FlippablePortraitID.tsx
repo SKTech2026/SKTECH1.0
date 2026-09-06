@@ -35,7 +35,7 @@ type FlippablePortraitIDProps = {
   issuedDate?: string;
   websiteUrl?: string;
   className?: string;
-  variant?: "full" | "mobilePreview";
+  variant?: "full" | "dashboardPreview" | "mobilePreview" | "mobileFull";
 };
 
 const MAX_TILT = 4;
@@ -96,8 +96,10 @@ export default function FlippablePortraitID({
   className,
   variant = "full",
 }: FlippablePortraitIDProps) {
-  const isMobilePreview = variant === "mobilePreview";
+  const isMobilePreview = variant === "mobilePreview" || variant === "dashboardPreview";
+  const isMobileFull = variant === "mobileFull";
   const [isFlipped, setIsFlipped] = useState(false);
+  const [isNarrowViewport, setIsNarrowViewport] = useState(false);
   const [failedPhotoUrl, setFailedPhotoUrl] = useState<string | null>(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [previewScale, setPreviewScale] = useState(1);
@@ -106,6 +108,7 @@ export default function FlippablePortraitID({
   const rafRef = useRef<number | null>(null);
   const targetRef = useRef({ x: 0, y: 0 });
   const currentRef = useRef({ x: 0, y: 0 });
+  const useMobileFace = isMobileFull && isNarrowViewport;
 
   const displayPhotoUrl = failedPhotoUrl === photoUrl ? DEFAULT_PHOTO_URL : photoUrl;
   const displayName = compact(fullName.toUpperCase(), 34);
@@ -142,6 +145,15 @@ export default function FlippablePortraitID({
       rafRef.current = window.requestAnimationFrame(step);
     });
   };
+
+  useEffect(() => {
+    if (!isMobileFull) return;
+    const mediaQuery = window.matchMedia("(max-width: 640px)");
+    const updateViewport = () => setIsNarrowViewport(mediaQuery.matches);
+    updateViewport();
+    mediaQuery.addEventListener("change", updateViewport);
+    return () => mediaQuery.removeEventListener("change", updateViewport);
+  }, [isMobileFull]);
 
   useEffect(() => {
     if (!isMobilePreview || !previewFrameRef.current) return;
@@ -337,9 +349,79 @@ export default function FlippablePortraitID({
     </section>
   );
 
+  const MobileFrontFace = () => (
+    <section className="official-id-mobile-face official-id-mobile-front absolute inset-0 overflow-y-auto rounded-2xl border border-[#c9d6e7] bg-[#f7faff] p-3 text-[#09235d] [backface-visibility:hidden]">
+      <header className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-xl bg-[#09235d] px-2.5 py-2 text-white">
+        <LogoMark src={sktechLogoUrl} alt="SKTECH logo" className="h-8 w-20" />
+        <div className="min-w-0 text-center">
+          <p className="truncate text-[0.62rem] font-black uppercase">{provinceName}</p>
+          <p className="mt-0.5 text-[0.5rem] font-semibold uppercase text-[#f6ca4a]">SK Federation Digital ID</p>
+        </div>
+        <LogoMark src={skfedLogoUrl} alt="Sangguniang Kabataan logo" className="h-9 w-11" />
+      </header>
+      <div className="mt-3 grid grid-cols-[34%_1fr] gap-2.5">
+        <div className="rounded-xl border border-[#d5e0ed] bg-white p-2">
+          <div className="relative aspect-[4/5] overflow-hidden rounded-lg bg-[#e8eef6]">
+            <Image src={displayPhotoUrl} alt={`${fullName} official portrait`} fill className="object-cover" sizes="140px" priority unoptimized={displayPhotoUrl.startsWith("/api/official/photo")} onError={() => setFailedPhotoUrl(photoUrl)} />
+          </div>
+          <p className="mt-1 text-center text-[0.5rem] font-black uppercase tracking-wide text-[#61728b]">Profile Photo</p>
+        </div>
+        <dl className="grid content-start gap-2 rounded-xl border border-[#d5e0ed] bg-white p-2.5">
+          <FieldRow label="Full Name" value={displayName} />
+          <FieldRow label="SK Position" value={compact(displayPosition.toUpperCase(), 28)} />
+          <FieldRow label="Municipality" value={compact(municipality.toUpperCase(), 22)} />
+          <FieldRow label="Barangay" value={compact(barangay.toUpperCase(), 22)} />
+          <FieldRow label="SKTECH ID" value={documentId} />
+          <FieldRow label="Term" value={serviceTerm} />
+        </dl>
+      </div>
+      <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-[#d5e0ed] bg-white p-2.5">
+        <div>
+          <p className={`inline-flex rounded-full px-2 py-1 text-[0.52rem] font-black uppercase ${verified ? "bg-[#e8f5ef] text-[#167447]" : "bg-[#fff4d6] text-[#946700]"}`}>{statusLabel}</p>
+          <p className="mt-2 text-[0.56rem] font-black uppercase tracking-wide text-[#61728b]">Scan to Verify</p>
+        </div>
+        <QRCodeSVG value={qrValue} size={112} level="M" includeMargin />
+      </div>
+      <p className="mt-2 text-center text-[0.48rem] font-black uppercase tracking-wide text-[#61728b]">{WATERMARK}</p>
+    </section>
+  );
+
+  const MobileBackFace = () => (
+    <section className="official-id-mobile-face official-id-mobile-back absolute inset-0 overflow-y-auto rounded-2xl border border-[#c9d6e7] bg-[#f7faff] p-3 text-[#172653] [backface-visibility:hidden] [transform:rotateY(180deg)]">
+      <header className="rounded-xl bg-[#09235d] px-3 py-2 text-center text-white">
+        <p className="text-[0.62rem] font-black uppercase tracking-wide">Credential Verification</p>
+        <p className="mt-0.5 text-[0.5rem] text-[#f6ca4a]">SKTECH secure registry record</p>
+      </header>
+      <div className="mt-3 grid gap-2.5">
+        <dl className="grid gap-2 rounded-xl border border-[#d5e0ed] bg-white p-2.5">
+          <BackField icon="▣" label="Birth Date" value={formatDisplayDate(birthDate)} />
+          <BackField icon="○" label="Contact Number" value={contactNo || "Not recorded"} />
+          <BackField icon="✉" label="Email Address" value={email || "Not recorded"} />
+          <BackField icon="●" label="Complete Address" value={addressLine || "Not recorded"} />
+        </dl>
+        <dl className="grid gap-2 rounded-xl border border-[#d5e0ed] bg-white p-2.5">
+          <BackField icon="▰" label="Date Elected" value={formatDisplayDate(dateElected)} />
+          <BackField icon="◷" label="Term Expiration" value={formatDisplayDate(termEnd)} />
+          <BackField icon="◆" label="Account Status" value={accountStatus || registryStatus || "Not recorded"} />
+        </dl>
+        <div className="flex flex-col items-center rounded-xl border border-[#d5e0ed] bg-white p-3">
+          <p className="text-center text-[0.62rem] font-black uppercase tracking-wide">QR Verification Code</p>
+          <div className="mt-2 rounded-md bg-white p-1"><QRCodeSVG value={qrValue} size={148} level="M" includeMargin /></div>
+          <p className="mt-2 text-center text-[0.6rem] leading-tight text-[#61728b]">{verificationNote}</p>
+        </div>
+      </div>
+      <div className="mt-3 rounded-xl border border-[#d5e0ed] bg-white p-2.5 text-center">
+        <p className="text-[0.58rem] font-black uppercase tracking-wide">Holder&apos;s Signature</p>
+        <div className="mt-2 h-4 border-b-2 border-[#172653]" />
+        <p className="mt-2 text-[0.68rem] font-black">{websiteUrl}</p>
+        <p className="mt-1 text-[0.5rem] text-[#61728b]">Issued: {issued}</p>
+      </div>
+    </section>
+  );
+
   return (
     <div className={className ?? ""}>
-      <div className={`mx-auto w-full ${isMobilePreview ? "max-w-[760px]" : "max-w-[920px]"}`}>
+      <div className={`mx-auto w-full ${useMobileFace ? "max-w-[430px]" : isMobilePreview ? "max-w-[760px]" : "max-w-[920px]"}`}>
         <div className="id-screen-controls mb-3 grid w-full max-w-[18rem] grid-cols-2 rounded-lg border border-white/10 bg-surface-elevated/55 p-1 text-xs font-semibold text-muted">
           <button
             type="button"
@@ -359,8 +441,8 @@ export default function FlippablePortraitID({
 
         <div
           ref={previewFrameRef}
-          className={`id-screen-card [perspective:1800px] ${isMobilePreview ? "id-mobile-preview-frame overflow-hidden" : ""}`}
-          style={isMobilePreview ? { height: `${540 * previewScale}px` } : undefined}
+          className={`id-screen-card [perspective:1800px] ${isMobilePreview ? "id-mobile-preview-frame" : useMobileFace ? "id-mobile-full-frame" : ""}`}
+          style={isMobilePreview ? { height: `${540 * previewScale}px` } : useMobileFace ? { height: "760px" } : undefined}
         >
           <div
             ref={cardRef}
@@ -379,13 +461,13 @@ export default function FlippablePortraitID({
               targetRef.current = { x: 0, y: 0 };
               startTilt();
             }}
-            className={`relative aspect-[856/540] cursor-pointer rounded-[0.72rem] outline-none [transform-style:preserve-3d] transition-transform duration-700 [transition-timing-function:cubic-bezier(0.2,0.8,0.2,1)] focus-visible:ring-2 focus-visible:ring-[#f5b300] ${isMobilePreview ? "id-mobile-preview-card" : "w-full"}`}
+            className={`relative cursor-pointer rounded-[0.72rem] outline-none [transform-style:preserve-3d] transition-transform duration-700 [transition-timing-function:cubic-bezier(0.2,0.8,0.2,1)] focus-visible:ring-2 focus-visible:ring-[#f5b300] ${isMobilePreview ? "id-mobile-preview-card aspect-[856/540] w-full" : useMobileFace ? "id-mobile-full-card h-full w-full" : "aspect-[856/540] w-full"}`}
             style={{
               transform: isMobilePreview ? `scale(${previewScale}) ${transform}` : transform,
             }}
           >
-            <FrontFace />
-            <BackFace />
+            {useMobileFace ? <MobileFrontFace /> : <FrontFace />}
+            {useMobileFace ? <MobileBackFace /> : <BackFace />}
           </div>
         </div>
 
@@ -403,6 +485,16 @@ export default function FlippablePortraitID({
         .official-id-face {
           isolation: isolate;
           font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .official-id-mobile-face {
+          isolation: isolate;
+          font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .id-mobile-preview-card,
+        .id-mobile-full-card {
+          transform-origin: top left;
         }
 
         .official-id-face::after {

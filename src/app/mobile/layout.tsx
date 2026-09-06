@@ -11,7 +11,7 @@ export default async function MobileLayout({ children }: { children: ReactNode }
 
   return (
     <div
-      className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100"
+      className="min-h-screen bg-background text-foreground"
       style={{
         paddingTop: "max(env(safe-area-inset-top), 0px)",
         paddingBottom: "max(env(safe-area-inset-bottom), 0px)",

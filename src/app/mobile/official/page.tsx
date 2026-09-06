@@ -81,10 +81,10 @@ export default async function MobileOfficialPage() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-2xl border border-cyan-300/20 bg-slate-900/80 p-4 shadow-xl">
-        <p className="text-[11px] uppercase tracking-[0.16em] text-cyan-300">Official Mobile Access</p>
-        <h1 className="mt-1 text-xl font-bold text-slate-100">Digital ID Wallet</h1>
-        <p className="mt-1 text-xs text-slate-300">
+      <section className="rounded-2xl border border-glass-border bg-surface p-4 shadow-xl">
+        <p className="text-[11px] uppercase tracking-[0.16em] text-accent">Official Mobile Access</p>
+        <h1 className="mt-1 text-xl font-bold text-foreground">Digital ID Wallet</h1>
+        <p className="mt-1 text-xs text-muted">
           Swipe-ready identity, attendance history, and federation announcements.
         </p>
       </section>
@@ -92,35 +92,35 @@ export default async function MobileOfficialPage() {
       <section className="grid grid-cols-2 gap-2">
         <Link
           href="/mobile/official"
-          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-slate-900/80 px-3 text-xs font-semibold text-slate-100"
+          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-glass-border bg-surface px-3 text-xs font-semibold text-foreground"
         >
           <IdCard className="h-4 w-4 text-cyan-300" />
           Mobile Home
         </Link>
         <Link
           href="/mobile/official/chat"
-          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-slate-900/80 px-3 text-xs font-semibold text-slate-100"
+          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-glass-border bg-surface px-3 text-xs font-semibold text-foreground"
         >
           <MessageSquare className="h-4 w-4 text-cyan-300" />
           Chat
         </Link>
         <a
           href="#announcements"
-          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-slate-900/80 px-3 text-xs font-semibold text-slate-100"
+          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-glass-border bg-surface px-3 text-xs font-semibold text-foreground"
         >
           <Megaphone className="h-4 w-4 text-cyan-300" />
           Announcements
         </a>
         <a
           href="#attendance"
-          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-slate-900/80 px-3 text-xs font-semibold text-slate-100"
+          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-glass-border bg-surface px-3 text-xs font-semibold text-foreground"
         >
           <Clock3 className="h-4 w-4 text-cyan-300" />
           Attendance
         </a>
       </section>
 
-      <section className="rounded-2xl border border-cyan-300/20 bg-slate-900/80 p-3">
+      <section className="rounded-2xl border border-glass-border bg-surface p-3">
         <FlippablePortraitID
           fullName={fullName}
           position={user.official.role}
@@ -130,7 +130,7 @@ export default async function MobileOfficialPage() {
           idNumber={user.official.id.slice(0, 12).toUpperCase()}
           qrValue={qrValue}
           photoUrl={photoUrl}
-          variant="mobilePreview"
+          variant="dashboardPreview"
           skfedLogoUrl="/assets/logos/sk-logo-new.png"
           provincialSealUrl="/assets/logos/official-seal-logo-new.png"
           sktechLogoUrl="/assets/logos/sktech-logo-new.png"
@@ -140,14 +140,14 @@ export default async function MobileOfficialPage() {
         <div className="mt-3 grid grid-cols-2 gap-2">
           <Link
             href={`/id/${user.official.id}`}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-cyan-500 px-3 text-sm font-semibold text-slate-950"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-accent px-3 text-sm font-semibold text-accent-foreground"
           >
             <IdCard className="h-4 w-4" />
             Open ID
           </Link>
           <Link
             href="/mobile/official/facial-registration"
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/20 bg-slate-800/80 px-3 text-sm font-semibold text-slate-100"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-glass-border bg-surface-elevated px-3 text-sm font-semibold text-foreground"
           >
             <RefreshCcw className="h-4 w-4" />
             Re-Register Face
@@ -155,26 +155,26 @@ export default async function MobileOfficialPage() {
         </div>
       </section>
 
-      <section id="attendance" className="scroll-mt-24 rounded-2xl border border-cyan-300/20 bg-slate-900/80 p-4">
+      <section id="attendance" className="scroll-mt-24 rounded-2xl border border-glass-border bg-surface p-4">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-100">Attendance History</h2>
-          <span className="text-xs text-slate-400">{user.official.attendances.length} recent records</span>
+          <h2 className="text-sm font-semibold text-foreground">Attendance History</h2>
+          <span className="text-xs text-muted">{user.official.attendances.length} recent records</span>
         </div>
         <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
           {user.official.attendances.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-white/15 px-3 py-3 text-xs text-slate-400">
+            <p className="rounded-xl border border-dashed border-glass-border px-3 py-3 text-xs text-muted">
               No attendance logs yet.
             </p>
           ) : (
             user.official.attendances.map((record) => (
               <article
                 key={record.id}
-                className="rounded-xl border border-white/10 bg-slate-800/70 px-3 py-2"
+                className="rounded-xl border border-glass-border bg-surface-elevated px-3 py-2"
               >
-                <p className="text-xs font-semibold text-slate-100">
+                <p className="text-xs font-semibold text-foreground">
                   {record.event?.title ?? "General Attendance"}
                 </p>
-                <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-slate-300">
+                <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted">
                   <Clock3 className="h-3.5 w-3.5 text-cyan-300" />
                   {record.timeIn.toLocaleString()}
                 </p>
@@ -188,22 +188,22 @@ export default async function MobileOfficialPage() {
         </div>
       </section>
 
-      <section id="announcements" className="scroll-mt-24 rounded-2xl border border-cyan-300/20 bg-slate-900/80 p-4">
-        <h2 className="text-sm font-semibold text-slate-100">Active Announcements</h2>
+      <section id="announcements" className="scroll-mt-24 rounded-2xl border border-glass-border bg-surface p-4">
+        <h2 className="text-sm font-semibold text-foreground">Active Announcements</h2>
         <div className="mt-3 space-y-2">
           {announcements.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-white/15 px-3 py-3 text-xs text-slate-400">
+            <p className="rounded-xl border border-dashed border-glass-border px-3 py-3 text-xs text-muted">
               No announcements available.
             </p>
           ) : (
             announcements.map((item) => (
-              <article key={item.id} className="rounded-xl border border-white/10 bg-slate-800/70 px-3 py-2">
-                <p className="text-xs font-semibold text-slate-100">{item.title}</p>
+              <article key={item.id} className="rounded-xl border border-glass-border bg-surface-elevated px-3 py-2">
+                <p className="text-xs font-semibold text-foreground">{item.title}</p>
                 <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-cyan-300">
                   <CalendarDays className="h-3.5 w-3.5" />
                   {item.eventDate.toLocaleDateString()}
                 </p>
-                <p className="mt-1 text-[11px] text-slate-300">
+                <p className="mt-1 text-[11px] text-muted">
                   {item.description ?? "No details provided."}
                 </p>
               </article>
@@ -212,7 +212,7 @@ export default async function MobileOfficialPage() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-cyan-300/20 bg-slate-900/80 p-4 text-xs text-slate-300">
+      <section className="rounded-2xl border border-glass-border bg-surface p-4 text-xs text-muted">
         <p>
           Face registration status:{" "}
           <span className={user.faceRegistered ? "text-emerald-300" : "text-amber-300"}>

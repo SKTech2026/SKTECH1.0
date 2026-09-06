@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { Home, Info, LogOut, Settings, ShieldCheck, X } from "lucide-react";
+import { Home, Info, LogOut, Settings, X } from "lucide-react";
 import { useState } from "react";
 
 import ThemeToggle from "@/components/ThemeToggle";
@@ -73,13 +73,9 @@ export default function MobileTopBar({
                   <p className="truncate text-sm font-semibold text-foreground">{accountName ?? "Official account"}</p>
                   <p className="truncate text-xs text-muted">{accountEmail ?? ""}</p>
                 </div>
-                <Link href="/dashboard/official/settings" onClick={() => setIsProfileOpen(false)} className="mt-2 flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-foreground hover:bg-surface-elevated">
+                <Link href="/mobile/official/settings" onClick={() => setIsProfileOpen(false)} className="mt-2 flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-foreground hover:bg-surface-elevated">
                   <Settings className="h-4 w-4" />
                   Settings
-                </Link>
-                <Link href="/dashboard/official/settings?tab=security" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-foreground hover:bg-surface-elevated">
-                  <ShieldCheck className="h-4 w-4" />
-                  Security
                 </Link>
                 <button type="button" onClick={() => setIsAboutOpen(true)} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-foreground hover:bg-surface-elevated">
                   <Info className="h-4 w-4" />

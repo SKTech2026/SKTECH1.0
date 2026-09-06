@@ -16,7 +16,7 @@ export default async function MobileOfficialChatPage() {
     <div className="space-y-3">
       <Link
         href="/mobile/official"
-        className="inline-flex h-10 items-center gap-2 rounded-xl border border-cyan-300/25 bg-slate-900/80 px-3 text-sm font-semibold text-slate-100"
+        className="inline-flex h-10 items-center gap-2 rounded-xl border border-glass-border bg-surface px-3 text-sm font-semibold text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to Dashboard
