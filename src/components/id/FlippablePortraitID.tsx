@@ -35,6 +35,7 @@ type FlippablePortraitIDProps = {
   issuedDate?: string;
   websiteUrl?: string;
   className?: string;
+  variant?: "full" | "mobilePreview";
 };
 
 const MAX_TILT = 4;
@@ -93,11 +94,15 @@ export default function FlippablePortraitID({
   issuedDate,
   websiteUrl = "sktech-ormin.com",
   className,
+  variant = "full",
 }: FlippablePortraitIDProps) {
+  const isMobilePreview = variant === "mobilePreview";
   const [isFlipped, setIsFlipped] = useState(false);
   const [failedPhotoUrl, setFailedPhotoUrl] = useState<string | null>(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const [previewScale, setPreviewScale] = useState(1);
   const cardRef = useRef<HTMLDivElement | null>(null);
+  const previewFrameRef = useRef<HTMLDivElement | null>(null);
   const rafRef = useRef<number | null>(null);
   const targetRef = useRef({ x: 0, y: 0 });
   const currentRef = useRef({ x: 0, y: 0 });
@@ -137,6 +142,16 @@ export default function FlippablePortraitID({
       rafRef.current = window.requestAnimationFrame(step);
     });
   };
+
+  useEffect(() => {
+    if (!isMobilePreview || !previewFrameRef.current) return;
+    const frame = previewFrameRef.current;
+    const updateScale = () => setPreviewScale(Math.min(1, frame.clientWidth / 760));
+    updateScale();
+    const observer = new ResizeObserver(updateScale);
+    observer.observe(frame);
+    return () => observer.disconnect();
+  }, [isMobilePreview]);
 
   useEffect(() => {
     return () => {
@@ -324,7 +339,7 @@ export default function FlippablePortraitID({
 
   return (
     <div className={className ?? ""}>
-      <div className="mx-auto w-full max-w-[760px]">
+      <div className={`mx-auto w-full ${isMobilePreview ? "max-w-[760px]" : "max-w-[920px]"}`}>
         <div className="id-screen-controls mb-3 grid w-full max-w-[18rem] grid-cols-2 rounded-lg border border-white/10 bg-surface-elevated/55 p-1 text-xs font-semibold text-muted">
           <button
             type="button"
@@ -342,7 +357,11 @@ export default function FlippablePortraitID({
           </button>
         </div>
 
-        <div className="id-screen-card [perspective:1800px]">
+        <div
+          ref={previewFrameRef}
+          className={`id-screen-card [perspective:1800px] ${isMobilePreview ? "id-mobile-preview-frame overflow-hidden" : ""}`}
+          style={isMobilePreview ? { height: `${540 * previewScale}px` } : undefined}
+        >
           <div
             ref={cardRef}
             role="button"
@@ -360,8 +379,10 @@ export default function FlippablePortraitID({
               targetRef.current = { x: 0, y: 0 };
               startTilt();
             }}
-            className="relative aspect-[856/540] w-full cursor-pointer rounded-[0.72rem] outline-none [transform-style:preserve-3d] transition-transform duration-700 [transition-timing-function:cubic-bezier(0.2,0.8,0.2,1)] focus-visible:ring-2 focus-visible:ring-[#f5b300]"
-            style={{ transform }}
+            className={`relative aspect-[856/540] cursor-pointer rounded-[0.72rem] outline-none [transform-style:preserve-3d] transition-transform duration-700 [transition-timing-function:cubic-bezier(0.2,0.8,0.2,1)] focus-visible:ring-2 focus-visible:ring-[#f5b300] ${isMobilePreview ? "id-mobile-preview-card" : "w-full"}`}
+            style={{
+              transform: isMobilePreview ? `scale(${previewScale}) ${transform}` : transform,
+            }}
           >
             <FrontFace />
             <BackFace />

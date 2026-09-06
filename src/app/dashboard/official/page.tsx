@@ -180,9 +180,9 @@ export default async function OfficialDashboardHomePage({
         </article>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-2">
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.75fr)_minmax(280px,0.85fr)] xl:items-start">
         {currentUser.official ? (
-          <article className="rounded-2xl border border-glass-border bg-surface p-4 shadow-xl backdrop-blur-md sm:p-5">
+          <article className="min-w-0 rounded-2xl border border-glass-border bg-surface p-4 shadow-xl backdrop-blur-md sm:p-5">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.14em] text-muted">Digital ID</p>
@@ -214,38 +214,62 @@ export default async function OfficialDashboardHomePage({
               qrValue={`/id/${currentUser.official.id}`}
               photoUrl={photoUrl}
               registryStatus={currentUser.official.status}
-              sktechLogoUrl="/sk-tech-logo.png"
-              provincialSealUrl="/images/provincial-seal-logo.png"
-              skfedLogoUrl="/login-logo.png"
+              sktechLogoUrl="/assets/logos/sktech-logo-new.png"
+              provincialSealUrl="/assets/logos/official-seal-logo-new.png"
+              skfedLogoUrl="/assets/logos/sk-logo-new.png"
             />
           </article>
         ) : null}
 
-        <article className="rounded-2xl border border-glass-border bg-surface p-5 shadow-xl backdrop-blur-md">
-          <h3 className="text-lg font-semibold text-foreground">Quick Access</h3>
-          <div className="mt-4 flex flex-wrap gap-3">
+        <div className="grid gap-4">
+          <article className="rounded-2xl border border-glass-border bg-surface p-5 shadow-xl backdrop-blur-md">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.14em] text-muted">Workspace</p>
+                <h3 className="mt-1 text-lg font-semibold text-foreground">Quick Access</h3>
+              </div>
+              <Link
+                href="/dashboard/official/settings"
+                className="text-xs font-semibold text-accent hover:underline"
+              >
+                Settings
+              </Link>
+            </div>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
             <Link
               href="/dashboard/official/digital-id"
-              className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition hover:opacity-90"
+              className="rounded-xl bg-accent px-4 py-2.5 text-center text-sm font-semibold text-accent-foreground transition hover:opacity-90"
             >
               Open Digital ID
             </Link>
             <Link
               href="/dashboard/official/profile"
-              className="rounded-xl border border-glass-border px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-elevated/70"
+              className="rounded-xl border border-glass-border px-4 py-2.5 text-center text-sm font-semibold text-foreground transition hover:bg-surface-elevated/70"
             >
               Edit Profile
             </Link>
             <Link
               href="/dashboard/official/attendance"
-              className="rounded-xl border border-glass-border px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-elevated/70"
+              className="rounded-xl border border-glass-border px-4 py-2.5 text-center text-sm font-semibold text-foreground transition hover:bg-surface-elevated/70"
             >
               View Attendance Logs
             </Link>
-          </div>
-        </article>
+            <Link
+              href="#announcements"
+              className="rounded-xl border border-glass-border px-4 py-2.5 text-center text-sm font-semibold text-foreground transition hover:bg-surface-elevated/70"
+            >
+              Announcements
+            </Link>
+            <Link
+              href="/dashboard/official/chat"
+              className="rounded-xl border border-glass-border px-4 py-2.5 text-center text-sm font-semibold text-foreground transition hover:bg-surface-elevated/70"
+            >
+              Chat
+            </Link>
+            </div>
+          </article>
 
-        <article className="rounded-2xl border border-glass-border bg-surface p-5 shadow-xl backdrop-blur-md">
+          <article id="announcements" className="scroll-mt-6 rounded-2xl border border-glass-border bg-surface p-5 shadow-xl backdrop-blur-md">
           <h3 className="text-lg font-semibold text-foreground">Active Announcements</h3>
           <ul className="mt-4 space-y-3">
             {bulletinItems.length === 0 ? (
@@ -261,7 +285,8 @@ export default async function OfficialDashboardHomePage({
               ))
             )}
           </ul>
-        </article>
+          </article>
+        </div>
       </section>
     </div>
   );

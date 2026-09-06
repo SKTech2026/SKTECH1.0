@@ -130,8 +130,10 @@ export default async function MobileOfficialPage() {
           idNumber={user.official.id.slice(0, 12).toUpperCase()}
           qrValue={qrValue}
           photoUrl={photoUrl}
-          skfedLogoUrl="/login-logo.png"
-          provincialSealUrl="/images/provincial-seal-logo.png"
+          variant="mobilePreview"
+          skfedLogoUrl="/assets/logos/sk-logo-new.png"
+          provincialSealUrl="/assets/logos/official-seal-logo-new.png"
+          sktechLogoUrl="/assets/logos/sktech-logo-new.png"
           className="mx-auto max-w-full"
         />
 
