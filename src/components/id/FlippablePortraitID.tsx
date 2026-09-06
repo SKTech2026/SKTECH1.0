@@ -15,8 +15,15 @@ type FlippablePortraitIDProps = {
   sitio?: string | null;
   skfedPosition?: string | null;
   dateElected?: string | null;
+  termEnd?: string | null;
   termPeriod?: string;
+  birthDate?: string | null;
+  contactNo?: string | null;
+  email?: string | null;
+  address?: string | null;
+  admissionStatus?: string | null;
   registryStatus?: string;
+  accountStatus?: string | null;
   logoUrl?: string;
   sktechLogoUrl?: string;
   skfedLogoUrl?: string;
@@ -26,12 +33,14 @@ type FlippablePortraitIDProps = {
   provinceName?: string;
   contactInfo?: string;
   issuedDate?: string;
+  websiteUrl?: string;
   className?: string;
 };
 
 const MAX_TILT = 4;
 const TILT_EASING = 0.18;
 const DEFAULT_PHOTO_URL = "/images/default-official.svg";
+const WATERMARK = "CAPSTONE PROJECT – DEMO ID – NOT AN OFFICIAL GOVERNMENT ID";
 
 const compact = (value: string, maxLength: number) =>
   value.length > maxLength ? `${value.slice(0, maxLength - 1)}.` : value;
@@ -41,10 +50,19 @@ const formatDisplayDate = (value: string | null | undefined) => {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return value;
   return new Intl.DateTimeFormat("en-US", {
-    month: "short",
+    month: "long",
     day: "2-digit",
     year: "numeric",
-  }).format(parsed);
+  })
+    .format(parsed)
+    .toUpperCase();
+};
+
+const yearLabel = (value: string | null | undefined) => {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return String(parsed.getFullYear());
 };
 
 export default function FlippablePortraitID({
@@ -58,11 +76,22 @@ export default function FlippablePortraitID({
   sitio,
   skfedPosition,
   dateElected,
+  termEnd,
   termPeriod,
+  birthDate,
+  contactNo,
+  email,
+  address,
+  admissionStatus,
   registryStatus = "ACTIVE",
-  provinceName = "Province of Oriental Mindoro",
-  contactInfo = "SK Provincial Federation Registry | Oriental Mindoro",
+  accountStatus,
+  sktechLogoUrl = "/assets/logos/sktech-logo-enhance.png",
+  skfedLogoUrl = "/assets/logos/sk-logo-enhance.png",
+  provincialSealUrl = "/assets/logos/official-logo-enhance.png",
+  provinceName = "ORIENTAL MINDORO",
+  contactInfo = "This digital identification card is part of the SKTECH college capstone prototype. Scan the QR code to verify the holder's information through the SKTECH system.",
   issuedDate,
+  websiteUrl = "sktech-ormin.com",
   className,
 }: FlippablePortraitIDProps) {
   const [isFlipped, setIsFlipped] = useState(false);
@@ -73,14 +102,22 @@ export default function FlippablePortraitID({
   const targetRef = useRef({ x: 0, y: 0 });
   const currentRef = useRef({ x: 0, y: 0 });
 
-  const sktechLogo = "/assets/logos/sktech-logo-enhance.png";
-  const officialLogo = "/assets/logos/official-logo-enhance.png";
-  const skLogo = "/assets/logos/sk-logo-enhance.png";
   const displayPhotoUrl = failedPhotoUrl === photoUrl ? DEFAULT_PHOTO_URL : photoUrl;
-  const displayName = compact(fullName.toUpperCase(), 42);
-  const documentId = compact(idNumber, 18);
+  const displayName = compact(fullName.toUpperCase(), 34);
+  const displayPosition = skfedPosition ? `${position} / ${skfedPosition}` : position;
+  const documentId = `SKTE-ORM-${compact(idNumber, 16)}`;
+  const addressLine =
+    address ||
+    [sitio ? `Sitio ${sitio}` : null, barangay, municipality, provinceName]
+      .filter(Boolean)
+      .join(", ");
+  const electedYear = yearLabel(dateElected);
+  const termEndYear = yearLabel(termEnd);
+  const serviceTerm =
+    termPeriod ?? ([electedYear, termEndYear].filter(Boolean).join("-") || "Not recorded");
+  const verified = admissionStatus === "APPROVED" || registryStatus === "ACTIVE";
+  const statusLabel = verified ? "VERIFIED STATUS" : "PENDING STATUS";
   const issued = issuedDate ?? "Upon registry approval";
-  const statusIsActive = registryStatus === "ACTIVE";
 
   const startTilt = () => {
     if (rafRef.current !== null) return;
@@ -123,10 +160,193 @@ export default function FlippablePortraitID({
 
   const transform = `rotateX(${tilt.x.toFixed(2)}deg) rotateY(${(tilt.y + (isFlipped ? 180 : 0)).toFixed(2)}deg)`;
 
+  const LogoMark = ({
+    src,
+    alt,
+    className: logoClassName = "",
+  }: {
+    src: string;
+    alt: string;
+    className?: string;
+  }) => (
+    <span className={`relative block ${logoClassName}`}>
+      <Image src={src} alt={alt} fill className="object-contain" sizes="96px" />
+    </span>
+  );
+
+  const FieldRow = ({
+    label,
+    value,
+    strong = true,
+  }: {
+    label: string;
+    value: string;
+    strong?: boolean;
+  }) => (
+    <div className="grid grid-cols-[7.4rem_0.55rem_1fr] items-baseline gap-1 text-[0.68rem] leading-tight text-[#09235d]">
+      <dt className="font-black uppercase">{label}</dt>
+      <dd className="font-black">:</dd>
+      <dd className={strong ? "text-[0.86rem] font-black uppercase tracking-wide" : "font-semibold"}>
+        {value}
+      </dd>
+    </div>
+  );
+
+  const BackField = ({
+    icon,
+    label,
+    value,
+  }: {
+    icon: string;
+    label: string;
+    value: string;
+  }) => (
+    <div className="grid grid-cols-[2rem_1fr] gap-2">
+      <span className="flex h-7 w-7 items-center justify-center rounded-md text-[1.35rem] text-[#f5b300]">
+        {icon}
+      </span>
+      <div>
+        <dt className="text-[0.68rem] font-black uppercase tracking-wide text-[#172653]">{label}</dt>
+        <dd className="mt-1 text-[0.82rem] font-bold leading-tight text-[#172653]">{value}</dd>
+      </div>
+    </div>
+  );
+
+  const FrontFace = ({ print = false }: { print?: boolean }) => (
+    <section className="official-id-face official-id-front absolute inset-0 overflow-hidden rounded-[0.72rem] border border-[#d7c26c] bg-white text-[#09235d] shadow-[0_28px_70px_-34px_rgba(2,6,23,0.75)] [backface-visibility:hidden]">
+      <div className="official-id-subtle-logo official-id-subtle-logo-left">
+        <Image src={sktechLogoUrl} alt="" fill className="object-contain opacity-20" sizes="380px" />
+      </div>
+      <div className="official-id-corner official-id-corner-top-left" />
+      <div className="official-id-corner official-id-corner-right" />
+      <div className="official-id-dot-grid official-id-dot-grid-front" />
+      <p className="official-id-watermark">{WATERMARK}</p>
+
+      <div className="relative z-10 flex h-full flex-col px-[4.7%] py-[3.2%]">
+        <header className="grid grid-cols-[1fr_1fr_1fr] items-start gap-3">
+          <LogoMark src={sktechLogoUrl} alt="SKTECH logo" className="h-[3.55rem] w-[5.9rem]" />
+          <LogoMark src={provincialSealUrl} alt="Province of Oriental Mindoro official seal" className="mx-auto h-[4.35rem] w-[4.35rem]" />
+          <LogoMark src={skfedLogoUrl} alt="Sangguniang Kabataan logo" className="ml-auto h-[4rem] w-[4.7rem]" />
+        </header>
+
+        <div className="mt-[0.45rem] text-center">
+          <h2 className="text-[1.05rem] font-black uppercase leading-tight tracking-wide">
+            SK Federation Identification of {provinceName}
+          </h2>
+          <p className="mt-1 text-[0.78rem] font-black uppercase tracking-wide text-[#f2af00]">
+            SKTECH Digital Identification System
+          </p>
+          <div className="mx-auto mt-2 h-[0.14rem] w-[84%] bg-[#f2db84]" />
+        </div>
+
+        <div className="mt-[0.72rem] grid flex-1 grid-cols-[24%_1fr_17%] gap-[2.3%]">
+          <div>
+            <div className="relative aspect-[4/5] overflow-hidden rounded-md border border-[#c9c9c9] bg-[#f8fafc] shadow-[0_10px_18px_-18px_rgba(2,6,23,0.7)]">
+              <Image
+                src={displayPhotoUrl}
+                alt={`${fullName} official portrait`}
+                fill
+                className="object-cover"
+                sizes="180px"
+                priority
+                unoptimized={displayPhotoUrl.startsWith("/api/official/photo")}
+                onError={() => setFailedPhotoUrl(photoUrl)}
+              />
+            </div>
+            <p className="mt-1 text-center text-[0.66rem] font-black uppercase leading-tight">
+              Profile Photo
+            </p>
+          </div>
+
+          <dl className="grid content-start gap-[0.66rem] pt-3">
+            <FieldRow label="Full Name" value={displayName} />
+            <FieldRow label="SK Position" value={compact(displayPosition.toUpperCase(), 34)} />
+            <FieldRow label="Municipality" value={compact(municipality.toUpperCase(), 24)} />
+            <FieldRow label="Barangay" value={compact(barangay.toUpperCase(), 24)} />
+            <div className="mt-0.5 grid grid-cols-[9.2rem_1fr] items-center gap-2 text-[0.68rem] leading-tight text-[#09235d]">
+              <dt className="font-black uppercase">SKTECH ID Number</dt>
+              <dd className="font-black uppercase tracking-wide">{documentId}</dd>
+            </div>
+            <div className="grid grid-cols-[8.4rem_1fr] items-center gap-2 text-[0.68rem] leading-tight text-[#09235d]">
+              <dt className="font-black uppercase">Term of Service</dt>
+              <dd className="text-[0.92rem] font-black uppercase tracking-wide">{serviceTerm}</dd>
+            </div>
+          </dl>
+
+          <div className="flex flex-col items-center justify-center gap-2">
+            <div className="grid w-full grid-cols-[2rem_1fr] items-center gap-1.5">
+              <span className="text-[2.1rem] leading-none text-[#f6c310]">◆</span>
+              <span className="text-[0.68rem] font-black uppercase leading-tight">{statusLabel}</span>
+            </div>
+            <div className="rounded-md border border-[#d6d6d6] bg-white p-1">
+              <QRCodeSVG value={qrValue} size={print ? 84 : 96} level="M" includeMargin />
+            </div>
+            <p className="text-center text-[0.62rem] font-black uppercase tracking-wide">Scan to Verify</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+
+  const BackFace = () => (
+    <section className="official-id-face official-id-back absolute inset-0 overflow-hidden rounded-[0.72rem] border border-[#d7c26c] bg-white text-[#172653] shadow-[0_28px_70px_-34px_rgba(2,6,23,0.75)] [backface-visibility:hidden] [transform:rotateY(180deg)]">
+      <div className="official-id-subtle-logo official-id-subtle-logo-back">
+        <Image src={sktechLogoUrl} alt="" fill className="object-contain opacity-20" sizes="420px" />
+      </div>
+      <div className="official-id-seal-watermark">
+        <Image src={provincialSealUrl} alt="" fill className="object-contain opacity-20" sizes="360px" />
+      </div>
+      <div className="official-id-dot-grid official-id-dot-grid-back" />
+      <div className="official-id-back-divider" />
+      <p className="official-id-watermark official-id-watermark-back">{WATERMARK}</p>
+
+      <div className="relative z-10 grid h-full grid-cols-[41%_24%_1fr] gap-[3%] px-[5.2%] py-[3.8%]">
+        <dl className="grid content-start gap-[0.78rem]">
+          <BackField icon="▣" label="Birth Date" value={formatDisplayDate(birthDate)} />
+          <BackField icon="○" label="Contact Number" value={contactNo || "Not recorded"} />
+          <BackField icon="✉" label="Email Address" value={email || "Not recorded"} />
+          <BackField icon="●" label="Complete Address" value={addressLine || "Not recorded"} />
+        </dl>
+
+        <dl className="grid content-start gap-[1.35rem] pt-1">
+          <BackField icon="▰" label="Date Elected" value={formatDisplayDate(dateElected)} />
+          <BackField icon="◷" label="Term Expiration" value={formatDisplayDate(termEnd)} />
+          <BackField icon="◆" label="Account Status" value={accountStatus || registryStatus || "Not recorded"} />
+        </dl>
+
+        <div className="flex min-w-0 flex-col items-center">
+          <p className="mb-2 text-center text-[0.68rem] font-black uppercase tracking-wide">
+            QR Verification Code
+          </p>
+          <div className="rounded-md bg-white p-1.5">
+            <QRCodeSVG value={qrValue} size={128} level="M" includeMargin />
+          </div>
+          <p className="mt-2 w-full text-[0.72rem] font-medium leading-tight text-[#172653]">
+            {contactInfo}
+          </p>
+        </div>
+
+        <div className="absolute bottom-[22%] left-[5.2%] w-[30%]">
+          <p className="text-center text-[0.68rem] font-black uppercase">Holder&apos;s Signature</p>
+          <div className="mt-2 h-3 border-2 border-[#111827] bg-white" />
+        </div>
+
+        <div className="absolute bottom-[5%] left-1/2 flex -translate-x-1/2 items-center gap-3 text-[#172653]">
+          <span className="text-[1.2rem] text-[#f5b300]">◎</span>
+          <span className="text-[0.82rem] font-black tracking-wide">{websiteUrl}</span>
+        </div>
+
+        <p className="absolute bottom-[3.2%] right-[4.2%] text-[0.52rem] font-semibold text-[#172653]">
+          Issued: {issued}
+        </p>
+      </div>
+    </section>
+  );
+
   return (
     <div className={className ?? ""}>
-      <div className="mx-auto w-full max-w-[390px]">
-        <div className="mb-3 grid grid-cols-2 rounded-lg border border-white/10 bg-surface-elevated/55 p-1 text-xs font-semibold text-muted">
+      <div className="mx-auto w-full max-w-[760px]">
+        <div className="id-screen-controls mb-3 grid w-full max-w-[18rem] grid-cols-2 rounded-lg border border-white/10 bg-surface-elevated/55 p-1 text-xs font-semibold text-muted">
           <button
             type="button"
             onClick={() => setIsFlipped(false)}
@@ -143,7 +363,7 @@ export default function FlippablePortraitID({
           </button>
         </div>
 
-        <div className="[perspective:1800px]">
+        <div className="id-screen-card [perspective:1800px]">
           <div
             ref={cardRef}
             role="button"
@@ -161,167 +381,20 @@ export default function FlippablePortraitID({
               targetRef.current = { x: 0, y: 0 };
               startTilt();
             }}
-            className="relative aspect-[63/100] cursor-pointer rounded-lg outline-none [transform-style:preserve-3d] transition-transform duration-700 [transition-timing-function:cubic-bezier(0.2,0.8,0.2,1)] focus-visible:ring-2 focus-visible:ring-[#c8a24a]"
+            className="relative aspect-[856/540] w-full cursor-pointer rounded-[0.72rem] outline-none [transform-style:preserve-3d] transition-transform duration-700 [transition-timing-function:cubic-bezier(0.2,0.8,0.2,1)] focus-visible:ring-2 focus-visible:ring-[#f5b300]"
             style={{ transform }}
           >
-            <section className="official-id-face absolute inset-0 overflow-hidden rounded-lg border border-[#c8a24a] bg-[#f8fafc] text-[#12213b] shadow-[0_28px_70px_-34px_rgba(2,6,23,0.75)] [backface-visibility:hidden]">
-              <div className="official-id-pattern" />
-              <div className="absolute inset-x-0 top-0 h-[7.35rem] bg-[#102b56]" />
-              <div className="absolute inset-x-0 top-[7.35rem] h-1.5 bg-[#c8a24a]" />
+            <FrontFace />
+            <BackFace />
+          </div>
+        </div>
 
-              <div className="relative z-10 flex h-full flex-col p-4">
-                <header className="grid grid-cols-[46px_1fr_46px] items-center gap-3 text-white">
-                  <div className="relative h-11 w-11 rounded-md bg-white p-1.5">
-                    <Image src={sktechLogo} alt="SKTECH logo placeholder" fill className="object-contain p-1" sizes="44px" />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-[11px] font-bold uppercase leading-tight">{provinceName}</p>
-                    <p className="mt-1 text-[10px] font-semibold text-[#f2d786]">SK Federation Digital Credential</p>
-                  </div>
-                  <div className="relative h-11 w-11 rounded-md bg-white p-1.5">
-                    <Image src={officialLogo} alt="Oriental Mindoro official seal" fill className="object-contain p-1" sizes="44px" />
-                  </div>
-                </header>
-
-                <div className="mt-7 flex items-start gap-3">
-                  <div className="relative h-[145px] w-[112px] shrink-0 overflow-hidden rounded-md border-2 border-white bg-slate-100 shadow-[0_14px_28px_-18px_rgba(2,6,23,0.6)]">
-                    <Image
-                      src={displayPhotoUrl}
-                      alt={`${fullName} official portrait`}
-                      fill
-                      className="object-cover"
-                      sizes="112px"
-                      priority
-                      unoptimized={displayPhotoUrl.startsWith("/api/official/photo")}
-                      onError={() => setFailedPhotoUrl(photoUrl)}
-                    />
-                  </div>
-
-                  <div className="min-w-0 flex-1 pt-1">
-                    <span
-                      className={`inline-flex rounded-full px-2.5 py-1 text-[9px] font-black tracking-wide text-white ${
-                        statusIsActive ? "bg-[#157347]" : "bg-[#9f1239]"
-                      }`}
-                    >
-                      {registryStatus}
-                    </span>
-                    <h2 className="mt-3 text-[1.16rem] font-black leading-[1.05] text-[#12213b]">
-                      {displayName}
-                    </h2>
-                    <p className="mt-2 text-xs font-extrabold uppercase text-[#9c7426]">{position}</p>
-                    {skfedPosition ? (
-                      <p className="mt-1 text-[10px] font-semibold uppercase text-[#102b56]">
-                        {skfedPosition}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-
-                <dl className="mt-4 grid grid-cols-[1fr_82px] gap-3">
-                  <div className="grid gap-2 text-[10px] text-[#44516a]">
-                    <div className="rounded-md border border-[#d9cfac] bg-white/80 px-2.5 py-2">
-                      <dt className="font-bold text-[#102b56]">Jurisdiction</dt>
-                      <dd className="mt-0.5 leading-tight">
-                        {barangay}, {municipality}
-                        {sitio ? <span className="block">Sitio {sitio}</span> : null}
-                      </dd>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="rounded-md border border-[#d9cfac] bg-white/80 px-2 py-2">
-                        <dt className="font-bold text-[#102b56]">Credential No.</dt>
-                        <dd className="mt-0.5 font-mono text-[10px]">{documentId}</dd>
-                      </div>
-                      <div className="rounded-md border border-[#d9cfac] bg-white/80 px-2 py-2">
-                        <dt className="font-bold text-[#102b56]">Date Elected</dt>
-                        <dd className="mt-0.5 leading-tight">{formatDisplayDate(dateElected ?? termPeriod)}</dd>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="self-end rounded-md border border-[#d9cfac] bg-white p-1.5 shadow-sm">
-                    <QRCodeSVG value={qrValue} size={70} level="M" includeMargin />
-                  </div>
-                </dl>
-
-                <footer className="mt-auto flex items-end justify-between border-t border-[#d9cfac] pt-3">
-                  <div>
-                    <p className="text-[9px] font-semibold uppercase text-[#102b56]">Issued</p>
-                    <p className="text-[10px] text-[#4b5872]">{issued}</p>
-                  </div>
-                  <div className="relative h-9 w-9 opacity-70">
-                    <Image src={skLogo} alt="SK logo" fill className="object-contain" sizes="36px" />
-                  </div>
-                </footer>
-              </div>
-            </section>
-
-            <section className="official-id-face absolute inset-0 overflow-hidden rounded-lg border border-[#c8a24a] bg-[#f8fafc] text-[#12213b] shadow-[0_28px_70px_-34px_rgba(2,6,23,0.75)] [backface-visibility:hidden] [transform:rotateY(180deg)]">
-              <div className="official-id-pattern" />
-              <div className="absolute inset-x-0 top-0 h-[5.9rem] bg-[#102b56]" />
-              <div className="absolute inset-x-0 top-[5.9rem] h-1.5 bg-[#c8a24a]" />
-
-              <div className="relative z-10 flex h-full flex-col p-4">
-                <header className="grid grid-cols-[44px_1fr_44px] items-center gap-3 text-white">
-                  <div className="relative h-11 w-11 rounded-md bg-white p-1.5">
-                    <Image src={officialLogo} alt="Oriental Mindoro official seal" fill className="object-contain p-1" sizes="44px" />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-xs font-black uppercase tracking-wide">Credential Verification</p>
-                    <p className="mt-1 text-[10px] font-semibold text-[#f2d786]">SKTECH secure registry record</p>
-                  </div>
-                  <div className="relative h-11 w-11 rounded-md bg-white p-1.5">
-                    <Image src={sktechLogo} alt="SKTECH logo placeholder" fill className="object-contain p-1" sizes="44px" />
-                  </div>
-                </header>
-
-                <div className="mt-8 rounded-md border border-[#d9cfac] bg-white/85 p-3">
-                  <p className="text-[11px] leading-relaxed text-[#44516a]">
-                    This credential is valid only when the QR verification record matches the
-                    official name, credential number, jurisdiction, and active registry status.
-                  </p>
-                </div>
-
-                <div className="mt-4 grid grid-cols-[126px_1fr] gap-4">
-                  <div className="rounded-md border border-[#d9cfac] bg-white p-2 shadow-sm">
-                    <QRCodeSVG value={qrValue} size={110} level="M" includeMargin />
-                  </div>
-
-                  <dl className="grid content-start gap-2 text-[10px]">
-                    <div>
-                      <dt className="font-bold text-[#102b56]">Credential No.</dt>
-                      <dd className="font-mono text-[#44516a]">{documentId}</dd>
-                    </div>
-                    <div>
-                      <dt className="font-bold text-[#102b56]">Official</dt>
-                      <dd className="leading-tight text-[#44516a]">{compact(fullName, 34)}</dd>
-                    </div>
-                    <div>
-                      <dt className="font-bold text-[#102b56]">Registry Status</dt>
-                      <dd className={statusIsActive ? "font-bold text-[#157347]" : "font-bold text-[#9f1239]"}>
-                        {registryStatus}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="font-bold text-[#102b56]">Registry Contact</dt>
-                      <dd className="leading-tight text-[#44516a]">{contactInfo}</dd>
-                    </div>
-                  </dl>
-                </div>
-
-                <div className="mt-auto grid grid-cols-[1fr_36px_72px] items-end gap-3">
-                  <div>
-                    <div className="h-9 border-b border-[#12213b]" />
-                    <p className="mt-1 text-[9px] text-[#44516a]">Authorized registry officer</p>
-                  </div>
-                  <div className="relative h-9 w-9 opacity-70">
-                    <Image src={skLogo} alt="SK logo" fill className="object-contain" sizes="36px" />
-                  </div>
-                  <div className="relative h-14">
-                    <Image src={officialLogo} alt="Oriental Mindoro official seal" fill className="object-contain opacity-70" sizes="72px" />
-                  </div>
-                </div>
-              </div>
-            </section>
+        <div className="id-print-stack hidden">
+          <div className="official-id-print-card relative aspect-[856/540] overflow-hidden">
+            <FrontFace print />
+          </div>
+          <div className="official-id-print-card relative aspect-[856/540] overflow-hidden">
+            <BackFace />
           </div>
         </div>
       </div>
@@ -329,17 +402,7 @@ export default function FlippablePortraitID({
       <style>{`
         .official-id-face {
           isolation: isolate;
-        }
-
-        .official-id-pattern {
-          pointer-events: none;
-          position: absolute;
-          inset: 0;
-          background:
-            radial-gradient(circle at 50% 16%, rgba(200, 162, 74, 0.16), transparent 28%),
-            linear-gradient(135deg, rgba(16, 43, 86, 0.07) 25%, transparent 25%) 0 0 / 18px 18px,
-            linear-gradient(45deg, rgba(200, 162, 74, 0.08) 25%, transparent 25%) 0 0 / 24px 24px;
-          opacity: 0.76;
+          font-family: Arial, Helvetica, sans-serif;
         }
 
         .official-id-face::after {
@@ -348,10 +411,160 @@ export default function FlippablePortraitID({
           position: absolute;
           inset: 0;
           background:
-            radial-gradient(circle at var(--id-shine-x, 50%) var(--id-shine-y, 40%), rgba(255, 255, 255, 0.34), transparent 30%),
-            linear-gradient(115deg, transparent 38%, rgba(255, 255, 255, 0.18) 49%, transparent 60%);
-          opacity: 0.38;
+            radial-gradient(circle at var(--id-shine-x, 50%) var(--id-shine-y, 40%), rgba(255, 255, 255, 0.38), transparent 28%),
+            linear-gradient(115deg, transparent 38%, rgba(255, 255, 255, 0.16) 49%, transparent 60%);
+          opacity: 0.32;
           mix-blend-mode: soft-light;
+        }
+
+        .official-id-corner {
+          pointer-events: none;
+          position: absolute;
+          z-index: 1;
+        }
+
+        .official-id-corner-top-left {
+          left: -2%;
+          top: -4%;
+          width: 22%;
+          height: 20%;
+          background:
+            linear-gradient(135deg, transparent 0 30%, #779bc6 30% 32%, transparent 32% 42%, #9eb4d2 42% 44%, transparent 44% 59%, #f7c600 59% 64%, transparent 64%),
+            linear-gradient(135deg, transparent 0 62%, #f7c600 62% 67%, transparent 67%);
+        }
+
+        .official-id-corner-right {
+          right: -3%;
+          top: 31%;
+          width: 13%;
+          height: 25%;
+          background:
+            linear-gradient(135deg, transparent 0 30%, #f7c600 30% 38%, transparent 38% 62%, #7d8daa 62% 65%, transparent 65% 75%, #7d8daa 75% 78%, transparent 78%);
+        }
+
+        .official-id-dot-grid {
+          pointer-events: none;
+          position: absolute;
+          z-index: 1;
+          width: 12%;
+          height: 7%;
+          background-image: radial-gradient(circle, #09235d 1.2px, transparent 1.6px);
+          background-size: 9px 9px;
+        }
+
+        .official-id-dot-grid::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background-image: radial-gradient(circle, #f7c600 1.2px, transparent 1.6px);
+          background-size: 27px 9px;
+          opacity: 0.85;
+        }
+
+        .official-id-dot-grid-front,
+        .official-id-dot-grid-back {
+          bottom: 3%;
+          left: 2.4%;
+        }
+
+        .official-id-subtle-logo,
+        .official-id-seal-watermark {
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
+        }
+
+        .official-id-subtle-logo-left {
+          left: 4%;
+          top: 7%;
+          width: 40%;
+          height: 38%;
+          opacity: 0.4;
+        }
+
+        .official-id-subtle-logo-back {
+          left: -2%;
+          top: -3%;
+          width: 43%;
+          height: 34%;
+          opacity: 0.42;
+        }
+
+        .official-id-seal-watermark {
+          right: -9%;
+          bottom: -22%;
+          width: 44%;
+          height: 64%;
+          opacity: 0.7;
+        }
+
+        .official-id-back-divider {
+          position: absolute;
+          left: 43%;
+          top: 7%;
+          bottom: 33%;
+          width: 2px;
+          background: #f2db84;
+        }
+
+        .official-id-watermark {
+          pointer-events: none;
+          position: absolute;
+          z-index: 2;
+          left: 50%;
+          top: 50%;
+          width: 86%;
+          transform: translate(-50%, -50%) rotate(-12deg);
+          border: 1px solid rgba(9, 35, 93, 0.16);
+          color: rgba(9, 35, 93, 0.2);
+          font-size: 0.92rem;
+          font-weight: 900;
+          letter-spacing: 0.06em;
+          text-align: center;
+          text-transform: uppercase;
+        }
+
+        .official-id-watermark-back {
+          top: 48%;
+          color: rgba(9, 35, 93, 0.22);
+        }
+
+        @media (max-width: 640px) {
+          .official-id-face {
+            font-size: clamp(0.52rem, 1.55vw, 1rem);
+          }
+        }
+
+        @page {
+          size: 85.6mm 54mm;
+          margin: 0;
+        }
+
+        @media print {
+          body {
+            background: #fff !important;
+          }
+
+          .id-screen-controls,
+          .id-screen-card {
+            display: none !important;
+          }
+
+          .id-print-stack {
+            display: block !important;
+          }
+
+          .official-id-print-card {
+            width: 85.6mm !important;
+            height: 54mm !important;
+            page-break-after: always;
+            break-after: page;
+          }
+
+          .official-id-print-card .official-id-face {
+            border-radius: 0 !important;
+            box-shadow: none !important;
+          }
         }
       `}</style>
     </div>

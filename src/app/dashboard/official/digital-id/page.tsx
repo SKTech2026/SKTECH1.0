@@ -23,14 +23,21 @@ export default async function OfficialDigitalIdPage() {
           middleName: true,
           lastName: true,
           suffix: true,
+          birthDate: true,
           position: true,
           skFederationOfficer: true,
           skFederationPosition: true,
+          province: true,
           municipality: true,
           barangay: true,
           sitio: true,
           dateElected: true,
           termStart: true,
+          termEnd: true,
+          email: true,
+          contactNo: true,
+          address: true,
+          admissionStatus: true,
           status: true,
         },
       },
@@ -101,13 +108,20 @@ export default async function OfficialDigitalIdPage() {
               municipality={user.official.municipality ?? "Not specified"}
               sitio={user.official.sitio}
               dateElected={(user.official.dateElected ?? user.official.termStart).toISOString()}
+              termEnd={user.official.termEnd?.toISOString()}
+              birthDate={user.official.birthDate?.toISOString()}
+              contactNo={user.official.contactNo}
+              email={user.official.email}
+              address={user.official.address}
+              admissionStatus={user.official.admissionStatus}
+              provinceName={user.official.province ?? "ORIENTAL MINDORO"}
               idNumber={user.official.id.replace(/-/g, "").slice(-12).toUpperCase()}
               qrValue={`/id/${user.official.id}`}
               photoUrl={photoUrl}
               registryStatus={user.official.status}
-              sktechLogoUrl="/sk-tech-logo.png"
-              provincialSealUrl="/images/provincial-seal-logo.png"
-              skfedLogoUrl="/login-logo.png"
+              sktechLogoUrl="/assets/logos/sktech-logo-enhance.png"
+              provincialSealUrl="/assets/logos/official-logo-enhance.png"
+              skfedLogoUrl="/assets/logos/sk-logo-enhance.png"
             />
           </div>
         </article>
