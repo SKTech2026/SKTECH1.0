@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AdmissionStatus, OfficialStatus, Role } from "@prisma/client";
 import { getServerSession } from "next-auth";
+import { Activity, BadgeCheck, ClipboardList, Megaphone } from "lucide-react";
 
 import { authOptions } from "@/lib/auth";
 import { getActiveAnnouncements } from "@/lib/announcements";
@@ -17,19 +18,23 @@ export default async function StaffDashboardHomePage() {
   if (!staffMunicipalityId) {
     return (
       <div className="space-y-6">
-        <section className="rounded-3xl border border-glass-border bg-surface p-6 shadow-[0_24px_48px_-24px_var(--shadow-color)] backdrop-blur-md sm:p-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
-            Staff Operations Deck
-          </p>
-          <h2 className="mt-3 text-3xl font-bold text-foreground">
-            Welcome, {authorizedSession.user.name ?? authorizedSession.user.email}
-          </h2>
-          <p className="mt-2 max-w-3xl text-sm text-muted">
-            Your staff account is active, but no municipality has been assigned yet. Contact your
-            administrator to complete assignment before managing SK official admissions.
-          </p>
-          <div className="mt-4 rounded-xl border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-            Status: Awaiting municipality assignment.
+        <section className="overflow-hidden rounded-2xl border border-glass-border bg-surface shadow-xl backdrop-blur-md">
+          <div className="border-b border-glass-border bg-surface-elevated/60 px-6 py-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">
+              Municipal Operations
+            </p>
+            <h2 className="mt-2 text-2xl font-semibold text-foreground sm:text-3xl">
+              Welcome, {authorizedSession.user.name ?? authorizedSession.user.email}
+            </h2>
+            <p className="mt-2 max-w-3xl text-sm text-muted">
+              Your staff account is active, but no municipality has been assigned yet. Contact your
+              administrator to complete assignment before managing SK official admissions.
+            </p>
+          </div>
+          <div className="p-6">
+            <div className="rounded-xl border border-glass-border bg-surface-elevated/55 px-4 py-3 text-sm text-muted">
+              <span className="font-semibold text-foreground">Status:</span> Awaiting municipality assignment.
+            </div>
           </div>
         </section>
       </div>
@@ -77,71 +82,147 @@ export default async function StaffDashboardHomePage() {
       }),
     ]);
 
+  const metrics = [
+    {
+      label: "Pending Admissions",
+      value: pendingAdmissions,
+      helper: "Awaiting staff review",
+      icon: ClipboardList,
+    },
+    {
+      label: "Approved Officials",
+      value: activeOfficials,
+      helper: "Active municipal records",
+      icon: BadgeCheck,
+    },
+    {
+      label: "Attendance Today",
+      value: attendanceToday,
+      helper: "Verified check-ins",
+      icon: Activity,
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl border border-glass-border bg-surface p-6 shadow-[0_24px_48px_-24px_var(--shadow-color)] backdrop-blur-md sm:p-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
-          Staff Operations Deck
-        </p>
-        <h2 className="mt-3 text-3xl font-bold text-foreground">
-          Welcome, {authorizedSession.user.name ?? authorizedSession.user.email}
-        </h2>
-        <p className="mt-2 max-w-3xl text-sm text-muted">
-          Process official admissions, maintain attendance visibility, and keep the
-          public bulletin up to date.
-        </p>
-        <p className="mt-2 inline-flex rounded-full border border-accent/40 bg-accent/15 px-3 py-1 text-xs font-semibold tracking-wide text-accent">
-          Assigned Municipality: {municipality ? `${municipality.name}, ${municipality.province}` : "Unknown"}
-        </p>
+      <section className="overflow-hidden rounded-2xl border border-glass-border bg-surface shadow-xl backdrop-blur-md">
+        <div className="grid gap-5 border-b border-glass-border bg-surface-elevated/60 px-6 py-5 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">
+              Municipal Operations
+            </p>
+            <h2 className="mt-2 text-2xl font-semibold text-foreground sm:text-3xl">
+              Welcome, {authorizedSession.user.name ?? authorizedSession.user.email}
+            </h2>
+            <p className="mt-2 max-w-3xl text-sm text-muted">
+              Process official admissions, maintain attendance visibility, and keep the
+              public bulletin up to date.
+            </p>
+          </div>
+          <div className="rounded-xl border border-glass-border bg-surface px-4 py-3 text-sm shadow-[0_16px_36px_-28px_var(--shadow-color)]">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+              Assigned Municipality
+            </p>
+            <p className="mt-1 font-semibold text-foreground">
+              {municipality ? `${municipality.name}, ${municipality.province}` : "Unknown"}
+            </p>
+          </div>
+        </div>
       </section>
 
       <section className="grid gap-4 md:grid-cols-3">
-        {[
-          { label: "Pending Admissions", value: pendingAdmissions, tone: "text-amber-300" },
-          { label: "Approved Officials", value: activeOfficials, tone: "text-accent" },
-          { label: "Attendance Today", value: attendanceToday, tone: "text-emerald-300" },
-        ].map((metric) => (
+        {metrics.map((metric) => {
+          const Icon = metric.icon;
+
+          return (
           <article
             key={metric.label}
-            className="rounded-2xl border border-glass-border bg-surface p-5 shadow-xl backdrop-blur-md"
+            className="rounded-xl border border-glass-border bg-surface-elevated/80 p-5 shadow-xl backdrop-blur-md"
           >
-            <p className="text-xs uppercase tracking-[0.14em] text-muted">
-              {metric.label}
-            </p>
-            <p className={`mt-2 text-3xl font-bold ${metric.tone}`}>{metric.value}</p>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+                  {metric.label}
+                </p>
+                <p className="mt-3 text-3xl font-semibold text-foreground">{metric.value}</p>
+                <p className="mt-1 text-sm text-muted">{metric.helper}</p>
+              </div>
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-accent/30 bg-accent/15 text-accent">
+                <Icon className="h-5 w-5" />
+              </span>
+            </div>
           </article>
-        ))}
+          );
+        })}
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-2">
-        <article className="rounded-2xl border border-glass-border bg-surface p-5 shadow-xl backdrop-blur-md">
-          <h3 className="text-lg font-semibold text-foreground">Priority Actions</h3>
-          <div className="mt-4 flex flex-wrap gap-3">
-            <Link
-              href="/dashboard/staff/admissions"
-              className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition hover:opacity-90"
-            >
-              Review Admission Queue
-            </Link>
-            <Link
-              href="/dashboard/staff/attendance-monitoring"
-              className="rounded-xl border border-glass-border px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-elevated/70"
-            >
-              Open Attendance Monitoring
-            </Link>
+      <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+        <article className="rounded-xl border border-glass-border bg-surface-elevated/80 p-5 shadow-xl backdrop-blur-md">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+                Next Steps
+              </p>
+              <h3 className="mt-1 text-lg font-semibold text-foreground">Priority Actions</h3>
+            </div>
+            <span className="rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
+              Staff
+            </span>
+          </div>
+          <div className="mt-5 grid gap-3">
+            {[
+              {
+                href: "/dashboard/staff/admissions",
+                label: "Review Admission Queue",
+                description: "Validate pending SK official submissions.",
+              },
+              {
+                href: "/dashboard/staff/attendance-monitoring",
+                label: "Open Attendance Monitoring",
+                description: "Watch recent check-ins for your municipality.",
+              },
+            ].map((action) => (
+              <Link
+                key={action.href}
+                href={action.href}
+                className="group rounded-xl border border-glass-border bg-surface/55 px-4 py-3 transition hover:border-accent/35 hover:bg-accent/10"
+              >
+                <p className="text-sm font-semibold text-foreground group-hover:text-accent">
+                  {action.label}
+                </p>
+                <p className="mt-1 text-xs text-muted">{action.description}</p>
+              </Link>
+            ))}
           </div>
         </article>
 
-        <article className="rounded-2xl border border-glass-border bg-surface p-5 shadow-xl backdrop-blur-md">
-          <h3 className="text-lg font-semibold text-foreground">Active Announcement Feed</h3>
+        <article className="rounded-xl border border-glass-border bg-surface-elevated/80 p-5 shadow-xl backdrop-blur-md">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+                Bulletin
+              </p>
+              <h3 className="mt-1 text-lg font-semibold text-foreground">Active Announcement Feed</h3>
+            </div>
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-glass-border bg-surface text-accent">
+              <Megaphone className="h-4 w-4" />
+            </span>
+          </div>
           <ul className="mt-4 space-y-3">
             {bulletinItems.length === 0 ? (
-              <li className="text-sm text-muted">No announcements available.</li>
+              <li className="rounded-xl border border-dashed border-glass-border bg-surface/45 px-4 py-6 text-center text-sm text-muted">
+                No announcements available.
+              </li>
             ) : (
               bulletinItems.map((item) => (
-                <li key={item.id} className="rounded-xl border border-glass-border bg-surface/45 p-3">
-                  <p className="text-sm font-semibold text-foreground">{item.title}</p>
-                  <p className="mt-1 text-xs text-muted">
+                <li key={item.id} className="rounded-xl border border-glass-border bg-surface/55 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <p className="text-sm font-semibold text-foreground">{item.title}</p>
+                    <span className="rounded-full border border-accent/25 bg-accent/10 px-2.5 py-1 text-xs font-semibold text-accent">
+                      Active
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xs text-muted">
                     {new Date(item.eventDate).toLocaleDateString()}
                   </p>
                 </li>

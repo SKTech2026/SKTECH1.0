@@ -80,7 +80,7 @@ type RoleShellProps = {
   subheading: string;
   items: RoleShellItem[];
   logoutCallbackUrl?: string;
-  variant?: "default" | "adminCn";
+  variant?: "default" | "adminCn" | "staffCn";
   account?: {
     name?: string | null;
     email?: string | null;
@@ -103,6 +103,29 @@ const ADMIN_GROUPS = [
   {
     label: "OPERATIONS",
     items: ["Event Management", "ID Production", "ID Scanning"],
+  },
+  {
+    label: "SYSTEM",
+    items: ["Settings"],
+  },
+];
+
+const STAFF_GROUPS = [
+  {
+    label: "OVERVIEW",
+    items: ["Operations Hub"],
+  },
+  {
+    label: "GOVERNANCE",
+    items: ["Digital ID Admission", "SK Profiling"],
+  },
+  {
+    label: "OPERATIONS",
+    items: ["Attendance Monitor", "Events", "ID Scanning", "Event Kiosk"],
+  },
+  {
+    label: "COMMUNICATION",
+    items: ["Announcements", "Chat"],
   },
   {
     label: "SYSTEM",
@@ -133,6 +156,8 @@ export default function RoleShell({
 }: RoleShellProps) {
   const pathname = usePathname();
   const isAdminCn = variant === "adminCn";
+  const isStaffCn = variant === "staffCn";
+  const isConsoleCn = isAdminCn || isStaffCn;
   const [adminCollapsed, setAdminCollapsed] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
@@ -144,28 +169,37 @@ export default function RoleShell({
     [items, pathname],
   );
 
-  const adminGroups = useMemo(
+  const navGroups = useMemo(
     () =>
-      ADMIN_GROUPS.map((group) => ({
+      (isStaffCn ? STAFF_GROUPS : ADMIN_GROUPS).map((group) => ({
         ...group,
         items: group.items
           .map((label) => items.find((item) => item.label === label))
           .filter((item): item is RoleShellItem => Boolean(item)),
       })).filter((group) => group.items.length > 0),
-    [items],
+    [isStaffCn, items],
   );
 
-  if (isAdminCn) {
-    const accountName = account?.name ?? "Administrator";
-    const accountEmail = account?.email ?? "SKTECH Admin";
-    const initials = getInitials(account?.name, account?.email);
+  if (isConsoleCn) {
+    const accountName = account?.name ?? (isStaffCn ? "Staff User" : "Administrator");
+    const accountEmail = account?.email ?? (isStaffCn ? "Municipal Operations" : "SKTECH Admin");
+    const initials = getInitials(accountName, accountEmail);
+    const homeHref = isStaffCn ? "/dashboard/staff" : "/dashboard/admin";
+    const brandTitle = isStaffCn ? "SKTECH Municipal Operations" : "SKTECH Administration";
+    const brandSubtitle = isStaffCn ? "Municipal Operations" : "Administration";
+    const closeNavigationLabel = isStaffCn ? "Close staff navigation" : "Close admin navigation";
+    const openNavigationLabel = isStaffCn ? "Open staff navigation" : "Open admin navigation";
+    const collapseSidebarLabel = isStaffCn ? "Collapse staff sidebar" : "Collapse admin sidebar";
+    const expandSidebarLabel = isStaffCn ? "Expand staff sidebar" : "Expand admin sidebar";
+    const headerEyebrow = isStaffCn ? "Municipal Operations" : "Provincial Administration";
+    const workspaceLabel = isStaffCn ? "Staff Workspace" : "Administrator Workspace";
 
     const renderAdminNavItem = (
       item: RoleShellItem,
       options?: { compact?: boolean; onNavigate?: () => void },
     ) => {
       const Icon = ICONS[item.icon];
-      const active = isActivePath(pathname, item.href);
+      const active = activeItem?.href === item.href;
       const compact = options?.compact ?? false;
 
       return (
@@ -218,12 +252,12 @@ export default function RoleShell({
       >
         <div className="flex min-h-16 items-center justify-between gap-3 border-b border-glass-border px-4">
           <Link
-            href="/dashboard/admin"
+            href={homeHref}
             onClick={mobile ? () => setMobileDrawerOpen(false) : undefined}
             className={`flex min-w-0 items-center gap-3 ${
               adminCollapsed && !mobile ? "justify-center" : ""
             }`}
-            title="SKTECH Administration"
+            title={brandTitle}
           >
             <Logo size="sm" theme="dark" />
             {!adminCollapsed || mobile ? (
@@ -232,7 +266,7 @@ export default function RoleShell({
                   SKTECH
                 </span>
                 <span className="block truncate text-xs text-muted">
-                  Administration
+                  {brandSubtitle}
                 </span>
               </span>
             ) : null}
@@ -242,7 +276,7 @@ export default function RoleShell({
               type="button"
               onClick={() => setMobileDrawerOpen(false)}
               className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-glass-border bg-surface-elevated/60 text-muted transition hover:text-foreground lg:hidden"
-              aria-label="Close admin navigation"
+              aria-label={closeNavigationLabel}
             >
               <X className="h-4 w-4" />
             </button>
@@ -282,7 +316,7 @@ export default function RoleShell({
 
         <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-4 [scrollbar-color:color-mix(in_oklab,var(--color-accent)_30%,transparent)_transparent] [scrollbar-width:thin]">
           <div className="space-y-5">
-            {adminGroups.map((group) => (
+            {navGroups.map((group) => (
               <div key={group.label}>
                 {!adminCollapsed || mobile ? (
                   <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
@@ -347,7 +381,7 @@ export default function RoleShell({
                     type="button"
                     onClick={() => setMobileDrawerOpen(true)}
                     className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-glass-border bg-surface-elevated/60 text-muted transition hover:text-foreground lg:hidden"
-                    aria-label="Open admin navigation"
+                    aria-label={openNavigationLabel}
                   >
                     <Menu className="h-4 w-4" />
                   </button>
@@ -356,7 +390,7 @@ export default function RoleShell({
                     onClick={() => setAdminCollapsed((current) => !current)}
                     className="hidden h-10 w-10 items-center justify-center rounded-lg border border-glass-border bg-surface-elevated/60 text-muted transition hover:text-foreground lg:inline-flex"
                     aria-label={
-                      adminCollapsed ? "Expand admin sidebar" : "Collapse admin sidebar"
+                      adminCollapsed ? expandSidebarLabel : collapseSidebarLabel
                     }
                   >
                     {adminCollapsed ? (
@@ -367,7 +401,7 @@ export default function RoleShell({
                   </button>
                   <div className="min-w-0">
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">
-                      Provincial Administration
+                      {headerEyebrow}
                     </p>
                     <h1 className="truncate text-base font-semibold text-foreground sm:text-lg">
                       {activeItem?.label ?? heading}
@@ -379,7 +413,7 @@ export default function RoleShell({
                   <ThemeToggle />
                   <div className="hidden items-center gap-2 rounded-full border border-glass-border bg-surface-elevated/60 px-3 py-1.5 text-xs font-semibold text-muted sm:inline-flex">
                     <UserCircle className="h-4 w-4 text-accent" />
-                    Administrator Workspace
+                    {workspaceLabel}
                   </div>
                 </div>
               </div>

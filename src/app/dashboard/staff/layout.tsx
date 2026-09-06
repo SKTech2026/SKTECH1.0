@@ -10,7 +10,7 @@ const staffItems: RoleShellItem[] = [
   {
     href: "/dashboard/staff",
     label: "Operations Hub",
-    description: "Daily monitoring view",
+    description: "Municipal command center",
     icon: "layoutDashboard",
   },
   {
@@ -75,16 +75,21 @@ export default async function StaffDashboardLayout({
   children: ReactNode;
 }) {
   const session = await getServerSession(authOptions);
-  requireDashboardRole(session, [Role.STAFF], {
+  const authorizedSession = requireDashboardRole(session, [Role.STAFF], {
     unauthenticatedRedirect: "/login?role=STAFF",
   });
 
   return (
     <RoleShell
       roleLabel="Staff Operations"
-      heading="Provincial Staff Dashboard"
-      subheading="Review admissions, monitor attendance, and publish public information."
+      heading="Municipal Staff Dashboard"
+      subheading="Coordinate municipal admissions, attendance, events, and public communications."
       items={staffItems}
+      variant="staffCn"
+      account={{
+        name: authorizedSession.user.name,
+        email: authorizedSession.user.email,
+      }}
     >
       {children}
     </RoleShell>
