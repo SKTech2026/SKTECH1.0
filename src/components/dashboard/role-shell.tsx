@@ -81,7 +81,7 @@ type RoleShellProps = {
   subheading: string;
   items: RoleShellItem[];
   logoutCallbackUrl?: string;
-  variant?: "default" | "adminCn" | "staffCn";
+  variant?: "default" | "adminCn" | "staffCn" | "officialCn";
   account?: {
     name?: string | null;
     email?: string | null;
@@ -134,6 +134,25 @@ const STAFF_GROUPS = [
   },
 ];
 
+const OFFICIAL_GROUPS = [
+  {
+    label: "OVERVIEW",
+    items: ["Official Briefing", "Admission Details", "Profile"],
+  },
+  {
+    label: "SERVICES",
+    items: ["Digital ID", "Attendance Logs", "Accomplishments"],
+  },
+  {
+    label: "COMMUNITY",
+    items: ["Announcements", "Municipal SK Federation Feed", "Chat"],
+  },
+  {
+    label: "SYSTEM",
+    items: ["Settings"],
+  },
+];
+
 const getInitials = (name?: string | null, email?: string | null) => {
   const source = name?.trim() || email?.split("@")[0] || "Admin";
   const parts = source.split(/\s+/).filter(Boolean);
@@ -158,7 +177,8 @@ export default function RoleShell({
   const pathname = usePathname();
   const isAdminCn = variant === "adminCn";
   const isStaffCn = variant === "staffCn";
-  const isConsoleCn = isAdminCn || isStaffCn;
+  const isOfficialCn = variant === "officialCn";
+  const isConsoleCn = isAdminCn || isStaffCn || isOfficialCn;
   const [adminCollapsed, setAdminCollapsed] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
@@ -172,28 +192,28 @@ export default function RoleShell({
 
   const navGroups = useMemo(
     () =>
-      (isStaffCn ? STAFF_GROUPS : ADMIN_GROUPS).map((group) => ({
+      (isStaffCn ? STAFF_GROUPS : isOfficialCn ? OFFICIAL_GROUPS : ADMIN_GROUPS).map((group) => ({
         ...group,
         items: group.items
           .map((label) => items.find((item) => item.label === label))
           .filter((item): item is RoleShellItem => Boolean(item)),
       })).filter((group) => group.items.length > 0),
-    [isStaffCn, items],
+    [isOfficialCn, isStaffCn, items],
   );
 
   if (isConsoleCn) {
-    const accountName = account?.name ?? (isStaffCn ? "Staff User" : "Administrator");
-    const accountEmail = account?.email ?? (isStaffCn ? "Municipal Operations" : "SKTECH Admin");
+    const accountName = account?.name ?? (isStaffCn ? "Staff User" : isOfficialCn ? "SK Official" : "Administrator");
+    const accountEmail = account?.email ?? (isStaffCn ? "Municipal Operations" : isOfficialCn ? "Official Services" : "SKTECH Admin");
     const initials = getInitials(accountName, accountEmail);
-    const homeHref = isStaffCn ? "/dashboard/staff" : "/dashboard/admin";
-    const brandTitle = isStaffCn ? "SKTECH Municipal Operations" : "SKTECH Administration";
-    const brandSubtitle = isStaffCn ? "Municipal Operations" : "Administration";
-    const closeNavigationLabel = isStaffCn ? "Close staff navigation" : "Close admin navigation";
-    const openNavigationLabel = isStaffCn ? "Open staff navigation" : "Open admin navigation";
-    const collapseSidebarLabel = isStaffCn ? "Collapse staff sidebar" : "Collapse admin sidebar";
-    const expandSidebarLabel = isStaffCn ? "Expand staff sidebar" : "Expand admin sidebar";
-    const headerEyebrow = isStaffCn ? "Municipal Operations" : "Provincial Administration";
-    const workspaceLabel = isStaffCn ? "Staff Workspace" : "Administrator Workspace";
+    const homeHref = isStaffCn ? "/dashboard/staff" : isOfficialCn ? "/dashboard/official" : "/dashboard/admin";
+    const brandTitle = isStaffCn ? "SKTECH Municipal Operations" : isOfficialCn ? "SKTECH Official Services" : "SKTECH Administration";
+    const brandSubtitle = isStaffCn ? "Municipal Operations" : isOfficialCn ? "Official Services" : "Administration";
+    const closeNavigationLabel = isStaffCn ? "Close staff navigation" : isOfficialCn ? "Close official navigation" : "Close admin navigation";
+    const openNavigationLabel = isStaffCn ? "Open staff navigation" : isOfficialCn ? "Open official navigation" : "Open admin navigation";
+    const collapseSidebarLabel = isStaffCn ? "Collapse staff sidebar" : isOfficialCn ? "Collapse official sidebar" : "Collapse admin sidebar";
+    const expandSidebarLabel = isStaffCn ? "Expand staff sidebar" : isOfficialCn ? "Expand official sidebar" : "Expand admin sidebar";
+    const headerEyebrow = isStaffCn ? "Municipal Operations" : isOfficialCn ? "Official Services" : "Provincial Administration";
+    const workspaceLabel = isStaffCn ? "Staff Workspace" : isOfficialCn ? "Official Workspace" : "Administrator Workspace";
 
     const renderAdminNavItem = (
       item: RoleShellItem,
@@ -431,7 +451,9 @@ export default function RoleShell({
             </header>
 
             <main className="w-full flex-1 px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
-              <div className="mx-auto w-full max-w-[1440px]">{children}</div>
+              <div className={`mx-auto w-full ${isOfficialCn ? "max-w-[1180px]" : "max-w-[1440px]"}`}>
+                {children}
+              </div>
             </main>
           </div>
         </div>

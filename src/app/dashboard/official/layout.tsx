@@ -75,7 +75,7 @@ export default async function OfficialDashboardLayout({
   children: ReactNode;
 }) {
   const session = await getServerSession(authOptions);
-  requireDashboardRole(session, [Role.OFFICIAL], {
+  const authorizedSession = requireDashboardRole(session, [Role.OFFICIAL], {
     unauthenticatedRedirect: "/official/auth",
     requireApproved: false,
   });
@@ -87,6 +87,11 @@ export default async function OfficialDashboardLayout({
       subheading="Read-only portal for announcements, identity, attendance, and accomplishments."
       items={officialItems}
       logoutCallbackUrl="/official/auth"
+      variant="officialCn"
+      account={{
+        name: authorizedSession.user.name,
+        email: authorizedSession.user.email,
+      }}
     >
       {children}
     </RoleShell>
