@@ -12,6 +12,7 @@ import {
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/roleGuard";
+import orientalMindoroBoundaries from "@/data/oriental-mindoro-municipalities.geojson";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,85 @@ type MunicipalityAnalytics = {
   eventCount: number;
   activityCount: number;
   activePercentage: number | null;
+};
+
+type GeoJsonFeature = (typeof orientalMindoroBoundaries.features)[number];
+
+const canonicalBoundaryName = (name: string) =>
+  name === "City of Calapan" ? "Calapan City" : name;
+
+const boundaryCoordinates = orientalMindoroBoundaries.features.flatMap((feature) => {
+  const coordinates = feature.geometry.coordinates as unknown;
+  const points: [number, number][] = [];
+  const collect = (value: unknown) => {
+    if (Array.isArray(value) && typeof value[0] === "number" && typeof value[1] === "number") {
+      points.push([value[0], value[1]]);
+      return;
+    }
+    if (Array.isArray(value)) value.forEach(collect);
+  };
+  collect(coordinates);
+  return points;
+});
+
+const boundaryBounds = boundaryCoordinates.reduce(
+  (bounds, [longitude, latitude]) => ({
+    minLongitude: Math.min(bounds.minLongitude, longitude),
+    maxLongitude: Math.max(bounds.maxLongitude, longitude),
+    minLatitude: Math.min(bounds.minLatitude, latitude),
+    maxLatitude: Math.max(bounds.maxLatitude, latitude),
+  }),
+  {
+    minLongitude: Number.POSITIVE_INFINITY,
+    maxLongitude: Number.NEGATIVE_INFINITY,
+    minLatitude: Number.POSITIVE_INFINITY,
+    maxLatitude: Number.NEGATIVE_INFINITY,
+  },
+);
+
+const projectBoundaryPoint = ([longitude, latitude]: [number, number]) => {
+  const width = boundaryBounds.maxLongitude - boundaryBounds.minLongitude;
+  const height = boundaryBounds.maxLatitude - boundaryBounds.minLatitude;
+  return [
+    40 + ((longitude - boundaryBounds.minLongitude) / width) * 920,
+    40 + ((boundaryBounds.maxLatitude - latitude) / height) * 620,
+  ] as const;
+};
+
+const geometryPath = (feature: GeoJsonFeature) => {
+  const commands: string[] = [];
+  const collectRing = (ring: unknown) => {
+    if (!Array.isArray(ring) || ring.length === 0) return;
+    const points = ring as [number, number][];
+    const projected = points.map(projectBoundaryPoint);
+    commands.push(`M ${projected.map(([x, y]) => `${x.toFixed(2)} ${y.toFixed(2)}`).join(" L ")} Z`);
+  };
+  const collect = (value: unknown, depth = 0) => {
+    if (depth === 2) {
+      collectRing(value);
+      return;
+    }
+    if (Array.isArray(value)) value.forEach((item) => collect(item, depth + 1));
+  };
+  collect(feature.geometry.coordinates);
+  return commands.join(" ");
+};
+
+const geometryCenter = (feature: GeoJsonFeature) => {
+  const points: [number, number][] = [];
+  const collect = (value: unknown) => {
+    if (Array.isArray(value) && typeof value[0] === "number" && typeof value[1] === "number") {
+      points.push([value[0], value[1]]);
+      return;
+    }
+    if (Array.isArray(value)) value.forEach(collect);
+  };
+  collect(feature.geometry.coordinates);
+  const center = points.reduce(
+    (sum, point) => [sum[0] + point[0] / points.length, sum[1] + point[1] / points.length],
+    [0, 0],
+  ) as [number, number];
+  return projectBoundaryPoint(center);
 };
 
 const formatNumber = (value: number) => new Intl.NumberFormat("en-US").format(value);
@@ -387,40 +467,53 @@ export default async function AdminAnalyticsPage() {
           </div>
 
           <div className="mt-5 rounded-[2rem] border border-glass-border bg-surface-elevated/35 p-4">
-            <div className="relative min-h-[560px] overflow-hidden rounded-[1.5rem] border border-glass-border bg-[linear-gradient(160deg,color-mix(in_oklab,var(--color-accent)_12%,transparent),transparent_42%),linear-gradient(180deg,var(--color-surface),var(--color-surface-elevated))] p-4 sm:p-6">
-              <div className="pointer-events-none absolute left-1/2 top-8 h-[88%] w-[42%] -translate-x-1/2 rounded-[55%_42%_50%_45%] border border-accent/25 bg-accent/5 shadow-inner" />
-              <div className="relative grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {municipalities.map((municipality) => (
-                  <a
-                    key={municipality.name}
-                    href={`#municipality-${municipality.name.replaceAll(" ", "-").toLowerCase()}`}
-                    className={`rounded-2xl border p-3 backdrop-blur transition hover:-translate-y-0.5 hover:border-accent/70 ${getIntensityClass(
-                      municipality.registeredOfficials,
-                      maxRegistered,
-                    )}`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold">
-                          {municipality.name}
-                        </p>
-                        <p className="mt-1 text-xs text-muted">
-                          {formatNumber(municipality.registeredOfficials)} registered
-                        </p>
-                      </div>
-                      <span className="rounded-full border border-current/20 px-2 py-0.5 text-xs font-semibold">
-                        {toPercent(municipality.activePercentage)}
-                      </span>
-                    </div>
-                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                      <span>Approved: {formatNumber(municipality.approvedOfficials)}</span>
-                      <span>Pending: {formatNumber(municipality.pendingOfficials)}</span>
-                      <span>Staff: {formatNumber(municipality.staffCount)}</span>
-                      <span>Activity: {formatNumber(municipality.activityCount)}</span>
-                    </div>
-                  </a>
-                ))}
-              </div>
+            <div className="overflow-x-auto rounded-[1.5rem] border border-glass-border bg-[linear-gradient(160deg,color-mix(in_oklab,var(--color-accent)_12%,transparent),transparent_42%),linear-gradient(180deg,var(--color-surface),var(--color-surface-elevated))] p-3 sm:p-5">
+              <svg
+                viewBox="0 0 1000 700"
+                role="img"
+                aria-label="Oriental Mindoro municipal boundary map with registered official counts"
+                className="mx-auto min-w-[620px] w-full max-w-[980px]"
+              >
+                <title>Oriental Mindoro municipal analytics map</title>
+                {orientalMindoroBoundaries.features.map((feature) => {
+                  const municipalityName = canonicalBoundaryName(feature.properties.name);
+                  const municipality = municipalities.find((item) => item.name === municipalityName);
+                  if (!municipality) return null;
+                  const [labelX, labelY] = geometryCenter(feature);
+                  return (
+                    <a
+                      key={feature.properties.sourceId}
+                      href={`#municipality-${municipality.name.replaceAll(" ", "-").toLowerCase()}`}
+                    >
+                      <path
+                        d={geometryPath(feature)}
+                        className="stroke-accent/70 transition hover:brightness-125"
+                        fill="var(--color-accent)"
+                        fillOpacity={maxRegistered === 0 ? 0.08 : Math.max(0.08, municipality.registeredOfficials / maxRegistered)}
+                        strokeWidth="1.5"
+                        vectorEffect="non-scaling-stroke"
+                        aria-label={`${municipality.name}: ${formatNumber(municipality.registeredOfficials)} registered officials`}
+                      >
+                        <title>{`${municipality.name}: ${formatNumber(municipality.registeredOfficials)} registered, ${formatNumber(municipality.activityCount)} activity records`}</title>
+                      </path>
+                      <text
+                        x={labelX}
+                        y={labelY}
+                        textAnchor="middle"
+                        className="pointer-events-none fill-foreground text-[13px] font-semibold"
+                      >
+                        {municipality.name.replace(" City", "")}
+                      </text>
+                    </a>
+                  );
+                })}
+              </svg>
+              <p className="mt-2 text-center text-xs text-muted">
+                Real municipal boundaries from geoBoundaries ADM3 data. Fill intensity reflects live registered official counts.
+              </p>
+              <p className="mt-1 text-center text-xs text-muted">
+                Map boundaries are based on geoBoundaries ADM3 data. Activity indicators use SKTECH system records only, not GPS tracking, and are not a claim of exact legal GIS boundary accuracy.
+              </p>
             </div>
           </div>
         </article>
