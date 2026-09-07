@@ -4,7 +4,7 @@ import { createSupabaseAdminClient } from "@/utils/supabase/admin";
 
 export const INTERNAL_FEED_BUCKET = "sktech-feed-images";
 export const PUBLIC_NEWS_BUCKET = "sktech-public-news";
-export const MAX_FEED_IMAGE_BYTES = 5 * 1024 * 1024;
+export const MAX_FEED_IMAGE_BYTES = 25 * 1024 * 1024;
 
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
@@ -22,8 +22,19 @@ export function assertFeedImage(file: File) {
   }
   if (file.size === 0) throw new Error("Image file is empty.");
   if (file.size > MAX_FEED_IMAGE_BYTES) {
-    throw new Error("Image is too large. Maximum size is 5MB.");
+    throw new Error("Image is too large. Maximum size is 25MB.");
   }
+}
+
+export function resolveFeedImageMimeType(storedMimeType: string | null, objectPath: string) {
+  const normalizedMimeType = storedMimeType?.trim().toLowerCase();
+  if (normalizedMimeType) return ALLOWED_IMAGE_TYPES.has(normalizedMimeType) ? normalizedMimeType : null;
+
+  const extension = objectPath.toLowerCase().split(".").pop();
+  if (extension === "jpg" || extension === "jpeg") return "image/jpeg";
+  if (extension === "png") return "image/png";
+  if (extension === "webp") return "image/webp";
+  return null;
 }
 
 async function ensureBucket(bucketName: string, isPublic: boolean) {
@@ -33,6 +44,12 @@ async function ensureBucket(bucketName: string, isPublic: boolean) {
     if (bucket.public !== isPublic) {
       throw new Error(`Storage bucket ${bucketName} has an unsafe visibility setting.`);
     }
+    const { error: updateError } = await supabase.storage.updateBucket(bucketName, {
+      public: isPublic,
+      fileSizeLimit: MAX_FEED_IMAGE_BYTES,
+      allowedMimeTypes: Array.from(ALLOWED_IMAGE_TYPES),
+    });
+    if (updateError) throw new Error(`Unable to prepare image storage: ${updateError.message}`);
     return supabase;
   }
   const { error: createError } = await supabase.storage.createBucket(bucketName, {
