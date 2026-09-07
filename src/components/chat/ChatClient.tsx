@@ -1,7 +1,19 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { ChevronLeft, FileText, Loader2, Paperclip, SendHorizonal } from "lucide-react";
+import {
+  ChevronLeft,
+  FileText,
+  Loader2,
+  Mic,
+  MicOff,
+  Paperclip,
+  Phone,
+  PhoneOff,
+  SendHorizonal,
+  Video,
+  VideoOff,
+} from "lucide-react";
 
 type ChatContact = {
   userId: string;
@@ -49,6 +61,31 @@ type ChatClientProps = {
 };
 
 const POLLING_INTERVAL_MS = 4000;
+const CALL_SIGNAL_POLLING_INTERVAL_MS = 1500;
+const RTC_CONFIGURATION: RTCConfiguration = {
+  iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+};
+
+type CallMode = "voice" | "video";
+type CallStatus = "idle" | "calling" | "ringing" | "connected" | "rejected" | "ended" | "failed";
+type CallSignalType = "offer" | "answer" | "ice-candidate" | "reject" | "end";
+
+type CallSignal = {
+  id: string;
+  senderId: string;
+  type: CallSignalType;
+  payload: unknown;
+  createdAt: number;
+};
+
+type SessionDescriptionSignalPayload = {
+  description?: RTCSessionDescriptionInit;
+  mode?: CallMode;
+};
+
+type IceCandidateSignalPayload = {
+  candidate?: RTCIceCandidateInit;
+};
 
 function formatTime(value: string) {
   const date = new Date(value);
@@ -63,6 +100,13 @@ function roleLabel(contact: Pick<ChatContact, "role" | "officialRole">) {
 
 export default function ChatClient({ title, compact = false }: ChatClientProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const remoteStreamRef = useRef<MediaStream | null>(null);
+  const localVideoRef = useRef<HTMLVideoElement | null>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+  const callSignalCursorRef = useRef(0);
+  const pendingIceCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
   const [contacts, setContacts] = useState<ChatContact[]>([]);
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
@@ -72,10 +116,237 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [callStatus, setCallStatus] = useState<CallStatus>("idle");
+  const [callMode, setCallMode] = useState<CallMode>("voice");
+  const [incomingOffer, setIncomingOffer] = useState<CallSignal | null>(null);
+  const [callError, setCallError] = useState<string | null>(null);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+  const [isMicMuted, setIsMicMuted] = useState(false);
+  const [isCameraOff, setIsCameraOff] = useState(false);
 
   const selectedConversation = conversations.find(
     (conversation) => conversation.id === selectedConversationId,
   );
+
+  const resetCallMedia = useCallback(() => {
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.onicecandidate = null;
+      peerConnectionRef.current.ontrack = null;
+      peerConnectionRef.current.onconnectionstatechange = null;
+      peerConnectionRef.current.close();
+    }
+    peerConnectionRef.current = null;
+
+    localStreamRef.current?.getTracks().forEach((track) => track.stop());
+    localStreamRef.current = null;
+    remoteStreamRef.current = null;
+    pendingIceCandidatesRef.current = [];
+
+    setLocalStream(null);
+    setRemoteStream(null);
+    setIncomingOffer(null);
+    setIsMicMuted(false);
+    setIsCameraOff(false);
+  }, []);
+
+  const resetCallState = useCallback(() => {
+    resetCallMedia();
+    setCallStatus("idle");
+    setCallError(null);
+    setCallMode("voice");
+    callSignalCursorRef.current = 0;
+  }, [resetCallMedia]);
+
+  const postCallSignal = useCallback(
+    async (type: CallSignalType, payload: unknown = null) => {
+      if (!selectedConversationId) return;
+
+      const response = await fetch(
+        `/api/chat/conversations/${selectedConversationId}/call-signals`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type, payload }),
+        },
+      );
+      const responsePayload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(responsePayload.error ?? "Failed to send call signal.");
+      }
+    },
+    [selectedConversationId],
+  );
+
+  const createPeerConnection = useCallback(() => {
+    const peerConnection = new RTCPeerConnection(RTC_CONFIGURATION);
+    const nextRemoteStream = new MediaStream();
+    remoteStreamRef.current = nextRemoteStream;
+    setRemoteStream(nextRemoteStream);
+
+    peerConnection.onicecandidate = (event) => {
+      if (!event.candidate) return;
+      void postCallSignal("ice-candidate", { candidate: event.candidate.toJSON() }).catch(
+        (signalError) => {
+          setCallStatus("failed");
+          setCallError(
+            signalError instanceof Error
+              ? signalError.message
+              : "Failed to exchange call network details.",
+          );
+        },
+      );
+    };
+
+    peerConnection.ontrack = (event) => {
+      event.streams[0]?.getTracks().forEach((track) => {
+        if (!remoteStreamRef.current?.getTracks().some((item) => item.id === track.id)) {
+          remoteStreamRef.current?.addTrack(track);
+        }
+      });
+      setRemoteStream(remoteStreamRef.current);
+    };
+
+    peerConnection.onconnectionstatechange = () => {
+      if (peerConnection.connectionState === "connected") {
+        setCallStatus("connected");
+        setCallError(null);
+      }
+      if (["failed", "disconnected", "closed"].includes(peerConnection.connectionState)) {
+        setCallStatus((status) => (status === "idle" ? status : "failed"));
+        setCallError("The call connection was interrupted.");
+      }
+    };
+
+    peerConnectionRef.current = peerConnection;
+    return peerConnection;
+  }, [postCallSignal]);
+
+  const requestLocalMedia = useCallback(async (mode: CallMode) => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: mode === "video",
+      });
+      localStreamRef.current = stream;
+      setLocalStream(stream);
+      return stream;
+    } catch (mediaError) {
+      const fallback =
+        mode === "video"
+          ? "Camera or microphone access was denied or unavailable."
+          : "Microphone access was denied or unavailable.";
+      throw new Error(mediaError instanceof Error ? mediaError.message : fallback);
+    }
+  }, []);
+
+  const startOutgoingCall = async (mode: CallMode) => {
+    if (!selectedConversationId || !selectedConversation?.otherParticipant) return;
+
+    resetCallMedia();
+    setCallStatus("calling");
+    setCallMode(mode);
+    setCallError(null);
+
+    try {
+      const stream = await requestLocalMedia(mode);
+      const peerConnection = createPeerConnection();
+      stream.getTracks().forEach((track) => peerConnection.addTrack(track, stream));
+
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
+      await postCallSignal("offer", { description: offer, mode });
+    } catch (callStartError) {
+      resetCallMedia();
+      setCallStatus("failed");
+      setCallError(
+        callStartError instanceof Error ? callStartError.message : "Could not start the call.",
+      );
+    }
+  };
+
+  const acceptIncomingCall = async () => {
+    if (!incomingOffer || !selectedConversationId) return;
+
+    const payload = incomingOffer.payload as SessionDescriptionSignalPayload;
+    if (!payload.description) {
+      setCallStatus("failed");
+      setCallError("Incoming call details were incomplete.");
+      return;
+    }
+
+    const queuedIceCandidates = pendingIceCandidatesRef.current;
+    resetCallMedia();
+    setCallStatus("connected");
+    setCallMode(payload.mode ?? "voice");
+    setCallError(null);
+
+    try {
+      const stream = await requestLocalMedia(payload.mode ?? "voice");
+      const peerConnection = createPeerConnection();
+      stream.getTracks().forEach((track) => peerConnection.addTrack(track, stream));
+
+      await peerConnection.setRemoteDescription(payload.description);
+      for (const candidate of queuedIceCandidates) {
+        await peerConnection.addIceCandidate(candidate);
+      }
+      pendingIceCandidatesRef.current = [];
+
+      const answer = await peerConnection.createAnswer();
+      await peerConnection.setLocalDescription(answer);
+      await postCallSignal("answer", { description: answer, mode: payload.mode ?? "voice" });
+      setIncomingOffer(null);
+    } catch (acceptError) {
+      resetCallMedia();
+      setCallStatus("failed");
+      setCallError(acceptError instanceof Error ? acceptError.message : "Could not accept the call.");
+    }
+  };
+
+  const rejectIncomingCall = async () => {
+    try {
+      await postCallSignal("reject");
+    } catch (rejectError) {
+      setCallError(
+        rejectError instanceof Error ? rejectError.message : "Failed to reject the call.",
+      );
+    } finally {
+      resetCallMedia();
+      setCallStatus("rejected");
+    }
+  };
+
+  const endCall = async () => {
+    try {
+      await postCallSignal("end");
+    } catch (endError) {
+      setCallError(endError instanceof Error ? endError.message : "Failed to notify the other user.");
+    } finally {
+      resetCallMedia();
+      setCallStatus("ended");
+    }
+  };
+
+  const toggleMicrophone = () => {
+    const audioTracks = localStreamRef.current?.getAudioTracks() ?? [];
+    const nextMuted = !isMicMuted;
+    audioTracks.forEach((track) => {
+      track.enabled = !nextMuted;
+    });
+    setIsMicMuted(nextMuted);
+  };
+
+  const toggleCamera = () => {
+    const videoTracks = localStreamRef.current?.getVideoTracks() ?? [];
+    const nextCameraOff = !isCameraOff;
+    videoTracks.forEach((track) => {
+      track.enabled = !nextCameraOff;
+    });
+    setIsCameraOff(nextCameraOff);
+  };
 
   const loadContactsAndConversations = useCallback(async () => {
     try {
@@ -149,6 +420,131 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
     return () => window.clearInterval(interval);
   }, [loadMessages, selectedConversationId]);
 
+  useEffect(() => {
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = localStream;
+    }
+  }, [localStream]);
+
+  useEffect(() => {
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = remoteStream;
+    }
+  }, [remoteStream]);
+
+  useEffect(() => {
+    resetCallState();
+    return () => resetCallState();
+  }, [resetCallState, selectedConversationId]);
+
+  useEffect(() => {
+    if (!selectedConversationId) return;
+
+    const processSignal = async (signal: CallSignal) => {
+      try {
+        if (signal.type === "offer") {
+          const payload = signal.payload as SessionDescriptionSignalPayload;
+          if (!payload.description) return;
+
+          if (callStatus !== "idle" && callStatus !== "ended" && callStatus !== "rejected") {
+            await postCallSignal("reject", { reason: "busy" });
+            return;
+          }
+
+          setIncomingOffer(signal);
+          setCallMode(payload.mode ?? "voice");
+          setCallStatus("ringing");
+          setCallError(null);
+          return;
+        }
+
+        if (signal.type === "answer" && callStatus === "calling") {
+          const payload = signal.payload as SessionDescriptionSignalPayload;
+          if (!payload.description || !peerConnectionRef.current) return;
+
+          await peerConnectionRef.current.setRemoteDescription(payload.description);
+          for (const candidate of pendingIceCandidatesRef.current) {
+            await peerConnectionRef.current.addIceCandidate(candidate);
+          }
+          pendingIceCandidatesRef.current = [];
+          setCallStatus("connected");
+          setCallError(null);
+          return;
+        }
+
+        if (signal.type === "ice-candidate") {
+          const payload = signal.payload as IceCandidateSignalPayload;
+          if (!payload.candidate) return;
+
+          if (peerConnectionRef.current?.remoteDescription) {
+            await peerConnectionRef.current.addIceCandidate(payload.candidate);
+          } else {
+            pendingIceCandidatesRef.current.push(payload.candidate);
+          }
+          return;
+        }
+
+        if (signal.type === "reject") {
+          resetCallMedia();
+          setCallStatus("rejected");
+          setCallError("The call was rejected.");
+          return;
+        }
+
+        if (signal.type === "end") {
+          resetCallMedia();
+          setCallStatus("ended");
+          setCallError("The call ended.");
+        }
+      } catch (signalError) {
+        resetCallMedia();
+        setCallStatus("failed");
+        setCallError(
+          signalError instanceof Error ? signalError.message : "Failed to process call signal.",
+        );
+      }
+    };
+
+    const pollCallSignals = async () => {
+      try {
+        const response = await fetch(
+          `/api/chat/conversations/${selectedConversationId}/call-signals?since=${callSignalCursorRef.current}`,
+          { cache: "no-store" },
+        );
+        const payload = (await response.json()) as {
+          signals?: CallSignal[];
+          cursor?: number;
+          error?: string;
+        };
+
+        if (!response.ok) {
+          throw new Error(payload.error ?? "Failed to load call signals.");
+        }
+
+        for (const signal of payload.signals ?? []) {
+          await processSignal(signal);
+          callSignalCursorRef.current = Math.max(callSignalCursorRef.current, signal.createdAt);
+        }
+        if (typeof payload.cursor === "number") {
+          callSignalCursorRef.current = Math.max(callSignalCursorRef.current, payload.cursor);
+        }
+      } catch (signalLoadError) {
+        setCallError(
+          signalLoadError instanceof Error
+            ? signalLoadError.message
+            : "Call signaling is temporarily unavailable.",
+        );
+      }
+    };
+
+    void pollCallSignals();
+    const interval = window.setInterval(() => {
+      void pollCallSignals();
+    }, CALL_SIGNAL_POLLING_INTERVAL_MS);
+
+    return () => window.clearInterval(interval);
+  }, [callStatus, postCallSignal, resetCallMedia, selectedConversationId]);
+
   const openConversation = async (recipientUserId: string) => {
     try {
       const response = await fetch("/api/chat/conversations", {
@@ -205,6 +601,11 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
       setIsSending(false);
     }
   };
+
+  const hasSelectedPeer = Boolean(selectedConversationId && selectedConversation?.otherParticipant);
+  const canStartCall = hasSelectedPeer && ["idle", "rejected", "ended", "failed"].includes(callStatus);
+  const isCallActive = callStatus === "calling" || callStatus === "connected";
+  const showCallPanel = callStatus !== "idle";
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -300,7 +701,7 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
             compact && !selectedConversationId ? "hidden" : "flex"
           }`}
         >
-          <div className="flex items-center gap-3 border-b border-glass-border px-4 py-3 sm:px-5 sm:py-4">
+          <div className="flex flex-wrap items-center gap-3 border-b border-glass-border px-4 py-3 sm:px-5 sm:py-4">
             {compact ? (
               <button
                 type="button"
@@ -321,7 +722,149 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
                   : "Choose a contact or existing conversation to begin."}
               </p>
             </div>
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                disabled={!canStartCall}
+                onClick={() => void startOutgoingCall("voice")}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-glass-border bg-surface-elevated px-3 text-xs font-semibold text-foreground transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label="Start voice call"
+              >
+                <Phone className="h-4 w-4" />
+                <span className="hidden sm:inline">Voice</span>
+              </button>
+              <button
+                type="button"
+                disabled={!canStartCall}
+                onClick={() => void startOutgoingCall("video")}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-glass-border bg-surface-elevated px-3 text-xs font-semibold text-foreground transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label="Start video call"
+              >
+                <Video className="h-4 w-4" />
+                <span className="hidden sm:inline">Video</span>
+              </button>
+            </div>
           </div>
+
+          {showCallPanel ? (
+            <div className="border-b border-glass-border bg-surface-elevated/35 p-3 sm:p-4">
+              <div className="rounded-xl border border-glass-border bg-surface p-3 sm:p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-foreground">
+                      {callStatus === "ringing"
+                        ? `Incoming ${callMode} call`
+                        : callStatus === "calling"
+                          ? `Calling ${selectedConversation?.otherParticipant?.name ?? "participant"}`
+                          : callStatus === "connected"
+                            ? `${callMode === "video" ? "Video" : "Voice"} call connected`
+                            : callStatus === "rejected"
+                              ? "Call rejected"
+                              : callStatus === "ended"
+                                ? "Call ended"
+                                : "Call failed"}
+                    </p>
+                    <p className="mt-1 truncate text-xs text-muted">
+                      {callStatus === "ringing"
+                        ? selectedConversation?.otherParticipant?.name ?? "Chat participant"
+                        : callError ?? "WebRTC peer-to-peer prototype"}
+                    </p>
+                  </div>
+
+                  {callStatus === "ringing" ? (
+                    <div className="flex shrink-0 items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void acceptIncomingCall()}
+                        className="inline-flex h-10 items-center gap-2 rounded-lg bg-accent px-3 text-xs font-semibold text-accent-foreground transition hover:opacity-90"
+                      >
+                        <Phone className="h-4 w-4" />
+                        Accept
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void rejectIncomingCall()}
+                        className="inline-flex h-10 items-center gap-2 rounded-lg border border-rose-400/40 bg-rose-500/10 px-3 text-xs font-semibold text-rose-100 transition hover:bg-rose-500/15"
+                      >
+                        <PhoneOff className="h-4 w-4" />
+                        Reject
+                      </button>
+                    </div>
+                  ) : null}
+
+                  {isCallActive ? (
+                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={toggleMicrophone}
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-glass-border bg-surface-elevated text-foreground transition hover:bg-surface"
+                        aria-label={isMicMuted ? "Unmute microphone" : "Mute microphone"}
+                      >
+                        {isMicMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                      </button>
+                      {callMode === "video" ? (
+                        <button
+                          type="button"
+                          onClick={toggleCamera}
+                          className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-glass-border bg-surface-elevated text-foreground transition hover:bg-surface"
+                          aria-label={isCameraOff ? "Turn camera on" : "Turn camera off"}
+                        >
+                          {isCameraOff ? (
+                            <VideoOff className="h-4 w-4" />
+                          ) : (
+                            <Video className="h-4 w-4" />
+                          )}
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => void endCall()}
+                        className="inline-flex h-10 items-center gap-2 rounded-lg border border-rose-400/40 bg-rose-500/10 px-3 text-xs font-semibold text-rose-100 transition hover:bg-rose-500/15"
+                      >
+                        <PhoneOff className="h-4 w-4" />
+                        End
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+
+                {isCallActive ? (
+                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                    <div className="min-w-0 overflow-hidden rounded-lg border border-glass-border bg-black/40">
+                      {callMode === "video" ? (
+                        <video
+                          ref={localVideoRef}
+                          autoPlay
+                          muted
+                          playsInline
+                          className="aspect-video w-full bg-black object-cover"
+                        />
+                      ) : (
+                        <div className="flex aspect-video items-center justify-center text-sm text-muted">
+                          Local audio
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 overflow-hidden rounded-lg border border-glass-border bg-black/40">
+                      {callMode === "video" ? (
+                        <video
+                          ref={remoteVideoRef}
+                          autoPlay
+                          playsInline
+                          className="aspect-video w-full bg-black object-cover"
+                        />
+                      ) : (
+                        <div className="flex aspect-video items-center justify-center text-sm text-muted">
+                          Remote audio
+                          <video ref={remoteVideoRef} autoPlay playsInline className="hidden" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
 
           <div className="flex-1 space-y-3 overflow-y-auto p-3 sm:p-5">
             {!selectedConversationId ? (
