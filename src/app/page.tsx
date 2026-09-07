@@ -26,6 +26,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import ThemeToggle from "@/components/ThemeToggle";
+import PublicNewsFeed from "@/components/landing/PublicNewsFeed";
 import { useTheme } from "@/context/ThemeContext";
 
 type ChatMessage = {
@@ -496,6 +497,8 @@ export default function HomePage() {
             </motion.div>
           </div>
         </section>
+
+        <PublicNewsFeed />
 
         <section className="landing-light-surface bg-white px-4 py-7 sm:px-8 lg:px-10">
           <div

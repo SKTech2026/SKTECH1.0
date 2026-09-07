@@ -84,6 +84,12 @@ enum OfficialOtpPurpose {
   REGISTER
 }
 
+enum FeedReactionType {
+  LIKE
+  HEART
+  SUPPORT
+}
+
 model User {
   id                      String     @id @default(cuid())
   employeeId              String?    @unique
@@ -109,6 +115,10 @@ model User {
   reviewedProfileChanges  OfficialProfileChangeRequest[] @relation("ProfileChangeReviewedBy")
   chatParticipants        ChatParticipant[]
   chatMessages            ChatMessage[]       @relation("ChatMessageSender")
+  feedPosts               FeedPost[]          @relation("FeedPostAuthor")
+  feedReactions           FeedReaction[]
+  feedComments            FeedComment[]
+  publicNewsPosts         PublicNewsPost[]    @relation("PublicNewsPostAuthor")
   createdEvents           Event[]              @relation("EventCreatedBy")
   municipalityAsPresident Municipality?       @relation("MunicipalPresident", fields: [municipalityPresidentId], references: [id], onDelete: SetNull)
   municipalityAsOfficer   Municipality?       @relation("MunicipalOfficers", fields: [municipalityOfficerId], references: [id], onDelete: SetNull)
@@ -262,6 +272,7 @@ model Municipality {
   municipalPresident User?               @relation("MunicipalPresident")
   officers           User[]              @relation("MunicipalOfficers")
   chatConversations  ChatConversation[]
+  feedPosts          FeedPost[]
   profileChangeRequests OfficialProfileChangeRequest[]
   events             Event[]              @relation("MunicipalityEvents")
 }
@@ -325,6 +336,71 @@ model Event {
 
   @@index([municipalityId, createdAt])
   @@index([createdById, createdAt])
+}
+
+model FeedPost {
+  id             String       @id @default(cuid())
+  content        String?
+  imagePath      String?
+  imageMimeType  String?
+  authorId       String
+  municipalityId String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  author       User          @relation("FeedPostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  municipality Municipality? @relation(fields: [municipalityId], references: [id], onDelete: Cascade)
+  reactions    FeedReaction[]
+  comments     FeedComment[]
+
+  @@index([municipalityId, createdAt])
+  @@index([authorId, createdAt])
+}
+
+model FeedReaction {
+  id        String           @id @default(cuid())
+  postId    String
+  userId    String
+  type      FeedReactionType @default(LIKE)
+  createdAt DateTime         @default(now())
+
+  post FeedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([userId, createdAt])
+}
+
+model FeedComment {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  post FeedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
+  @@index([userId, createdAt])
+}
+
+model PublicNewsPost {
+  id            String   @id @default(cuid())
+  title         String
+  content       String?
+  imagePath     String?
+  imageMimeType String?
+  published     Boolean  @default(false)
+  authorId      String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  author User @relation("PublicNewsPostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([published, createdAt])
+  @@index([authorId, createdAt])
 }
 
 model Attendance {

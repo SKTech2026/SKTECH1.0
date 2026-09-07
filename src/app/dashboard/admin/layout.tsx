@@ -50,6 +50,18 @@ const adminItems: RoleShellItem[] = [
     icon: "calendarDays",
   },
   {
+    href: "/dashboard/admin/feed",
+    label: "Internal Feed",
+    description: "Admin and Staff updates",
+    icon: "messageSquare",
+  },
+  {
+    href: "/dashboard/admin/public-news",
+    label: "Public News Feed",
+    description: "Publish landing updates",
+    icon: "megaphone",
+  },
+  {
     href: "/dashboard/admin/id-production",
     label: "ID Production",
     description: "Generate official IDs",

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { requireRole } from "@/lib/roleGuard";
 import StaffAnnouncementComposer from "./composer-client";
+import InternalFeedComposer from "@/components/feed/InternalFeedComposer";
 
 export const dynamic = "force-dynamic";
 
@@ -12,5 +13,5 @@ export default async function MobileStaffAnnouncementsPage() {
   const session = await getServerSession(authOptions);
   const authorized = requireRole(session, [Role.STAFF]);
   if (!authorized.user.municipalityPresidentId) redirect("/unauthorized?error=staff_unassigned");
-  return <StaffAnnouncementComposer />;
+  return <div className="space-y-4"><InternalFeedComposer /><StaffAnnouncementComposer /></div>;
 }

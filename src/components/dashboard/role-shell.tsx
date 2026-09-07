@@ -103,7 +103,7 @@ const ADMIN_GROUPS = [
   },
   {
     label: "OPERATIONS",
-    items: ["Event Management", "ID Production", "ID Scanning"],
+    items: ["Event Management", "Internal Feed", "Public News Feed", "ID Production", "ID Scanning"],
   },
   {
     label: "SYSTEM",

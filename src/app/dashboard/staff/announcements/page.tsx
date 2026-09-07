@@ -8,6 +8,7 @@ import {
   getArchivedAnnouncements,
 } from "@/lib/announcements";
 import { requireRole } from "@/lib/roleGuard";
+import InternalFeedComposer from "@/components/feed/InternalFeedComposer";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,8 @@ export default async function StaffAnnouncementsPage() {
       </section>
 
       <section className="space-y-4">
+        <InternalFeedComposer />
+        <p className="text-xs text-muted">Existing dated announcements remain below and are separate from internal image/pubmat posts.</p>
         {events.length === 0 ? (
           <article className="rounded-2xl border border-glass-border bg-surface p-5 text-sm text-muted">
             No announcements available.
