@@ -9,6 +9,7 @@ import {
   Activity,
   BadgeCheck,
   BarChart3,
+  Bell,
   CalendarDays,
   ClipboardList,
   LayoutDashboard,
@@ -411,6 +412,16 @@ export default function RoleShell({
 
                 <div className="flex shrink-0 items-center gap-2">
                   <ThemeToggle />
+                  {roleLabel === "SK Official" ? (
+                    <Link
+                      href="/dashboard/official/feed"
+                      aria-label="Open Official notifications and municipal feed"
+                      title="Municipal SK Federation Feed"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-glass-border bg-surface-elevated/60 text-muted transition hover:border-accent/50 hover:text-accent"
+                    >
+                      <Bell className="h-4 w-4" />
+                    </Link>
+                  ) : null}
                   <div className="hidden items-center gap-2 rounded-full border border-glass-border bg-surface-elevated/60 px-3 py-1.5 text-xs font-semibold text-muted sm:inline-flex">
                     <UserCircle className="h-4 w-4 text-accent" />
                     {workspaceLabel}
@@ -528,6 +539,11 @@ export default function RoleShell({
                 <LogOut className="h-3.5 w-3.5" />
                 Logout
               </button>
+              {roleLabel === "SK Official" ? (
+                <Link href="/dashboard/official/feed" aria-label="Open Official notifications and municipal feed" className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-glass-border bg-surface-elevated/60 text-muted">
+                  <Bell className="h-4 w-4" />
+                </Link>
+              ) : null}
             </div>
             <nav className="flex gap-2 overflow-x-auto pb-1">
               {items.map((item) => {

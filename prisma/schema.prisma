@@ -109,6 +109,7 @@ model User {
   reviewedProfileChanges  OfficialProfileChangeRequest[] @relation("ProfileChangeReviewedBy")
   chatParticipants        ChatParticipant[]
   chatMessages            ChatMessage[]       @relation("ChatMessageSender")
+  createdEvents           Event[]              @relation("EventCreatedBy")
   municipalityAsPresident Municipality?       @relation("MunicipalPresident", fields: [municipalityPresidentId], references: [id], onDelete: SetNull)
   municipalityAsOfficer   Municipality?       @relation("MunicipalOfficers", fields: [municipalityOfficerId], references: [id], onDelete: SetNull)
 
@@ -262,6 +263,7 @@ model Municipality {
   officers           User[]              @relation("MunicipalOfficers")
   chatConversations  ChatConversation[]
   profileChangeRequests OfficialProfileChangeRequest[]
+  events             Event[]              @relation("MunicipalityEvents")
 }
 
 model Barangay {
@@ -311,11 +313,18 @@ model Event {
   title       String
   description String?
   eventDate   DateTime
+  municipalityId String?
+  createdById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   attendances         Attendance[]
   officialAttendances OfficialAttendance[]
+  municipality        Municipality? @relation("MunicipalityEvents", fields: [municipalityId], references: [id], onDelete: SetNull)
+  createdBy           User? @relation("EventCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([municipalityId, createdAt])
+  @@index([createdById, createdAt])
 }
 
 model Attendance {

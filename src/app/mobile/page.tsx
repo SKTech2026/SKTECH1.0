@@ -14,7 +14,7 @@ export default async function MobileEntryPage() {
   }
 
   if (session.user.role === Role.STAFF) {
-    redirect("/mobile/staff-scanner");
+    redirect("/mobile/staff");
   }
 
   if (session.user.role === Role.OFFICIAL) {

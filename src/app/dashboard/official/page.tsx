@@ -152,6 +152,7 @@ export default async function OfficialDashboardHomePage({
     ["Digital ID", "Open your landscape credential", "/dashboard/official/digital-id", IdCard, "bg-[#1452d9]/15 text-[#6ea0ff]"],
     ["Admission / Profile", "Manage approved details", "/dashboard/official/profile", UserCog, "bg-[#cf2638]/15 text-[#ff8a95]"],
     ["Announcements", "Read federation advisories", "/dashboard/official/announcements", Megaphone, "bg-[#f3c72b]/15 text-[#e7b720]"],
+    ["Municipal SK Federation Feed", "Read Staff posts for your municipality", "/dashboard/official/feed", Megaphone, "bg-[#1452d9]/15 text-[#6ea0ff]"],
     ["Attendance", "Review your participation", "/dashboard/official/attendance", ClipboardList, "bg-[#1452d9]/15 text-[#6ea0ff]"],
     ["Chat", "Message your municipality", "/dashboard/official/chat", MessageSquare, "bg-[#cf2638]/15 text-[#ff8a95]"],
     ["Settings", "Theme and account preferences", "/dashboard/official/settings", Settings2, "bg-[#f3c72b]/15 text-[#e7b720]"],

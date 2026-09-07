@@ -153,6 +153,11 @@ export default async function MobileOfficialPage() {
           <h2 className="mt-3 text-base font-semibold text-foreground">Announcements</h2>
           <p className="mt-1 text-xs text-muted">Read active federation announcements.</p>
         </Link>
+        <Link href="/mobile/official/feed" className="rounded-2xl border border-glass-border bg-surface p-4 transition hover:bg-surface-elevated">
+          <Megaphone className="h-6 w-6 text-cyan-300" />
+          <h2 className="mt-3 text-base font-semibold text-foreground">Municipal SK Federation Feed</h2>
+          <p className="mt-1 text-xs text-muted">See Staff posts for your municipality.</p>
+        </Link>
         <Link href="/mobile/official/chat" className="rounded-2xl border border-glass-border bg-surface p-4 transition hover:bg-surface-elevated">
           <MessageSquare className="h-6 w-6 text-cyan-300" />
           <h2 className="mt-3 text-base font-semibold text-foreground">Chat</h2>

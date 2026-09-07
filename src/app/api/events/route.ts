@@ -15,21 +15,26 @@ export const dynamic = "force-dynamic";
 
 const requireAdminOrStaff = async () => {
   const guard = await requireApiRole([Role.ADMIN, Role.STAFF]);
-  return guard.error ?? null;
+  return guard.error ? { error: guard.error } : { session: guard.session };
 };
 
 export async function GET() {
   try {
     const authError = await requireAdminOrStaff();
-    if (authError) {
-      return authError;
+    if (authError.error) {
+      return authError.error;
     }
+
+    const scope = authError.session.user.role === Role.STAFF
+      ? { municipalityId: authError.session.user.municipalityPresidentId ?? "" }
+      : {};
 
     const now = new Date();
     const activeAnnouncementIds = await getActiveAnnouncementIds(now);
     const [activeEvents, archivedEvents] = await Promise.all([
       prisma.event.findMany({
         where: {
+          ...scope,
           id: { in: activeAnnouncementIds },
           ...getActiveAnnouncementWhere(now),
         },
@@ -42,6 +47,7 @@ export async function GET() {
       }),
       prisma.event.findMany({
         where: {
+          ...scope,
           OR: [
             getArchivedAnnouncementWhere(now),
             {
@@ -81,8 +87,8 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const authError = await requireAdminOrStaff();
-    if (authError) {
-      return authError;
+    if (authError.error) {
+      return authError.error;
     }
 
     const body = (await request.json()) as {
@@ -121,11 +127,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const session = authError.session;
+    const municipalityId = session.user.role === Role.STAFF
+      ? session.user.municipalityPresidentId
+      : null;
+
+    if (session.user.role === Role.STAFF && !municipalityId) {
+      return NextResponse.json({ error: "Staff account is not assigned to a municipality." }, { status: 403 });
+    }
+
     const event = await prisma.event.create({
       data: {
         title,
         description,
         eventDate: parsedEventDate,
+        municipalityId,
+        createdById: session.user.id,
       },
     });
 

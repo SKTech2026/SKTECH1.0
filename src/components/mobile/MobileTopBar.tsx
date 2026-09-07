@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { Home, Info, LogOut, Settings, X } from "lucide-react";
+import { Bell, Home, Info, LogOut, Settings, X } from "lucide-react";
 import { useState } from "react";
 
 import ThemeToggle from "@/components/ThemeToggle";
@@ -52,6 +52,10 @@ export default function MobileTopBar({
       <div className="flex items-center gap-2">
         <ThemeToggle className="h-8" />
         {isOfficial ? (
+          <>
+          <Link href="/mobile/official/feed" aria-label="Open Official notifications and municipal feed" className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-glass-border bg-surface-elevated/70 text-foreground transition hover:border-accent/60 hover:bg-surface-elevated">
+            <Bell className="h-4 w-4" />
+          </Link>
           <div className="relative">
             <button
               type="button"
@@ -88,6 +92,7 @@ export default function MobileTopBar({
               </div>
             ) : null}
           </div>
+          </>
         ) : (
           <button
             type="button"

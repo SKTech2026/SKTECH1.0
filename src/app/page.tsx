@@ -403,7 +403,7 @@ export default function HomePage() {
       <main>
         <section
           id="about"
-          className="relative isolate overflow-hidden px-4 pb-10 pt-6 sm:px-8 sm:pb-16 sm:pt-10 lg:px-10"
+          className="landing-overview relative isolate overflow-hidden px-4 pb-10 pt-6 sm:px-8 sm:pb-16 sm:pt-10 lg:px-10"
         >
           <div className="landing-hero-backdrop absolute inset-0 -z-20 bg-[radial-gradient(circle_at_20%_10%,#fff2b8_0,#fff8dd_18%,transparent_34%),radial-gradient(circle_at_75%_25%,#dce8ff_0,#eaf2ff_24%,transparent_44%),linear-gradient(145deg,#ffffff_0%,#eef5ff_44%,#dce8ff_100%)]" />
           <div className="absolute left-0 top-0 -z-10 h-1.5 w-full bg-[linear-gradient(90deg,#cf2638,#f3c72b,#1452d9)]" />

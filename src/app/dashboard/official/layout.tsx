@@ -32,6 +32,12 @@ const officialItems: RoleShellItem[] = [
     icon: "megaphone",
   },
   {
+    href: "/dashboard/official/feed",
+    label: "Municipal SK Federation Feed",
+    description: "Staff posts for your municipality",
+    icon: "megaphone",
+  },
+  {
     href: "/dashboard/official/chat",
     label: "Chat",
     description: "Municipality messages",

@@ -15,26 +15,17 @@ type RouteContext = {
 
 const requireAdminOrStaff = async () => {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-  }
-
-  if (session.user.status !== UserStatus.APPROVED) {
-    return NextResponse.json({ error: "Account is not approved." }, { status: 403 });
-  }
-
-  if (session.user.role !== Role.ADMIN && session.user.role !== Role.STAFF) {
-    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
-  }
-
-  return null;
+  if (!session?.user?.id) return { error: NextResponse.json({ error: "Unauthorized." }, { status: 401 }) };
+  if (session.user.status !== UserStatus.APPROVED) return { error: NextResponse.json({ error: "Account is not approved." }, { status: 403 }) };
+  if (session.user.role !== Role.ADMIN && session.user.role !== Role.STAFF) return { error: NextResponse.json({ error: "Forbidden." }, { status: 403 }) };
+  return { session };
 };
 
 export async function DELETE(_request: NextRequest, context: RouteContext) {
   try {
     const authError = await requireAdminOrStaff();
-    if (authError) {
-      return authError;
+    if (authError.error) {
+      return authError.error;
     }
 
     const { id } = await context.params;
@@ -43,8 +34,13 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "id is required" }, { status: 400 });
     }
 
-    const event = await prisma.event.findUnique({
-      where: { id },
+    const event = await prisma.event.findFirst({
+      where: {
+        id,
+        ...(authError.session.user.role === Role.STAFF
+          ? { municipalityId: authError.session.user.municipalityPresidentId ?? "" }
+          : {}),
+      },
       select: { id: true },
     });
 
