@@ -18,6 +18,7 @@ import {
   Send,
   ShieldCheck,
   UsersRound,
+  UserCircle,
   X,
 } from "lucide-react";
 import Image from "next/image";
@@ -25,9 +26,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
-import ThemeToggle from "@/components/ThemeToggle";
+import GovernanceCommandHub from "@/components/landing/GovernanceCommandHub";
 import PublicNewsFeed from "@/components/landing/PublicNewsFeed";
-import { useTheme } from "@/context/ThemeContext";
 
 type ChatMessage = {
   role: "bot" | "user";
@@ -35,6 +35,8 @@ type ChatMessage = {
 };
 
 const logoPath = "/assets/logos/sktech-logo-new.png";
+const skLogoPath = "/assets/logos/sk-logo-new.png";
+const provincialSealPath = "/assets/logos/official-seal-logo-new.png";
 const orientalMindoroWordmarkPath = "/assets/branding/oriental-mindoro-wordmark.png";
 
 const navItems = [
@@ -154,7 +156,6 @@ function answerQuestion(question: string) {
 
 export default function HomePage() {
   const router = useRouter();
-  const { effectiveTheme } = useTheme();
   const reducedMotion = useReducedMotion();
   const [menuOpen, setMenuOpen] = useState(false);
   const [showLoginActions, setShowLoginActions] = useState(false);
@@ -250,10 +251,8 @@ export default function HomePage() {
     setChatOpen(true);
   };
 
-  const isLandingDark = effectiveTheme === "dark";
-
   return (
-    <div className={`landing-page min-h-screen overflow-x-hidden bg-[#f6f9ff] text-[#06132d] ${effectiveTheme === "dark" ? "landing-page-dark" : ""}`}>
+    <div className="landing-page min-h-screen overflow-x-hidden bg-[#f6f9ff] text-[#06132d]">
       <audio ref={getStartedAudioRef} preload="auto" src="/sounds/e-1.mp3" />
       <audio ref={loginSelectAudioRef} preload="auto" src="/sounds/e-2.mp3" />
 
@@ -261,11 +260,7 @@ export default function HomePage() {
         aria-hidden={showFloatingMenu}
         className={`sticky top-0 z-40 border-b px-4 shadow-[0_10px_30px_-26px_rgba(6,19,45,0.75)] backdrop-blur transition-[max-height,opacity,transform,padding] duration-300 sm:px-8 lg:px-10 ${
           menuOpen ? "overflow-visible" : "overflow-hidden"
-        } ${
-          isLandingDark
-            ? "border-cyan-300/20 bg-[#071632]/95 text-slate-100"
-            : "border-[#dbe7ff] bg-white/90 text-[#06132d]"
-        } ${
+        } border-[#dbe7ff] bg-white/90 text-[#06132d] ${
           showFloatingMenu
             ? "pointer-events-none max-h-0 -translate-y-full border-transparent py-0 opacity-0"
             : "max-h-24 py-2.5 opacity-100 md:py-4"
@@ -273,42 +268,34 @@ export default function HomePage() {
       >
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
           <Link href="/" className="flex min-w-0 items-center gap-3">
-            <span className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center md:h-11 md:w-11">
-              <span className="absolute inset-0 rounded-xl bg-[linear-gradient(135deg,#cf2638,#1c5bd8,#f3c72b)] opacity-35 blur" />
-              <Image
-                src={logoPath}
-                alt="SKTECH"
-                width={44}
-                height={44}
-                className="relative h-9 w-9 object-contain md:h-11 md:w-11"
-                priority
-              />
+            <span className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+              <Image src={skLogoPath} alt="Sangguniang Kabataan" width={34} height={34} className="h-8 w-8 object-contain sm:h-9 sm:w-9" priority />
+              <Image src={provincialSealPath} alt="Oriental Mindoro provincial seal" width={34} height={34} className="h-8 w-8 object-contain sm:h-9 sm:w-9" priority />
+              <Image src={logoPath} alt="SKTECH" width={50} height={34} className="h-8 w-11 object-contain sm:h-9 sm:w-14" priority />
             </span>
-            <span className={`truncate text-sm font-black uppercase ${isLandingDark ? "text-slate-100" : "text-[#06132d]"}`}>
-              SKTECH
+            <span className="hidden h-8 w-px bg-[#dbe7ff] sm:block" />
+            <span className="max-w-[10rem] text-[11px] font-black uppercase leading-tight tracking-[0.08em] text-[#0b4a24] sm:max-w-none sm:text-sm">
+              SKTECH Oriental Mindoro
             </span>
           </Link>
 
-          <nav className={`hidden items-center gap-7 text-sm font-semibold md:flex ${isLandingDark ? "text-slate-300" : "text-[#24385f]/70"}`}>
+          <nav className="hidden items-center gap-7 text-sm font-semibold text-[#24385f]/70 md:flex">
             {navItems.map(([label, href]) => (
               <a key={href} href={href} className="transition hover:text-[#1452d9]">
                 {label}
               </a>
             ))}
-            <ThemeToggle />
           </nav>
 
           <div className="flex items-center gap-2 md:hidden">
-            <ThemeToggle />
+            <Link href="/official/auth" aria-label="Official Portal" className="inline-flex items-center justify-center rounded-full border border-[#bfd1f8] bg-white p-2 text-[#0a3aa2] shadow-sm">
+              <UserCircle className="h-5 w-5" />
+            </Link>
             <button
               type="button"
               aria-label="Toggle navigation"
               onClick={() => setMenuOpen((open) => !open)}
-              className={`rounded-lg border p-2 ${
-                isLandingDark
-                  ? "border-cyan-300/25 text-slate-100 hover:bg-white/10"
-                  : "border-[#dbe7ff] text-[#06132d] hover:bg-[#eef4ff]"
-              }`}
+              className="rounded-lg border border-[#dbe7ff] p-2 text-[#06132d] hover:bg-[#eef4ff]"
             >
               {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
@@ -316,17 +303,13 @@ export default function HomePage() {
         </div>
 
         {menuOpen ? (
-          <nav className={`absolute left-4 right-4 top-[calc(100%+0.35rem)] mx-auto grid max-w-md gap-1 rounded-xl border p-2 text-sm font-semibold shadow-lg md:hidden ${
-            isLandingDark
-              ? "border-cyan-300/20 bg-[#071632] text-slate-100"
-              : "border-[#dbe7ff] bg-white text-[#06132d]"
-          }`}>
+          <nav className="absolute left-4 right-4 top-[calc(100%+0.35rem)] mx-auto grid max-w-md gap-1 rounded-xl border border-[#dbe7ff] bg-white p-2 text-sm font-semibold text-[#06132d] shadow-lg md:hidden">
             {navItems.map(([label, href]) => (
               <a
                 key={href}
                 href={href}
                 onClick={() => setMenuOpen(false)}
-                className={`rounded-lg px-3 py-2.5 ${isLandingDark ? "hover:bg-white/10" : "hover:bg-[#eef4ff]"}`}
+                className="rounded-lg px-3 py-2.5 hover:bg-[#eef4ff]"
               >
                 {label}
               </a>
@@ -346,11 +329,7 @@ export default function HomePage() {
             aria-label="Open section navigation"
             aria-expanded={floatingMenuOpen}
             onClick={() => setFloatingMenuOpen((open) => !open)}
-            className={`rounded-2xl border p-3 shadow-[0_18px_40px_-24px_rgba(6,19,45,0.8)] backdrop-blur-md transition ${
-              effectiveTheme === "dark"
-                ? "border-cyan-300/25 bg-slate-900/90 text-cyan-200 hover:bg-slate-800"
-                : "border-[#bfd1f8] bg-white/90 text-[#0a3aa2] hover:bg-white"
-            }`}
+            className="rounded-2xl border border-[#bfd1f8] bg-white/90 p-3 text-[#0a3aa2] shadow-[0_18px_40px_-24px_rgba(6,19,45,0.8)] backdrop-blur-md transition hover:bg-white"
           >
             <Compass className="h-5 w-5" />
           </button>
@@ -359,11 +338,7 @@ export default function HomePage() {
               initial={reducedMotion ? false : { opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
               aria-label="Landing page sections"
-              className={`mt-2 w-40 rounded-2xl border p-2 shadow-[0_20px_50px_-26px_rgba(6,19,45,0.8)] backdrop-blur-md ${
-                effectiveTheme === "dark"
-                  ? "border-cyan-300/20 bg-slate-900/95"
-                  : "border-[#dbe7ff] bg-white/95"
-              }`}
+              className="mt-2 w-40 rounded-2xl border border-[#dbe7ff] bg-white/95 p-2 shadow-[0_20px_50px_-26px_rgba(6,19,45,0.8)] backdrop-blur-md"
             >
               {navItems.map(([label, href]) => {
                 const sectionId = href.slice(1);
@@ -381,15 +356,7 @@ export default function HomePage() {
                       });
                       setFloatingMenuOpen(false);
                     }}
-                    className={`block rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
-                      active
-                        ? effectiveTheme === "dark"
-                          ? "bg-cyan-300/15 text-cyan-200"
-                          : "bg-[#eaf2ff] text-[#0a3aa2]"
-                        : effectiveTheme === "dark"
-                          ? "text-slate-300 hover:bg-white/10 hover:text-white"
-                          : "text-[#24385f]/70 hover:bg-[#f6f9ff] hover:text-[#0a3aa2]"
-                    }`}
+                    className={`block rounded-xl px-3 py-2.5 text-sm font-semibold transition ${active ? "bg-[#eaf2ff] text-[#0a3aa2]" : "text-[#24385f]/70 hover:bg-[#f6f9ff] hover:text-[#0a3aa2]"}`}
                   >
                     <span className="mr-2 inline-block h-1.5 w-1.5 rounded-full bg-[#cf2638] align-middle" />
                     {label}
@@ -446,15 +413,14 @@ export default function HomePage() {
                       animate: { opacity: 1, y: 0 },
                       transition: { delay: 0.12, duration: 0.5 },
                     })}
-                className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row"
+                className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap"
               >
-                <button
-                  type="button"
-                  onClick={onGetStarted}
-                  className="inline-flex items-center justify-center rounded-full bg-[#06132d] px-5 py-2.5 text-sm font-bold text-white shadow-[0_18px_32px_-26px_rgba(6,19,45,0.95)] transition hover:bg-[#0a3aa2] sm:px-6 sm:py-3"
-                >
-                  Official Access <ArrowRight className="ml-2 h-4 w-4" />
-                </button>
+                <Link href="/official/auth" className="inline-flex items-center justify-center rounded-full bg-[#06132d] px-5 py-2.5 text-sm font-bold text-white shadow-[0_18px_32px_-26px_rgba(6,19,45,0.95)] transition hover:bg-[#0a3aa2] sm:px-6 sm:py-3">
+                  Official Portal <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+                <Link href="#news" className="inline-flex items-center justify-center rounded-full border border-[#bfd1f8] bg-white/75 px-5 py-2.5 text-sm font-bold text-[#0a3aa2] shadow-sm transition hover:bg-white sm:px-6 sm:py-3">
+                  View Public Updates
+                </Link>
               </motion.div>
             </div>
 
@@ -522,6 +488,8 @@ export default function HomePage() {
             </motion.div>
           </div>
         </section>
+
+        <GovernanceCommandHub />
 
         <section
           id="platform"
