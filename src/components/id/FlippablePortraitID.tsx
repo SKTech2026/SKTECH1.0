@@ -94,9 +94,9 @@ export default function FlippablePortraitID({
   admissionStatus,
   registryStatus = "ACTIVE",
   accountStatus,
-  sktechLogoUrl = "/assets/logos/sktech-logo-enhance.png",
-  skfedLogoUrl = "/assets/logos/sk-logo-enhance.png",
-  provincialSealUrl = "/assets/logos/official-logo-enhance.png",
+  sktechLogoUrl = "/assets/logos/sktech-logo-new.png",
+  skfedLogoUrl = "/assets/logos/sk-logo-new.png",
+  provincialSealUrl = "/assets/logos/official-seal-logo-new.png",
   provinceName = "ORIENTAL MINDORO",
   contactInfo = DEFAULT_CONTACT_INFO,
   issuedDate,
@@ -108,8 +108,6 @@ export default function FlippablePortraitID({
   const [isFlipped, setIsFlipped] = useState(false);
   const [failedPhotoUrl, setFailedPhotoUrl] = useState<string | null>(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
-  const [landscapeScale, setLandscapeScale] = useState(1);
-  const landscapeFrameRef = useRef<HTMLDivElement | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
   const rafRef = useRef<number | null>(null);
   const targetRef = useRef({ x: 0, y: 0 });
@@ -153,20 +151,6 @@ export default function FlippablePortraitID({
     return () => {
       if (rafRef.current !== null) window.cancelAnimationFrame(rafRef.current);
     };
-  }, []);
-
-  useEffect(() => {
-    const frame = landscapeFrameRef.current;
-    if (!frame) return;
-
-    const updateScale = () => {
-      setLandscapeScale(Math.min(1, frame.clientWidth / CR80_WIDTH));
-    };
-
-    updateScale();
-    const observer = new ResizeObserver(updateScale);
-    observer.observe(frame);
-    return () => observer.disconnect();
   }, []);
 
   const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -375,8 +359,7 @@ export default function FlippablePortraitID({
       ) : null}
 
       <div
-        ref={landscapeFrameRef}
-        className="id-screen-card relative w-full max-w-full overflow-visible [perspective:1800px]"
+        className="id-screen-card relative w-full max-w-full [perspective:1800px]"
         style={{ aspectRatio: `${CR80_WIDTH} / ${CR80_HEIGHT}` }}
       >
         <div
@@ -404,11 +387,9 @@ export default function FlippablePortraitID({
                   startTilt();
                 }
           }
-          className={`id-landscape-card absolute left-1/2 top-0 w-[856px] rounded-[0.72rem] outline-none [transform-style:preserve-3d] transition-transform duration-700 [transition-timing-function:cubic-bezier(0.2,0.8,0.2,1)] focus-visible:ring-2 focus-visible:ring-[#f5b300] ${preview ? "" : "cursor-pointer"}`}
+          className={`id-landscape-card absolute inset-0 h-full w-full rounded-[0.72rem] outline-none [transform-style:preserve-3d] transition-transform duration-700 [transition-timing-function:cubic-bezier(0.2,0.8,0.2,1)] focus-visible:ring-2 focus-visible:ring-[#f5b300] ${preview ? "" : "cursor-pointer"}`}
           style={{
-            height: `${CR80_HEIGHT}px`,
-            transform: `translateX(-50%) scale(${landscapeScale}) ${preview ? "" : transform}`,
-            transformOrigin: "top center",
+            transform: preview ? undefined : transform,
           }}
         >
           <DesktopFront />
