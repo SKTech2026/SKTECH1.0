@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Role } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -6,13 +7,16 @@ import { ArrowLeft } from "lucide-react";
 import OfficialProfileForm from "@/app/dashboard/official/profile/profile-form";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { requireOfficialFeatureAccess } from "@/lib/roleGuard";
+import { requireDashboardRole } from "@/lib/roleGuard";
 
 export const dynamic = "force-dynamic";
 
 export default async function MobileOfficialProfilePage() {
   const session = await getServerSession(authOptions);
-  const authorizedSession = await requireOfficialFeatureAccess(session);
+  const authorizedSession = requireDashboardRole(session, [Role.OFFICIAL], {
+    unauthenticatedRedirect: "/official/auth",
+    requireApproved: false,
+  });
 
   const [user, municipalities, pendingRequest, rejectedRequest] = await Promise.all([
     prisma.user.findUnique({

@@ -48,12 +48,34 @@ export default async function MobileOfficialPage() {
       },
     },
   });
+  const faceRegistered = user?.faceRegistered ?? false;
 
   if (!user?.official) {
     return (
-      <section className="rounded-2xl border border-amber-400/35 bg-amber-500/10 p-4 text-sm text-amber-200">
-        Your official profile is not linked yet. Please contact municipal staff for verification.
-      </section>
+      <div className="space-y-4">
+        <section className="rounded-2xl border border-glass-border bg-surface p-4 shadow-xl">
+          <p className="text-[11px] uppercase tracking-[0.16em] text-accent">Official Mobile</p>
+          <h1 className="mt-1 text-xl font-bold text-foreground">Complete Admission Credentials</h1>
+          <p className="mt-1 text-sm text-muted">
+            Submit your SK information, proof of legitimacy, ID photo, and face registration for Staff review.
+          </p>
+        </section>
+        <section className="rounded-2xl border border-amber-300/30 bg-amber-500/10 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-200">Not submitted yet</p>
+          <h2 className="mt-2 text-lg font-semibold text-foreground">Admission is required</h2>
+          <p className="mt-1 text-sm text-muted">Your Official profile is not linked yet. Start the secure admission flow to create your submission.</p>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <Link href="/mobile/official/admission" className="inline-flex h-11 items-center justify-center rounded-xl bg-accent px-4 text-sm font-semibold text-accent-foreground">Start / Continue Admission</Link>
+            <Link href="/mobile/official/admission" className="inline-flex h-11 items-center justify-center rounded-xl border border-glass-border bg-surface px-4 text-sm font-semibold text-foreground">Upload ID Photo</Link>
+            <Link href="/mobile/official/facial-registration" className="inline-flex h-11 items-center justify-center rounded-xl border border-glass-border bg-surface px-4 text-sm font-semibold text-foreground">Register Face</Link>
+            <Link href="/mobile/official/admission" className="inline-flex h-11 items-center justify-center rounded-xl border border-glass-border bg-surface px-4 text-sm font-semibold text-foreground">View Submission Status</Link>
+          </div>
+        </section>
+        <section className="rounded-2xl border border-glass-border bg-surface p-4 text-sm text-muted">
+          <p>Face status: <span className={faceRegistered ? "font-semibold text-emerald-300" : "font-semibold text-amber-200"}>{faceRegistered ? "Face Registered" : "Not Registered"}</span></p>
+          <p className="mt-2">Staff review begins after the admission form, proof document, and required face capture are submitted.</p>
+        </section>
+      </div>
     );
   }
 
@@ -63,6 +85,7 @@ export default async function MobileOfficialPage() {
     user.official.admissionStatus === "APPROVED" &&
     user.official.status === "ACTIVE";
   const isRejected = user.official.admissionStatus === "REJECTED";
+  const profileHref = user.official ? "/mobile/official/profile" : "/mobile/official/admission";
 
   if (!isApproved) {
     return (
@@ -85,9 +108,15 @@ export default async function MobileOfficialPage() {
           <Link href="/dashboard/official/admission" className="mt-4 inline-flex h-11 items-center justify-center rounded-xl bg-accent px-4 text-sm font-semibold text-accent-foreground">
             {isRejected ? "Review Admission Details" : "Complete Admission Details"}
           </Link>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <Link href={profileHref} className="inline-flex h-10 items-center justify-center rounded-xl border border-glass-border bg-surface px-3 text-xs font-semibold text-foreground">Upload / Update ID Photo</Link>
+            <Link href="/mobile/official/facial-registration" className="inline-flex h-10 items-center justify-center rounded-xl border border-glass-border bg-surface px-3 text-xs font-semibold text-foreground">{user.faceRegistered ? "Face Registered" : "Register Face"}</Link>
+          </div>
         </section>
         <section className="rounded-2xl border border-glass-border bg-surface p-4 text-sm text-muted">
-          Current status: <span className="font-semibold text-amber-200">{user.official.admissionStatus}</span>
+          <p>Current status: <span className="font-semibold text-amber-200">{user.official.admissionStatus}</span></p>
+          <p className="mt-2">Submitted details: <span className="font-semibold text-foreground">{fullName}</span> from {user.official.municipality ?? "your municipality"}.</p>
+          <p className="mt-2">Face status: <span className={user.faceRegistered ? "font-semibold text-emerald-300" : "font-semibold text-amber-200"}>{user.faceRegistered ? "Face Registered" : "Not Registered"}</span></p>
         </section>
       </div>
     );

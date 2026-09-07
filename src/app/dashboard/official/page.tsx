@@ -2,6 +2,17 @@ import Link from "next/link";
 import { AdmissionStatus, Role, UserStatus } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
+import {
+  ArrowUpRight,
+  BadgeCheck,
+  ClipboardList,
+  IdCard,
+  Megaphone,
+  MessageSquare,
+  Settings2,
+  UserCheck,
+  UserCog,
+} from "lucide-react";
 
 import FlippablePortraitID from "@/components/id/FlippablePortraitID";
 import { authOptions } from "@/lib/auth";
@@ -71,63 +82,52 @@ export default async function OfficialDashboardHomePage({
 
     return (
       <div className="space-y-6">
-        <section className="rounded-3xl border border-glass-border bg-surface p-6 shadow-[0_24px_48px_-24px_var(--shadow-color)] backdrop-blur-md sm:p-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
-            Official Admission Required
-          </p>
-          <h2 className="mt-3 text-3xl font-bold text-foreground">
-            {rejected
-              ? "Admission Requires Resubmission"
-              : waitingForApproval && currentUser.official?.updatedAt
-                ? "Admission Under Review"
-                : "Official Admission Required"}
-          </h2>
-          <p className="mt-2 max-w-3xl text-sm text-muted">
-            {rejected
-              ? "Your Official Admission was rejected. Please review the status below and resubmit your admission details according to the existing workflow."
-              : waitingForApproval && currentUser.official?.updatedAt
-                ? "Your Official Admission has been submitted and is currently under review by your Municipal SK Federation Staff. You will receive an email notification once your account is approved."
-                : "You cannot access this section yet. Please submit your Official Admission first and wait for approval from your Municipal SK Federation Staff before accessing dashboard features."}
-          </p>
-          {admissionRequired ? (
-            <p className="mt-3 rounded-xl border border-amber-300/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-              Full dashboard features unlock after your Official Admission is approved.
+        <section className="relative overflow-hidden rounded-[2rem] border border-[#1452d9]/25 bg-surface p-6 shadow-[0_28px_70px_-32px_var(--shadow-color)] backdrop-blur-xl sm:p-9">
+          <div className="pointer-events-none absolute -right-24 -top-28 h-72 w-72 rounded-full bg-[#1452d9]/15 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-28 left-10 h-56 w-56 rounded-full bg-[#cf2638]/10 blur-3xl" />
+          <div className="relative">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">SKTECH Official Portal</p>
+              <span className="inline-flex items-center gap-2 rounded-full border border-amber-300/30 bg-amber-400/10 px-3 py-1.5 text-xs font-semibold text-amber-200">
+                <UserCheck className="h-3.5 w-3.5" /> {profileStatus}
+              </span>
+            </div>
+            <h2 className="mt-4 max-w-3xl text-3xl font-black tracking-tight text-foreground sm:text-4xl">
+              {rejected ? "Let's refresh your admission." : waitingForApproval && currentUser.official?.updatedAt ? "Your credentials are in review." : "Build your verified official profile."}
+            </h2>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-muted">
+              {rejected
+                ? "Review the reason and resubmit your official details for Municipal Staff review."
+                : waitingForApproval && currentUser.official?.updatedAt
+                  ? "Your Municipal SK Federation Staff is reviewing the submitted details. Approved dashboard features unlock after review."
+                  : "Complete the SKTECH admission flow with your official information and supporting credentials before accessing dashboard features."}
             </p>
-          ) : null}
-          {rejected ? (
-            <p className="mt-3 rounded-xl border border-rose-300/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-              Current status: Rejected. Please update and resubmit your admission details.
-            </p>
-          ) : null}
-          {!rejected && !currentUser.official?.updatedAt ? (
-            <p className="mt-3 rounded-xl border border-sky-300/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
-              Start with the admission form so your Municipal SK Federation Staff can review your record.
-            </p>
-          ) : null}
-          <div className="mt-5 flex flex-wrap gap-3">
-            <Link
-              href="/dashboard/official/admission"
-              className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition hover:opacity-90"
-            >
-              Submit Admission Details
-            </Link>
-            <span
-              className={`inline-flex items-center rounded-full px-3 py-2 text-xs font-semibold ${
-                waitingForApproval
-                  ? "bg-amber-500/20 text-amber-200"
-                  : profileStatus === AdmissionStatus.REJECTED
-                    ? "bg-rose-500/20 text-rose-200"
-                    : "bg-surface-elevated text-foreground"
-              }`}
-            >
-              Current Status: {profileStatus}
-            </span>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link href="/dashboard/official/admission" className="inline-flex items-center gap-2 rounded-xl bg-[#1452d9] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_16px_30px_-18px_#1452d9] transition hover:bg-[#0f43b5]">
+                {rejected ? "Review Admission" : "Complete Admission"}
+                <ArrowUpRight className="h-4 w-4" />
+              </Link>
+              {admissionRequired ? <span className="inline-flex items-center rounded-xl border border-amber-300/25 bg-amber-400/10 px-4 py-2.5 text-xs font-semibold text-amber-100">Features unlock after Staff approval</span> : null}
+            </div>
           </div>
-          {currentUser.official?.updatedAt ? (
-            <p className="mt-3 text-xs text-muted">
-              Last submission: {new Date(currentUser.official.updatedAt).toLocaleString()}
-            </p>
-          ) : null}
+        </section>
+
+        <section className="grid gap-4 md:grid-cols-3">
+          <article className="glass-card rounded-2xl p-5">
+            <p className="text-xs uppercase tracking-[0.14em] text-muted">Admission status</p>
+            <p className="mt-2 text-2xl font-black text-amber-200">{profileStatus}</p>
+            <p className="mt-2 text-xs text-muted">Staff review keeps your access protected.</p>
+          </article>
+          <article className="glass-card rounded-2xl p-5">
+            <p className="text-xs uppercase tracking-[0.14em] text-muted">Profile readiness</p>
+            <p className="mt-2 text-2xl font-black text-accent">{currentUser.official?.updatedAt ? "Submitted" : "Not started"}</p>
+            <p className="mt-2 text-xs text-muted">Personal and SK details are submitted through the admission form.</p>
+          </article>
+          <article className="glass-card rounded-2xl p-5">
+            <p className="text-xs uppercase tracking-[0.14em] text-muted">Next step</p>
+            <p className="mt-2 text-2xl font-black text-[#cf2638]">{waitingForApproval ? "Wait" : "Submit"}</p>
+            <p className="mt-2 text-xs text-muted">Your official workspace remains locked until approval.</p>
+          </article>
         </section>
       </div>
     );
@@ -148,41 +148,56 @@ export default async function OfficialDashboardHomePage({
       ? currentUser.image
       : "/images/default-official.svg";
 
+  const quickAccess = [
+    ["Digital ID", "Open your landscape credential", "/dashboard/official/digital-id", IdCard, "bg-[#1452d9]/15 text-[#6ea0ff]"],
+    ["Admission / Profile", "Manage approved details", "/dashboard/official/profile", UserCog, "bg-[#cf2638]/15 text-[#ff8a95]"],
+    ["Announcements", "Read federation advisories", "/dashboard/official/announcements", Megaphone, "bg-[#f3c72b]/15 text-[#e7b720]"],
+    ["Attendance", "Review your participation", "/dashboard/official/attendance", ClipboardList, "bg-[#1452d9]/15 text-[#6ea0ff]"],
+    ["Chat", "Message your municipality", "/dashboard/official/chat", MessageSquare, "bg-[#cf2638]/15 text-[#ff8a95]"],
+    ["Settings", "Theme and account preferences", "/dashboard/official/settings", Settings2, "bg-[#f3c72b]/15 text-[#e7b720]"],
+  ] as const;
+
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl border border-glass-border bg-surface p-6 shadow-[0_24px_48px_-24px_var(--shadow-color)] backdrop-blur-md sm:p-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
-          Official Access
-        </p>
-        <h2 className="mt-3 text-3xl font-bold text-foreground">
-          Welcome, {currentUser.name ?? currentUser.email}
-        </h2>
-        <p className="mt-2 max-w-3xl text-sm text-muted">
-          Access verified public announcements, your digital ID, attendance logs, and
-          provincial federation accomplishments.
-        </p>
+      <section className="relative overflow-hidden rounded-[2rem] border border-[#1452d9]/25 bg-surface p-6 shadow-[0_28px_70px_-32px_var(--shadow-color)] backdrop-blur-xl sm:p-9">
+        <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[#1452d9]/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-32 left-1/3 h-64 w-64 rounded-full bg-[#cf2638]/10 blur-3xl" />
+        <div className="relative flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">
+              <BadgeCheck className="h-4 w-4" /> Official Access
+            </div>
+            <h2 className="mt-4 max-w-3xl text-3xl font-black tracking-tight text-foreground sm:text-5xl">
+              Welcome, {currentUser.name ?? currentUser.email}
+            </h2>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-muted">
+              Your SKTECH workspace for verified identity, local coordination, attendance, and federation updates.
+            </p>
+          </div>
+          <div className="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-2 text-xs font-semibold text-emerald-200">
+            <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_12px_rgba(110,231,183,0.9)]" /> Account approved
+          </div>
+        </div>
       </section>
 
       <section className="grid gap-4 md:grid-cols-3">
-        <article className="rounded-2xl border border-glass-border bg-surface p-5 shadow-xl backdrop-blur-md">
+        <article className="glass-card rounded-2xl p-5">
           <p className="text-xs uppercase tracking-[0.14em] text-muted">Account Status</p>
-          <p className="mt-2 text-2xl font-bold text-accent">{currentUser.status}</p>
+          <p className="mt-2 text-2xl font-black text-accent">{currentUser.status}</p>
         </article>
-        <article className="rounded-2xl border border-glass-border bg-surface p-5 shadow-xl backdrop-blur-md">
+        <article className="glass-card rounded-2xl p-5">
           <p className="text-xs uppercase tracking-[0.14em] text-muted">Official Role</p>
-          <p className="mt-2 text-2xl font-bold text-emerald-300">
-            {currentUser.official?.role ?? "Unassigned"}
-          </p>
+          <p className="mt-2 text-2xl font-black text-emerald-300">{currentUser.official?.role ?? "Unassigned"}</p>
         </article>
-        <article className="rounded-2xl border border-glass-border bg-surface p-5 shadow-xl backdrop-blur-md">
+        <article className="glass-card rounded-2xl p-5">
           <p className="text-xs uppercase tracking-[0.14em] text-muted">Attendance Logs</p>
-          <p className="mt-2 text-2xl font-bold text-indigo-300">{attendanceCount}</p>
+          <p className="mt-2 text-2xl font-black text-[#e7b720]">{attendanceCount}</p>
         </article>
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.75fr)_minmax(280px,0.85fr)] xl:items-start">
         {currentUser.official ? (
-          <article className="min-w-0 rounded-2xl border border-glass-border bg-surface p-4 shadow-xl backdrop-blur-md sm:p-5">
+          <article className="min-w-0 overflow-hidden rounded-[1.5rem] border border-[#1452d9]/20 bg-surface p-4 shadow-[0_24px_55px_-28px_var(--shadow-color)] backdrop-blur-xl sm:p-5">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.14em] text-muted">Digital ID</p>
@@ -190,12 +205,8 @@ export default async function OfficialDashboardHomePage({
                   {formatOfficialFullName(currentUser.official)}
                 </h3>
               </div>
-              <Link
-                href={`/id/${currentUser.official.id}`}
-                target="_blank"
-                className="rounded-lg border border-glass-border px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-elevated/70"
-              >
-                Full Page
+              <Link href={`/id/${currentUser.official.id}`} target="_blank" className="inline-flex items-center gap-1 rounded-lg border border-glass-border px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-elevated/70">
+                Full Page <ArrowUpRight className="h-3.5 w-3.5" />
               </Link>
             </div>
             <FlippablePortraitID
@@ -222,7 +233,7 @@ export default async function OfficialDashboardHomePage({
         ) : null}
 
         <div className="grid gap-4">
-          <article className="rounded-2xl border border-glass-border bg-surface p-5 shadow-xl backdrop-blur-md">
+          <article className="rounded-[1.5rem] border border-[#cf2638]/20 bg-surface p-5 shadow-[0_24px_55px_-28px_var(--shadow-color)] backdrop-blur-xl">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.14em] text-muted">Workspace</p>
@@ -236,40 +247,17 @@ export default async function OfficialDashboardHomePage({
               </Link>
             </div>
             <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
-            <Link
-              href="/dashboard/official/digital-id"
-              className="rounded-xl bg-accent px-4 py-2.5 text-center text-sm font-semibold text-accent-foreground transition hover:opacity-90"
-            >
-              Open Digital ID
-            </Link>
-            <Link
-              href="/dashboard/official/profile"
-              className="rounded-xl border border-glass-border px-4 py-2.5 text-center text-sm font-semibold text-foreground transition hover:bg-surface-elevated/70"
-            >
-              Edit Profile
-            </Link>
-            <Link
-              href="/dashboard/official/attendance"
-              className="rounded-xl border border-glass-border px-4 py-2.5 text-center text-sm font-semibold text-foreground transition hover:bg-surface-elevated/70"
-            >
-              View Attendance Logs
-            </Link>
-            <Link
-              href="#announcements"
-              className="rounded-xl border border-glass-border px-4 py-2.5 text-center text-sm font-semibold text-foreground transition hover:bg-surface-elevated/70"
-            >
-              Announcements
-            </Link>
-            <Link
-              href="/dashboard/official/chat"
-              className="rounded-xl border border-glass-border px-4 py-2.5 text-center text-sm font-semibold text-foreground transition hover:bg-surface-elevated/70"
-            >
-              Chat
-            </Link>
+              {quickAccess.map(([label, description, href, Icon, colorClass]) => (
+                <Link key={href} href={href} className="group flex items-center gap-3 rounded-xl border border-glass-border bg-surface-elevated/35 p-3 transition hover:-translate-y-0.5 hover:border-accent/35 hover:bg-surface-elevated/70">
+                  <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${colorClass}`}><Icon className="h-5 w-5" /></span>
+                  <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-foreground">{label}</span><span className="mt-0.5 block text-xs text-muted">{description}</span></span>
+                  <ArrowUpRight className="h-4 w-4 shrink-0 text-muted transition group-hover:text-accent" />
+                </Link>
+              ))}
             </div>
           </article>
 
-          <article id="announcements" className="scroll-mt-6 rounded-2xl border border-glass-border bg-surface p-5 shadow-xl backdrop-blur-md">
+          <article id="announcements" className="scroll-mt-6 rounded-[1.5rem] border border-[#f3c72b]/20 bg-surface p-5 shadow-[0_24px_55px_-28px_var(--shadow-color)] backdrop-blur-xl">
           <h3 className="text-lg font-semibold text-foreground">Active Announcements</h3>
           <ul className="mt-4 space-y-3">
             {bulletinItems.length === 0 ? (

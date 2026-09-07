@@ -40,7 +40,12 @@ const ROLE_RULES: RoleRule[] = [
     prefix: "/mobile/official",
     allowed: ["OFFICIAL"],
     requiresApproved: false,
-    pendingAllowedPaths: ["/mobile/official"],
+    pendingAllowedPaths: [
+      "/mobile/official",
+      "/mobile/official/admission",
+      "/mobile/official/profile",
+      "/mobile/official/facial-registration",
+    ],
   },
 ];
 
