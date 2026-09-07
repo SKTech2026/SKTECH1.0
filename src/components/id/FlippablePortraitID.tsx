@@ -5,6 +5,8 @@ import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useRef, useState } from "react";
 
+type IDVariant = "full" | "dashboardPreview" | "mobilePreview" | "mobileFull" | "mobileViewer";
+
 type FlippablePortraitIDProps = {
   fullName: string;
   position: string;
@@ -36,14 +38,16 @@ type FlippablePortraitIDProps = {
   issuedDate?: string;
   websiteUrl?: string;
   className?: string;
-  variant?: "full" | "dashboardPreview" | "mobilePreview" | "mobileFull" | "mobileViewer";
+  variant?: IDVariant;
   closeHref?: string;
 };
 
 const MAX_TILT = 4;
 const TILT_EASING = 0.18;
 const DEFAULT_PHOTO_URL = "/images/default-official.svg";
-const WATERMARK = "CAPSTONE PROJECT – DEMO ID – NOT AN OFFICIAL GOVERNMENT ID";
+const WATERMARK = "CAPSTONE PROJECT \u2013 DEMO ID \u2013 NOT AN OFFICIAL GOVERNMENT ID";
+const DEFAULT_CONTACT_INFO =
+  "This digital identification card is part of the SKTECH college capstone prototype. Scan the QR code to verify the holder's information through the SKTECH system.";
 
 const compact = (value: string, maxLength: number) =>
   value.length > maxLength ? `${value.slice(0, maxLength - 1)}.` : value;
@@ -88,35 +92,28 @@ export default function FlippablePortraitID({
   admissionStatus,
   registryStatus = "ACTIVE",
   accountStatus,
-  sktechLogoUrl = "/assets/logos/sktech-logo-new.png",
-  skfedLogoUrl = "/assets/logos/sk-logo-new.png",
-  provincialSealUrl = "/assets/logos/official-seal-logo-new.png",
+  sktechLogoUrl = "/assets/logos/sktech-logo-enhance.png",
+  skfedLogoUrl = "/assets/logos/sk-logo-enhance.png",
+  provincialSealUrl = "/assets/logos/official-logo-enhance.png",
   provinceName = "ORIENTAL MINDORO",
-  contactInfo = "This digital identification card is part of the SKTECH college capstone prototype. Scan the QR code to verify the holder's information through the SKTECH system.",
+  contactInfo = DEFAULT_CONTACT_INFO,
   issuedDate,
   websiteUrl = "sktech-ormin.com",
   className,
   variant = "full",
   closeHref = "/mobile/official",
 }: FlippablePortraitIDProps) {
-  const isMobilePreview = variant === "mobilePreview" || variant === "dashboardPreview";
-  const isMobileFull = variant === "mobileFull" || variant === "mobileViewer";
   const [isFlipped, setIsFlipped] = useState(false);
-  const [isNarrowViewport, setIsNarrowViewport] = useState(false);
   const [failedPhotoUrl, setFailedPhotoUrl] = useState<string | null>(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
-  const [previewScale, setPreviewScale] = useState(1);
   const cardRef = useRef<HTMLDivElement | null>(null);
-  const previewFrameRef = useRef<HTMLDivElement | null>(null);
   const rafRef = useRef<number | null>(null);
   const targetRef = useRef({ x: 0, y: 0 });
   const currentRef = useRef({ x: 0, y: 0 });
-  const useMobileFace = isMobileFull && isNarrowViewport;
 
   const displayPhotoUrl = failedPhotoUrl === photoUrl ? DEFAULT_PHOTO_URL : photoUrl;
-  const displayName = compact(fullName.toUpperCase(), 34);
   const displayPosition = skfedPosition ? `${position} / ${skfedPosition}` : position;
-  const documentId = `SKTE-ORM-${compact(idNumber, 16)}`;
+  const documentId = idNumber.startsWith("SKTE-") ? idNumber : `SKTE-ORM-${idNumber}`;
   const addressLine =
     address ||
     [sitio ? `Sitio ${sitio}` : null, barangay, municipality, provinceName]
@@ -126,10 +123,9 @@ export default function FlippablePortraitID({
   const termEndYear = yearLabel(termEnd);
   const serviceTerm =
     termPeriod ?? ([electedYear, termEndYear].filter(Boolean).join("-") || "Not recorded");
-  const verified = admissionStatus === "APPROVED" || registryStatus === "ACTIVE";
-  const statusLabel = verified ? "VERIFIED STATUS" : "PENDING STATUS";
+  const verified = admissionStatus ? admissionStatus === "APPROVED" : registryStatus === "ACTIVE";
+  const statusLabel = verified ? "Verified" : "Pending";
   const issued = issuedDate ?? "Upon registry approval";
-  const verificationNote = compact(contactInfo, 92);
 
   const startTilt = () => {
     if (rafRef.current !== null) return;
@@ -148,25 +144,6 @@ export default function FlippablePortraitID({
       rafRef.current = window.requestAnimationFrame(step);
     });
   };
-
-  useEffect(() => {
-    if (!isMobileFull) return;
-    const mediaQuery = window.matchMedia("(max-width: 640px)");
-    const updateViewport = () => setIsNarrowViewport(mediaQuery.matches);
-    updateViewport();
-    mediaQuery.addEventListener("change", updateViewport);
-    return () => mediaQuery.removeEventListener("change", updateViewport);
-  }, [isMobileFull]);
-
-  useEffect(() => {
-    if (!isMobilePreview || !previewFrameRef.current) return;
-    const frame = previewFrameRef.current;
-    const updateScale = () => setPreviewScale(Math.min(1, frame.clientWidth / 760));
-    updateScale();
-    const observer = new ResizeObserver(updateScale);
-    observer.observe(frame);
-    return () => observer.disconnect();
-  }, [isMobilePreview]);
 
   useEffect(() => {
     return () => {
@@ -191,109 +168,96 @@ export default function FlippablePortraitID({
 
   const transform = `rotateX(${tilt.x.toFixed(2)}deg) rotateY(${(tilt.y + (isFlipped ? 180 : 0)).toFixed(2)}deg)`;
 
-  const LogoMark = ({
-    src,
-    alt,
-    className: logoClassName = "",
-  }: {
-    src: string;
-    alt: string;
-    className?: string;
-  }) => (
-    <span className={`relative block ${logoClassName}`}>
-      <Image src={src} alt={alt} fill className="object-contain" sizes="96px" />
+  const logo = (src: string, alt: string, className: string) => (
+    <span className={`relative block ${className}`}>
+      <Image src={src} alt={alt} fill className="object-contain" sizes="120px" />
     </span>
   );
 
-  const FieldRow = ({
-    label,
-    value,
-    strong = true,
-  }: {
-    label: string;
-    value: string;
-    strong?: boolean;
-  }) => (
-    <div className="grid grid-cols-[7.4rem_0.55rem_1fr] items-baseline gap-1 text-[0.68rem] leading-tight text-[#09235d]">
+  const photo = (sizes: string) => (
+    <Image
+      src={displayPhotoUrl}
+      alt={`${fullName} official portrait`}
+      fill
+      className="object-cover"
+      sizes={sizes}
+      priority
+      unoptimized={displayPhotoUrl.startsWith("/api/official/photo")}
+      onError={() => setFailedPhotoUrl(photoUrl)}
+    />
+  );
+
+  const desktopRow = (label: string, value: string, valueClass = "text-[0.9rem]") => (
+    <div className="grid grid-cols-[8rem_0.55rem_1fr] items-baseline gap-1 text-[0.68rem] leading-tight text-[#09235d]">
       <dt className="font-black uppercase">{label}</dt>
       <dd className="font-black">:</dd>
-      <dd className={strong ? "text-[0.86rem] font-black uppercase tracking-wide" : "font-semibold"}>
+      <dd className={`${valueClass} min-w-0 break-words font-black uppercase tracking-wide`}>
         {value}
       </dd>
     </div>
   );
 
-  const BackField = ({
-    icon,
-    label,
-    value,
-  }: {
-    icon: string;
-    label: string;
-    value: string;
-  }) => (
-    <div className="grid grid-cols-[2rem_1fr] gap-2">
-      <span className="flex h-7 w-7 items-center justify-center rounded-md text-[1.35rem] text-[#f5b300]">
-        {icon}
-      </span>
-      <div>
-        <dt className="text-[0.68rem] font-black uppercase tracking-wide text-[#172653]">{label}</dt>
-        <dd className="mt-1 text-[0.82rem] font-bold leading-tight text-[#172653]">{value}</dd>
-      </div>
+  const infoBlock = (label: string, value: string) => (
+    <div className="min-w-0 rounded-xl border border-[#d5e0ed] bg-white px-3 py-2">
+      <dt className="text-[0.66rem] font-black uppercase tracking-wide text-[#61728b]">{label}</dt>
+      <dd className="mt-1 break-words text-sm font-bold leading-snug text-[#172653]">{value}</dd>
     </div>
   );
 
-  const FrontFace = ({ print = false }: { print?: boolean }) => (
-    <section className="official-id-face official-id-front absolute inset-0 overflow-hidden rounded-[0.72rem] border border-[#c9d6e7] bg-[#f7faff] text-[#09235d] shadow-[0_28px_70px_-34px_rgba(2,6,23,0.75)] [backface-visibility:hidden]">
+  const DesktopFront = ({ print = false }: { print?: boolean }) => (
+    <section className="id-face absolute inset-0 overflow-hidden rounded-[0.72rem] border border-[#d7c26c] bg-white text-[#09235d] shadow-[0_28px_70px_-34px_rgba(2,6,23,0.75)] [backface-visibility:hidden]">
+      <div className="id-corner id-corner-left" />
+      <div className="id-corner id-corner-right" />
+      <div className="id-dots" />
+      <div className="id-soft-logo left-[5%] top-[8%] h-[38%] w-[40%]">
+        <Image src={sktechLogoUrl} alt="" fill className="object-contain opacity-15" sizes="360px" />
+      </div>
 
-      <div className="relative z-10 flex h-full flex-col px-[4.7%] py-[3.2%]">
-        <header className="official-id-topbar grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-lg bg-[#09235d] px-3 py-2.5 text-white">
-          <LogoMark src={sktechLogoUrl} alt="SKTECH logo" className="h-[2.7rem] w-[5.5rem]" />
-          <div className="flex min-w-0 items-center justify-center gap-2 text-center">
-            <LogoMark src={provincialSealUrl} alt="Province of Oriental Mindoro official seal" className="h-8 w-8 shrink-0" />
-            <div className="min-w-0">
-              <p className="truncate text-[0.72rem] font-black uppercase tracking-[0.08em]">{provinceName}</p>
-              <p className="mt-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-[#f6ca4a]">SK Federation Digital ID</p>
-            </div>
-          </div>
-          <LogoMark src={skfedLogoUrl} alt="Sangguniang Kabataan logo" className="h-[3rem] w-[3.6rem]" />
+      <div className="relative z-10 flex h-full flex-col px-[4.6%] py-[3.1%]">
+        <header className="grid grid-cols-[1fr_1fr_1fr] items-start gap-3">
+          {logo(sktechLogoUrl, "SKTECH logo", "h-[3.5rem] w-[6.3rem]")}
+          {logo(provincialSealUrl, "Province of Oriental Mindoro official seal", "mx-auto h-[4.45rem] w-[4.45rem]")}
+          {logo(skfedLogoUrl, "Sangguniang Kabataan logo", "ml-auto h-[4.15rem] w-[5rem]")}
         </header>
 
-        <div className="mt-3 grid min-h-0 flex-1 grid-cols-[24%_1fr_18%] gap-3">
-          <div className="official-id-photo-panel rounded-lg border border-[#d5e0ed] bg-white p-2">
-            <div className="relative aspect-[4/5] overflow-hidden rounded-md bg-[#e8eef6]">
-              <Image
-                src={displayPhotoUrl}
-                alt={`${fullName} official portrait`}
-                fill
-                className="object-cover"
-                sizes="180px"
-                priority
-                unoptimized={displayPhotoUrl.startsWith("/api/official/photo")}
-                onError={() => setFailedPhotoUrl(photoUrl)}
-              />
+        <div className="mt-[0.42rem] text-center">
+          <h2 className="text-[1.05rem] font-black uppercase leading-tight tracking-wide">
+            SK Federation Identification of {provinceName}
+          </h2>
+          <p className="mt-1 text-[0.78rem] font-black uppercase tracking-wide text-[#f2af00]">
+            SKTECH Digital Identification System
+          </p>
+          <div className="mx-auto mt-2 h-[0.14rem] w-[84%] bg-[#f2db84]" />
+        </div>
+
+        <div className="mt-[0.7rem] grid min-h-0 flex-1 grid-cols-[24%_1fr_18%] gap-[2.4%]">
+          <div>
+            <div className="relative aspect-[4/5] overflow-hidden rounded-md border border-[#c9c9c9] bg-[#eef3f9]">
+              {photo("180px")}
             </div>
-            <p className="mt-1.5 text-center text-[0.58rem] font-black uppercase tracking-[0.12em] text-[#61728b]">Profile Photo</p>
+            <p className="mt-1 text-center text-[0.66rem] font-black uppercase leading-tight">
+              Profile Photo
+            </p>
           </div>
 
-          <dl className="official-id-detail-panel grid content-start gap-2 rounded-lg border border-[#d5e0ed] bg-white p-3">
-            <FieldRow label="Full Name" value={displayName} />
-            <FieldRow label="SK Position" value={compact(displayPosition.toUpperCase(), 34)} />
-            <FieldRow label="Municipality" value={compact(municipality.toUpperCase(), 24)} />
-            <FieldRow label="Barangay" value={compact(barangay.toUpperCase(), 24)} />
-            <div className="mt-0.5 grid grid-cols-[9.2rem_1fr] items-center gap-2 text-[0.68rem] leading-tight text-[#09235d]">
+          <dl className="grid content-start gap-[0.58rem] pt-3">
+            {desktopRow("Full Name", compact(fullName.toUpperCase(), 34))}
+            {desktopRow("SK Position", compact(displayPosition.toUpperCase(), 34))}
+            {desktopRow("Municipality", compact(municipality.toUpperCase(), 24))}
+            {desktopRow("Barangay", compact(barangay.toUpperCase(), 24))}
+            <div className="grid grid-cols-[9.3rem_1fr] items-baseline gap-1 text-[0.68rem] leading-tight text-[#09235d]">
               <dt className="font-black uppercase">SKTECH ID Number</dt>
-              <dd className="font-black uppercase tracking-wide">{documentId}</dd>
+              <dd className="break-words text-[0.8rem] font-black uppercase tracking-wide">{documentId}</dd>
             </div>
-            <div className="grid grid-cols-[8.4rem_1fr] items-center gap-2 text-[0.68rem] leading-tight text-[#09235d]">
+            <div className="grid grid-cols-[8.4rem_1fr] items-baseline gap-2 text-[0.68rem] leading-tight text-[#09235d]">
               <dt className="font-black uppercase">Term of Service</dt>
               <dd className="text-[0.92rem] font-black uppercase tracking-wide">{serviceTerm}</dd>
             </div>
           </dl>
 
-          <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-[#d5e0ed] bg-white p-2">
-            <div className={`rounded-full px-2 py-1 text-center text-[0.52rem] font-black uppercase tracking-[0.08em] ${verified ? "bg-[#e8f5ef] text-[#167447]" : "bg-[#fff4d6] text-[#946700]"}`}>
-              {statusLabel}
+          <div className="flex flex-col items-center justify-center gap-2">
+            <div className={`rounded-full px-2 py-1 text-center text-[0.58rem] font-black uppercase leading-tight ${verified ? "bg-[#e8f5ef] text-[#167447]" : "bg-[#fff4d6] text-[#946700]"}`}>
+              {statusLabel} Status
             </div>
             <div className="rounded-md border border-[#d6d6d6] bg-white p-1">
               <QRCodeSVG value={qrValue} size={print ? 84 : 96} level="M" includeMargin />
@@ -301,383 +265,421 @@ export default function FlippablePortraitID({
             <p className="text-center text-[0.62rem] font-black uppercase tracking-wide">Scan to Verify</p>
           </div>
         </div>
-        <p className="official-id-watermark mt-2 text-center">{WATERMARK}</p>
-      </div>
-    </section>
-  );
 
-  const BackFace = () => (
-    <section className="official-id-face official-id-back absolute inset-0 overflow-hidden rounded-[0.72rem] border border-[#c9d6e7] bg-[#f7faff] text-[#172653] shadow-[0_28px_70px_-34px_rgba(2,6,23,0.75)] [backface-visibility:hidden] [transform:rotateY(180deg)]">
-
-      <div className="relative z-10 grid h-full grid-cols-[1.1fr_0.9fr_1fr] gap-3 px-[5.2%] py-[4.5%]">
-        <dl className="official-id-detail-panel self-start grid content-start gap-2 rounded-lg border border-[#d5e0ed] bg-white p-3">
-          <BackField icon="▣" label="Birth Date" value={formatDisplayDate(birthDate)} />
-          <BackField icon="○" label="Contact Number" value={contactNo || "Not recorded"} />
-          <BackField icon="✉" label="Email Address" value={email || "Not recorded"} />
-          <BackField icon="●" label="Complete Address" value={addressLine || "Not recorded"} />
-        </dl>
-
-        <dl className="official-id-detail-panel self-start grid content-start gap-2 rounded-lg border border-[#d5e0ed] bg-white p-3">
-          <BackField icon="▰" label="Date Elected" value={formatDisplayDate(dateElected)} />
-          <BackField icon="◷" label="Term Expiration" value={formatDisplayDate(termEnd)} />
-          <BackField icon="◆" label="Account Status" value={accountStatus || registryStatus || "Not recorded"} />
-        </dl>
-
-        <div className="self-start flex min-w-0 flex-col items-center rounded-lg border border-[#d5e0ed] bg-white p-3">
-          <p className="mb-2 text-center text-[0.62rem] font-black uppercase tracking-[0.08em]">
-            QR Verification Code
-          </p>
-          <div className="rounded-md bg-white p-1.5">
-            <QRCodeSVG value={qrValue} size={128} level="M" includeMargin />
-          </div>
-          <p className="mt-2 w-full text-center text-[0.62rem] font-medium leading-tight text-[#61728b]">
-            {verificationNote}
-          </p>
-        </div>
-
-        <div className="absolute bottom-[8%] left-[5.2%] w-[30%]">
-          <p className="text-center text-[0.58rem] font-black uppercase tracking-[0.1em]">Holder&apos;s Signature</p>
-          <div className="mt-1 h-3 border-b-2 border-[#172653]" />
-        </div>
-
-        <div className="absolute bottom-[5%] left-1/2 flex -translate-x-1/2 items-center gap-3 text-[#172653]">
-          <span className="text-[1.2rem] text-[#f5b300]">◎</span>
-          <span className="text-[0.82rem] font-black tracking-wide">{websiteUrl}</span>
-        </div>
-
-        <p className="absolute bottom-[3.2%] right-[4.2%] text-[0.52rem] font-semibold text-[#172653]">
-          Issued: {issued}
+        <p className="relative z-20 mt-1 text-center text-[0.47rem] font-black uppercase tracking-[0.08em] text-[#09235d]/55">
+          {WATERMARK}
         </p>
       </div>
     </section>
   );
 
-  const MobileFrontFace = () => (
-    <section className="official-id-mobile-face official-id-mobile-front absolute inset-0 overflow-y-auto rounded-2xl border border-[#c9d6e7] bg-[#f7faff] p-3 text-[#09235d] [backface-visibility:hidden]">
-      <header className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-xl bg-[#09235d] px-2.5 py-2 text-white">
-        <LogoMark src={sktechLogoUrl} alt="SKTECH logo" className="h-8 w-20" />
-        <div className="min-w-0 text-center">
-          <p className="truncate text-[0.62rem] font-black uppercase">{provinceName}</p>
-          <p className="mt-0.5 text-[0.5rem] font-semibold uppercase text-[#f6ca4a]">SK Federation Digital ID</p>
-        </div>
-        <LogoMark src={skfedLogoUrl} alt="Sangguniang Kabataan logo" className="h-9 w-11" />
-      </header>
-      <div className="mt-3 grid grid-cols-[34%_1fr] gap-2.5">
-        <div className="rounded-xl border border-[#d5e0ed] bg-white p-2">
-          <div className="relative aspect-[4/5] overflow-hidden rounded-lg bg-[#e8eef6]">
-            <Image src={displayPhotoUrl} alt={`${fullName} official portrait`} fill className="object-cover" sizes="140px" priority unoptimized={displayPhotoUrl.startsWith("/api/official/photo")} onError={() => setFailedPhotoUrl(photoUrl)} />
-          </div>
-          <p className="mt-1 text-center text-[0.5rem] font-black uppercase tracking-wide text-[#61728b]">Profile Photo</p>
-        </div>
-        <dl className="grid content-start gap-2 rounded-xl border border-[#d5e0ed] bg-white p-2.5">
-          <FieldRow label="Full Name" value={displayName} />
-          <FieldRow label="SK Position" value={compact(displayPosition.toUpperCase(), 28)} />
-          <FieldRow label="Municipality" value={compact(municipality.toUpperCase(), 22)} />
-          <FieldRow label="Barangay" value={compact(barangay.toUpperCase(), 22)} />
-          <FieldRow label="SKTECH ID" value={documentId} />
-          <FieldRow label="Term" value={serviceTerm} />
+  const DesktopBack = ({ print = false }: { print?: boolean }) => (
+    <section className={`id-face absolute inset-0 overflow-hidden rounded-[0.72rem] border border-[#d7c26c] bg-white text-[#172653] shadow-[0_28px_70px_-34px_rgba(2,6,23,0.75)] [backface-visibility:hidden] ${print ? "" : "[transform:rotateY(180deg)]"}`}>
+      <div className="id-soft-logo left-[-3%] top-[-4%] h-[38%] w-[43%]">
+        <Image src={sktechLogoUrl} alt="" fill className="object-contain opacity-15" sizes="390px" />
+      </div>
+      <div className="id-soft-logo bottom-[-20%] right-[-8%] h-[64%] w-[43%]">
+        <Image src={provincialSealUrl} alt="" fill className="object-contain opacity-20" sizes="340px" />
+      </div>
+      <div className="id-dots" />
+
+      <div className="relative z-10 grid h-full grid-cols-[41%_25%_1fr] gap-[3%] px-[5.2%] py-[4.2%]">
+        <dl className="grid content-start gap-2">
+          {infoBlock("Birth Date", formatDisplayDate(birthDate))}
+          {infoBlock("Contact Number", contactNo || "Not recorded")}
+          {infoBlock("Email Address", email || "Not recorded")}
+          {infoBlock("Complete Address", addressLine || "Not recorded")}
         </dl>
-      </div>
-      <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-[#d5e0ed] bg-white p-2.5">
-        <div>
-          <p className={`inline-flex rounded-full px-2 py-1 text-[0.52rem] font-black uppercase ${verified ? "bg-[#e8f5ef] text-[#167447]" : "bg-[#fff4d6] text-[#946700]"}`}>{statusLabel}</p>
-          <p className="mt-2 text-[0.56rem] font-black uppercase tracking-wide text-[#61728b]">Scan to Verify</p>
+
+        <dl className="grid content-start gap-2">
+          {infoBlock("Date Elected", formatDisplayDate(dateElected))}
+          {infoBlock("Term Expiration", formatDisplayDate(termEnd))}
+          {infoBlock("Account Status", accountStatus || registryStatus || "Not recorded")}
+        </dl>
+
+        <div className="flex min-w-0 flex-col items-center rounded-xl border border-[#d5e0ed] bg-white p-3">
+          <p className="mb-2 text-center text-[0.66rem] font-black uppercase tracking-wide">
+            QR Verification Code
+          </p>
+          <QRCodeSVG value={qrValue} size={126} level="M" includeMargin />
+          <p className="mt-2 text-[0.62rem] font-medium leading-tight text-[#172653]">
+            {contactInfo}
+          </p>
         </div>
-        <QRCodeSVG value={qrValue} size={112} level="M" includeMargin />
+
+        <div className="absolute bottom-[8%] left-[5.2%] w-[30%]">
+          <p className="text-center text-[0.62rem] font-black uppercase">Holder&apos;s Signature</p>
+          <div className="mt-1 h-3 border-b-2 border-[#172653]" />
+        </div>
+
+        <div className="absolute bottom-[5%] left-1/2 flex -translate-x-1/2 items-center gap-2 text-[#172653]">
+          <span aria-hidden="true" className="h-3.5 w-3.5 rounded-full border-2 border-[#f5b300]" />
+          <span className="text-[0.82rem] font-black tracking-wide">{websiteUrl}</span>
+        </div>
+
+        <p className="absolute bottom-[3.2%] right-[4.2%] text-[0.5rem] font-semibold text-[#172653]">
+          Issued: {issued}
+        </p>
+        <p className="absolute bottom-[1.6%] left-1/2 z-20 w-[88%] -translate-x-1/2 text-center text-[0.46rem] font-black uppercase tracking-[0.08em] text-[#09235d]/55">
+          {WATERMARK}
+        </p>
       </div>
-      <p className="mt-2 text-center text-[0.48rem] font-black uppercase tracking-wide text-[#61728b]">{WATERMARK}</p>
     </section>
   );
 
-  const MobileBackFace = () => (
-    <section className="official-id-mobile-face official-id-mobile-back absolute inset-0 overflow-y-auto rounded-2xl border border-[#c9d6e7] bg-[#f7faff] p-3 text-[#172653] [backface-visibility:hidden] [transform:rotateY(180deg)]">
-      <header className="rounded-xl bg-[#09235d] px-3 py-2 text-center text-white">
-        <p className="text-[0.62rem] font-black uppercase tracking-wide">Credential Verification</p>
-        <p className="mt-0.5 text-[0.5rem] text-[#f6ca4a]">SKTECH secure registry record</p>
+  const MobileSummary = () => (
+    <article className="w-full rounded-3xl border border-[#d5e0ed] bg-white p-4 text-[#09235d] shadow-[0_20px_50px_-30px_rgba(2,6,23,0.5)]">
+      <header className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-2xl bg-[#09235d] px-3 py-2 text-white">
+        {logo(sktechLogoUrl, "SKTECH logo", "h-9 w-20")}
+        <div className="min-w-0 text-center">
+          <p className="text-[0.62rem] font-black uppercase tracking-wide">Digital ID</p>
+          <p className="mt-0.5 truncate text-[0.55rem] font-semibold text-[#f6ca4a]">{provinceName}</p>
+        </div>
+        {logo(skfedLogoUrl, "Sangguniang Kabataan logo", "h-10 w-11")}
       </header>
-      <div className="mt-3 grid gap-2.5">
-        <dl className="grid gap-2 rounded-xl border border-[#d5e0ed] bg-white p-2.5">
-          <BackField icon="▣" label="Birth Date" value={formatDisplayDate(birthDate)} />
-          <BackField icon="○" label="Contact Number" value={contactNo || "Not recorded"} />
-          <BackField icon="✉" label="Email Address" value={email || "Not recorded"} />
-          <BackField icon="●" label="Complete Address" value={addressLine || "Not recorded"} />
-        </dl>
-        <dl className="grid gap-2 rounded-xl border border-[#d5e0ed] bg-white p-2.5">
-          <BackField icon="▰" label="Date Elected" value={formatDisplayDate(dateElected)} />
-          <BackField icon="◷" label="Term Expiration" value={formatDisplayDate(termEnd)} />
-          <BackField icon="◆" label="Account Status" value={accountStatus || registryStatus || "Not recorded"} />
-        </dl>
-        <div className="flex flex-col items-center rounded-xl border border-[#d5e0ed] bg-white p-3">
-          <p className="text-center text-[0.62rem] font-black uppercase tracking-wide">QR Verification Code</p>
-          <div className="mt-2 rounded-md bg-white p-1"><QRCodeSVG value={qrValue} size={148} level="M" includeMargin /></div>
-          <p className="mt-2 text-center text-[0.6rem] leading-tight text-[#61728b]">{verificationNote}</p>
+
+      <div className="mt-4 grid grid-cols-[6.2rem_1fr] gap-3">
+        <div>
+          <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-[#d5e0ed] bg-[#eef3f9]">
+            {photo("120px")}
+          </div>
+          <span className={`mt-2 inline-flex w-full justify-center rounded-full px-2 py-1 text-[0.62rem] font-black uppercase ${verified ? "bg-[#e8f5ef] text-[#167447]" : "bg-[#fff4d6] text-[#946700]"}`}>
+            {statusLabel}
+          </span>
+        </div>
+
+        <div className="min-w-0">
+          <h2 className="break-words text-xl font-black leading-tight">{fullName}</h2>
+          <p className="mt-1 break-words text-sm font-bold uppercase text-[#d79a00]">{displayPosition}</p>
+          <dl className="mt-3 space-y-2 text-sm">
+            <div>
+              <dt className="text-[0.62rem] font-black uppercase tracking-wide text-[#61728b]">Municipality</dt>
+              <dd className="break-words font-bold">{municipality}</dd>
+            </div>
+            <div>
+              <dt className="text-[0.62rem] font-black uppercase tracking-wide text-[#61728b]">Barangay</dt>
+              <dd className="break-words font-bold">{barangay}</dd>
+            </div>
+            <div>
+              <dt className="text-[0.62rem] font-black uppercase tracking-wide text-[#61728b]">SKTECH ID</dt>
+              <dd className="break-all font-mono text-xs font-black">{documentId}</dd>
+            </div>
+          </dl>
         </div>
       </div>
-      <div className="mt-3 rounded-xl border border-[#d5e0ed] bg-white p-2.5 text-center">
-        <p className="text-[0.58rem] font-black uppercase tracking-wide">Holder&apos;s Signature</p>
-        <div className="mt-2 h-4 border-b-2 border-[#172653]" />
-        <p className="mt-2 text-[0.68rem] font-black">{websiteUrl}</p>
-        <p className="mt-1 text-[0.5rem] text-[#61728b]">Issued: {issued}</p>
+
+      <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-[#d5e0ed] bg-[#f7faff] p-3">
+        <div>
+          <p className="text-xs font-black uppercase tracking-wide">QR Verification</p>
+          <p className="mt-1 text-[0.66rem] font-semibold text-[#61728b]">Scan to verify live registry data.</p>
+        </div>
+        <div className="shrink-0 rounded-lg bg-white p-1">
+          <QRCodeSVG value={qrValue} size={88} level="M" includeMargin />
+        </div>
+      </div>
+    </article>
+  );
+
+  const MobileViewer = () => (
+    <section className="w-full max-w-[430px] rounded-3xl border border-glass-border bg-surface p-3 shadow-[0_24px_70px_-34px_var(--shadow-color)]">
+      <header className="mb-3 flex items-start justify-between gap-3 px-1">
+        <div className="min-w-0">
+          <p className="text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-accent">SKTech Governance Registry</p>
+          <h2 className="mt-1 break-words text-lg font-bold text-foreground">
+            Sangguniang Kabataan Official Credential
+          </h2>
+        </div>
+        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[0.62rem] font-black uppercase tracking-wide ${verified ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300" : "bg-amber-500/15 text-amber-700 dark:text-amber-300"}`}>
+          {verified ? "Active" : "Pending"}
+        </span>
+      </header>
+
+      <div className="grid grid-cols-2 rounded-2xl border border-glass-border bg-surface-elevated/55 p-1 text-xs font-semibold text-muted">
+        <button
+          type="button"
+          onClick={() => setIsFlipped(false)}
+          className={`rounded-xl px-3 py-2 transition ${!isFlipped ? "bg-accent text-accent-foreground" : "hover:bg-white/10"}`}
+        >
+          Front
+        </button>
+        <button
+          type="button"
+          onClick={() => setIsFlipped(true)}
+          className={`rounded-xl px-3 py-2 transition ${isFlipped ? "bg-accent text-accent-foreground" : "hover:bg-white/10"}`}
+        >
+          Back
+        </button>
+      </div>
+
+      <div className="mt-3">
+        {!isFlipped ? (
+          <div className="rounded-3xl bg-white p-4 text-[#09235d]">
+            <header className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-2xl bg-[#09235d] px-3 py-2 text-white">
+              {logo(sktechLogoUrl, "SKTECH logo", "h-9 w-20")}
+              {logo(provincialSealUrl, "Province of Oriental Mindoro official seal", "mx-auto h-10 w-10")}
+              {logo(skfedLogoUrl, "Sangguniang Kabataan logo", "ml-auto h-10 w-11")}
+            </header>
+
+            <div className="mt-4 flex flex-col items-center text-center">
+              <div className="relative h-40 w-32 overflow-hidden rounded-2xl border border-[#d5e0ed] bg-[#eef3f9]">
+                {photo("140px")}
+              </div>
+              <h3 className="mt-3 max-w-full break-words text-2xl font-black leading-tight">{fullName}</h3>
+              <p className="mt-1 break-words text-sm font-bold uppercase text-[#d79a00]">{displayPosition}</p>
+            </div>
+
+            <dl className="mt-4 grid gap-2 text-sm">
+              {infoBlock("Municipality", municipality)}
+              {infoBlock("Barangay", barangay)}
+              {infoBlock("SKTECH ID", documentId)}
+              {infoBlock("Term of Service", serviceTerm)}
+              {infoBlock("Status", `${statusLabel} - ${registryStatus}`)}
+            </dl>
+
+            <div className="mt-4 rounded-2xl border border-[#d5e0ed] bg-[#f7faff] p-3 text-center">
+              <p className="text-xs font-black uppercase tracking-wide">QR Verification</p>
+              <div className="mt-2 inline-block rounded-lg bg-white p-1">
+                <QRCodeSVG value={qrValue} size={156} level="M" includeMargin />
+              </div>
+              <p className="mt-2 text-xs font-black uppercase tracking-wide">Scan to Verify</p>
+            </div>
+            <p className="mt-3 text-center text-[0.6rem] font-black uppercase tracking-wide text-[#61728b]">{WATERMARK}</p>
+          </div>
+        ) : (
+          <div className="rounded-3xl bg-white p-4 text-[#172653]">
+            <h3 className="text-base font-black uppercase tracking-wide">Holder Details</h3>
+            <dl className="mt-3 grid gap-2 text-sm">
+              {infoBlock("Birth Date", formatDisplayDate(birthDate))}
+              {infoBlock("Contact Number", contactNo || "Not recorded")}
+              {infoBlock("Email Address", email || "Not recorded")}
+              {infoBlock("Complete Address", addressLine || "Not recorded")}
+            </dl>
+
+            <h3 className="mt-4 text-base font-black uppercase tracking-wide">Term Details</h3>
+            <dl className="mt-3 grid gap-2 text-sm">
+              {infoBlock("Date Elected", formatDisplayDate(dateElected))}
+              {infoBlock("Term Expiration", formatDisplayDate(termEnd))}
+              {infoBlock("Account Status", accountStatus || registryStatus || "Not recorded")}
+            </dl>
+
+            <div className="mt-4 rounded-2xl border border-[#d5e0ed] bg-[#f7faff] p-3 text-center">
+              <p className="text-xs font-black uppercase tracking-wide">Verification</p>
+              <div className="mt-2 inline-block rounded-lg bg-white p-1">
+                <QRCodeSVG value={qrValue} size={164} level="M" includeMargin />
+              </div>
+              <p className="mt-2 break-words text-sm font-black">{websiteUrl}</p>
+              <p className="mt-1 text-xs text-[#61728b]">Issued: {issued}</p>
+              <p className="mt-2 text-xs leading-snug text-[#61728b]">{contactInfo}</p>
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-[#d5e0ed] bg-white p-3 text-center">
+              <p className="text-xs font-black uppercase tracking-wide">Holder&apos;s Signature</p>
+              <div className="mt-3 h-5 border-b-2 border-[#172653]" />
+            </div>
+            <p className="mt-3 text-center text-[0.6rem] font-black uppercase tracking-wide text-[#61728b]">{WATERMARK}</p>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <Link href={closeHref} className="inline-flex h-11 items-center justify-center rounded-xl border border-glass-border bg-surface-elevated px-3 text-sm font-semibold text-foreground">
+          Close / Back
+        </Link>
+        <a href={qrValue} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center justify-center rounded-xl bg-accent px-3 text-sm font-semibold text-accent-foreground">
+          Verify QR
+        </a>
       </div>
     </section>
   );
+
+  const desktopShell = (
+    <div className="mx-auto w-full max-w-[920px]">
+      <div className="id-screen-controls mb-3 grid w-full max-w-[18rem] grid-cols-2 rounded-lg border border-white/10 bg-surface-elevated/55 p-1 text-xs font-semibold text-muted">
+        <button
+          type="button"
+          onClick={() => setIsFlipped(false)}
+          className={`rounded-md px-3 py-2 transition ${!isFlipped ? "bg-accent text-accent-foreground" : "hover:bg-white/10"}`}
+        >
+          Front
+        </button>
+        <button
+          type="button"
+          onClick={() => setIsFlipped(true)}
+          className={`rounded-md px-3 py-2 transition ${isFlipped ? "bg-accent text-accent-foreground" : "hover:bg-white/10"}`}
+        >
+          Back
+        </button>
+      </div>
+
+      <div className="id-screen-card [perspective:1800px]">
+        <div
+          ref={cardRef}
+          role="button"
+          tabIndex={0}
+          aria-label="Digital ID card"
+          onClick={() => setIsFlipped((previous) => !previous)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              setIsFlipped((previous) => !previous);
+            }
+          }}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={() => {
+            targetRef.current = { x: 0, y: 0 };
+            startTilt();
+          }}
+          className="relative aspect-[856/540] w-full cursor-pointer rounded-[0.72rem] outline-none [transform-style:preserve-3d] transition-transform duration-700 [transition-timing-function:cubic-bezier(0.2,0.8,0.2,1)] focus-visible:ring-2 focus-visible:ring-[#f5b300]"
+          style={{ transform }}
+        >
+          <DesktopFront />
+          <DesktopBack />
+        </div>
+      </div>
+
+      <div className="id-print-stack hidden">
+        <div className="official-id-print-card relative aspect-[856/540] overflow-hidden">
+          <DesktopFront print />
+        </div>
+        <div className="official-id-print-card relative aspect-[856/540] overflow-hidden">
+          <DesktopBack print />
+        </div>
+      </div>
+    </div>
+  );
+
+  if (variant === "dashboardPreview" || variant === "mobilePreview") {
+    return (
+      <div className={className ?? ""}>
+        <MobileSummary />
+        <IDStyles />
+      </div>
+    );
+  }
+
+  if (variant === "mobileFull" || variant === "mobileViewer") {
+    return (
+      <div className={className ?? ""}>
+        <MobileViewer />
+        <IDStyles />
+      </div>
+    );
+  }
 
   return (
     <div className={className ?? ""}>
-      <div className={`${useMobileFace ? "mx-auto w-full max-w-[430px]" : "mx-auto w-full max-w-[920px]"} ${useMobileFace ? "rounded-3xl border border-glass-border bg-surface p-3 shadow-[0_24px_70px_-34px_var(--shadow-color)]" : ""}`}>
-        {useMobileFace ? (
-          <header className="mb-3 flex items-start justify-between gap-3 px-1">
-            <div>
-              <p className="text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-accent">SKTECH Governance Registry</p>
-              <h2 className="mt-1 text-lg font-bold text-foreground">Digital ID</h2>
-              <p className="mt-0.5 text-[0.64rem] text-muted">Sangguniang Kabataan Official Credential</p>
-            </div>
-            <span className={`mt-1 rounded-full px-2.5 py-1 text-[0.62rem] font-black uppercase tracking-wide ${verified ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300" : "bg-amber-500/15 text-amber-700 dark:text-amber-300"}`}>
-              {verified ? "Digital ID is Active" : "Digital ID is Pending"}
-            </span>
-          </header>
-        ) : null}
-
-        <div className="id-screen-controls mb-3 grid w-full max-w-[18rem] grid-cols-2 rounded-lg border border-white/10 bg-surface-elevated/55 p-1 text-xs font-semibold text-muted">
-          <button
-            type="button"
-            onClick={() => setIsFlipped(false)}
-            className={`rounded-md px-3 py-2 transition ${!isFlipped ? "bg-accent text-accent-foreground" : "hover:bg-white/10"}`}
-          >
-            Front
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsFlipped(true)}
-            className={`rounded-md px-3 py-2 transition ${isFlipped ? "bg-accent text-accent-foreground" : "hover:bg-white/10"}`}
-          >
-            Back
-          </button>
-        </div>
-
-        {useMobileFace ? (
-          <p className="mb-2 text-center text-xs text-muted">{isFlipped ? "Back of credential" : "Front of credential"}</p>
-        ) : null}
-
-        <div
-          ref={previewFrameRef}
-          className={`id-screen-card [perspective:1800px] ${isMobilePreview ? "id-mobile-preview-frame" : useMobileFace ? "id-mobile-full-frame" : ""}`}
-          style={isMobilePreview ? { height: `${540 * previewScale}px` } : useMobileFace ? { height: "760px" } : undefined}
-        >
-          <div
-            ref={cardRef}
-            role="button"
-            tabIndex={0}
-            aria-label="Digital ID card"
-            onClick={() => setIsFlipped((previous) => !previous)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                setIsFlipped((previous) => !previous);
-              }
-            }}
-            onMouseMove={handleMouseMove}
-            onMouseLeave={() => {
-              targetRef.current = { x: 0, y: 0 };
-              startTilt();
-            }}
-            className={`relative cursor-pointer rounded-[0.72rem] outline-none [transform-style:preserve-3d] transition-transform duration-700 [transition-timing-function:cubic-bezier(0.2,0.8,0.2,1)] focus-visible:ring-2 focus-visible:ring-[#f5b300] ${isMobilePreview ? "id-mobile-preview-card aspect-[856/540] w-full" : useMobileFace ? "id-mobile-full-card h-full w-full" : "aspect-[856/540] w-full"}`}
-            style={{
-              transform: isMobilePreview ? `scale(${previewScale}) ${transform}` : transform,
-            }}
-          >
-            {useMobileFace ? <MobileFrontFace /> : <FrontFace />}
-            {useMobileFace ? <MobileBackFace /> : <BackFace />}
-          </div>
-        </div>
-
-        <div className="id-print-stack hidden">
-          <div className="official-id-print-card relative aspect-[856/540] overflow-hidden">
-            <FrontFace print />
-          </div>
-          <div className="official-id-print-card relative aspect-[856/540] overflow-hidden">
-            <BackFace />
-          </div>
-        </div>
-
-        {useMobileFace ? (
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <Link href={closeHref} className="inline-flex h-11 items-center justify-center rounded-xl border border-glass-border bg-surface-elevated px-3 text-sm font-semibold text-foreground">
-              Close / Back
-            </Link>
-            <a href={qrValue} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center justify-center rounded-xl bg-accent px-3 text-sm font-semibold text-accent-foreground">
-              Verify QR
-            </a>
-          </div>
-        ) : null}
+      <div className="sm:hidden">
+        <MobileViewer />
       </div>
-
-      <style>{`
-        .official-id-face {
-          isolation: isolate;
-          font-family: Arial, Helvetica, sans-serif;
-        }
-
-        .official-id-mobile-face {
-          isolation: isolate;
-          font-family: Arial, Helvetica, sans-serif;
-        }
-
-        .id-mobile-preview-card,
-        .id-mobile-full-card {
-          transform-origin: top left;
-        }
-
-        .official-id-face::after {
-          content: "";
-          pointer-events: none;
-          position: absolute;
-          inset: 0;
-          background:
-            radial-gradient(circle at var(--id-shine-x, 50%) var(--id-shine-y, 40%), rgba(255, 255, 255, 0.38), transparent 28%),
-            linear-gradient(115deg, transparent 38%, rgba(255, 255, 255, 0.16) 49%, transparent 60%);
-          opacity: 0.32;
-          mix-blend-mode: soft-light;
-        }
-
-        .official-id-corner {
-          pointer-events: none;
-          position: absolute;
-          z-index: 1;
-        }
-
-        .official-id-corner-top-left {
-          left: -2%;
-          top: -4%;
-          width: 22%;
-          height: 20%;
-          background:
-            linear-gradient(135deg, transparent 0 30%, #779bc6 30% 32%, transparent 32% 42%, #9eb4d2 42% 44%, transparent 44% 59%, #f7c600 59% 64%, transparent 64%),
-            linear-gradient(135deg, transparent 0 62%, #f7c600 62% 67%, transparent 67%);
-        }
-
-        .official-id-corner-right {
-          right: -3%;
-          top: 31%;
-          width: 13%;
-          height: 25%;
-          background:
-            linear-gradient(135deg, transparent 0 30%, #f7c600 30% 38%, transparent 38% 62%, #7d8daa 62% 65%, transparent 65% 75%, #7d8daa 75% 78%, transparent 78%);
-        }
-
-        .official-id-dot-grid {
-          pointer-events: none;
-          position: absolute;
-          z-index: 1;
-          width: 12%;
-          height: 7%;
-          background-image: radial-gradient(circle, #09235d 1.2px, transparent 1.6px);
-          background-size: 9px 9px;
-        }
-
-        .official-id-dot-grid::after {
-          content: "";
-          position: absolute;
-          inset: 0;
-          background-image: radial-gradient(circle, #f7c600 1.2px, transparent 1.6px);
-          background-size: 27px 9px;
-          opacity: 0.85;
-        }
-
-        .official-id-dot-grid-front,
-        .official-id-dot-grid-back {
-          bottom: 3%;
-          left: 2.4%;
-        }
-
-        .official-id-subtle-logo,
-        .official-id-seal-watermark {
-          pointer-events: none;
-          position: absolute;
-          z-index: 0;
-        }
-
-        .official-id-subtle-logo-left {
-          left: 4%;
-          top: 7%;
-          width: 40%;
-          height: 38%;
-          opacity: 0.4;
-        }
-
-        .official-id-subtle-logo-back {
-          left: -2%;
-          top: -3%;
-          width: 43%;
-          height: 34%;
-          opacity: 0.42;
-        }
-
-        .official-id-seal-watermark {
-          right: -9%;
-          bottom: -22%;
-          width: 44%;
-          height: 64%;
-          opacity: 0.7;
-        }
-
-        .official-id-back-divider {
-          position: absolute;
-          left: 43%;
-          top: 7%;
-          bottom: 33%;
-          width: 2px;
-          background: #f2db84;
-        }
-
-        .official-id-watermark {
-          color: rgba(9, 35, 93, 0.42);
-          font-size: 0.48rem;
-          font-weight: 900;
-          letter-spacing: 0.08em;
-          text-align: center;
-          text-transform: uppercase;
-          white-space: nowrap;
-        }
-
-        @media (max-width: 640px) {
-          .official-id-face {
-            font-size: clamp(0.52rem, 1.55vw, 1rem);
-          }
-        }
-
-        @page {
-          size: 85.6mm 54mm;
-          margin: 0;
-        }
-
-        @media print {
-          body {
-            background: #fff !important;
-          }
-
-          .id-screen-controls,
-          .id-screen-card {
-            display: none !important;
-          }
-
-          .id-print-stack {
-            display: block !important;
-          }
-
-          .official-id-print-card {
-            width: 85.6mm !important;
-            height: 54mm !important;
-            page-break-after: always;
-            break-after: page;
-          }
-
-          .official-id-print-card .official-id-face {
-            border-radius: 0 !important;
-            box-shadow: none !important;
-          }
-        }
-      `}</style>
+      <div className="hidden sm:block">{desktopShell}</div>
+      <IDStyles />
     </div>
+  );
+}
+
+function IDStyles() {
+  return (
+    <style>{`
+      .id-face {
+        isolation: isolate;
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      .id-face::after {
+        content: "";
+        pointer-events: none;
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(circle at var(--id-shine-x, 50%) var(--id-shine-y, 40%), rgba(255, 255, 255, 0.38), transparent 28%),
+          linear-gradient(115deg, transparent 38%, rgba(255, 255, 255, 0.16) 49%, transparent 60%);
+        opacity: 0.32;
+        mix-blend-mode: soft-light;
+      }
+
+      .id-corner {
+        pointer-events: none;
+        position: absolute;
+        z-index: 1;
+      }
+
+      .id-corner-left {
+        left: -2%;
+        top: -4%;
+        width: 22%;
+        height: 20%;
+        background:
+          linear-gradient(135deg, transparent 0 30%, #779bc6 30% 32%, transparent 32% 42%, #9eb4d2 42% 44%, transparent 44% 59%, #f7c600 59% 64%, transparent 64%),
+          linear-gradient(135deg, transparent 0 62%, #f7c600 62% 67%, transparent 67%);
+      }
+
+      .id-corner-right {
+        right: -3%;
+        top: 31%;
+        width: 13%;
+        height: 25%;
+        background:
+          linear-gradient(135deg, transparent 0 30%, #f7c600 30% 38%, transparent 38% 62%, #7d8daa 62% 65%, transparent 65% 75%, #7d8daa 75% 78%, transparent 78%);
+      }
+
+      .id-dots {
+        pointer-events: none;
+        position: absolute;
+        z-index: 1;
+        bottom: 3%;
+        left: 2.4%;
+        width: 12%;
+        height: 7%;
+        background-image: radial-gradient(circle, #09235d 1.2px, transparent 1.6px);
+        background-size: 9px 9px;
+      }
+
+      .id-dots::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image: radial-gradient(circle, #f7c600 1.2px, transparent 1.6px);
+        background-size: 27px 9px;
+        opacity: 0.85;
+      }
+
+      .id-soft-logo {
+        pointer-events: none;
+        position: absolute;
+        z-index: 0;
+      }
+
+      @page {
+        size: 85.6mm 54mm;
+        margin: 0;
+      }
+
+      @media print {
+        body {
+          background: #fff !important;
+        }
+
+        .id-screen-controls,
+        .id-screen-card {
+          display: none !important;
+        }
+
+        .id-print-stack {
+          display: block !important;
+        }
+
+        .official-id-print-card {
+          width: 85.6mm !important;
+          height: 54mm !important;
+          page-break-after: always;
+          break-after: page;
+        }
+
+        .official-id-print-card .id-face {
+          border-radius: 0 !important;
+          box-shadow: none !important;
+        }
+      }
+    `}</style>
   );
 }

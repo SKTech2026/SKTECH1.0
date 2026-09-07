@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Role } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import {
   CalendarDays,
@@ -15,16 +14,14 @@ import FlippablePortraitID from "@/components/id/FlippablePortraitID";
 import { authOptions } from "@/lib/auth";
 import { getActiveAnnouncements } from "@/lib/announcements";
 import { prisma } from "@/lib/db";
-import { requireDashboardRole } from "@/lib/roleGuard";
+import { requireOfficialFeatureAccess } from "@/lib/roleGuard";
+import { formatEnumLabel, formatOfficialFullName } from "@/lib/sk-official";
 
 export const dynamic = "force-dynamic";
 
 export default async function MobileOfficialPage() {
   const session = await getServerSession(authOptions);
-  const authorized = requireDashboardRole(session, [Role.OFFICIAL], {
-    unauthenticatedRedirect: "/official/auth",
-    requireApproved: false,
-  });
+  const authorized = await requireOfficialFeatureAccess(session);
 
   const user = await prisma.user.findUnique({
     where: { id: authorized.user.id },
@@ -39,11 +36,21 @@ export default async function MobileOfficialPage() {
           firstName: true,
           middleName: true,
           lastName: true,
+          suffix: true,
           barangay: true,
           municipality: true,
           role: true,
+          position: true,
+          skFederationOfficer: true,
+          skFederationPosition: true,
+          dateElected: true,
           termStart: true,
           termEnd: true,
+          birthDate: true,
+          contactNo: true,
+          email: true,
+          address: true,
+          admissionStatus: true,
           status: true,
           attendances: {
             orderBy: { createdAt: "desc" },
@@ -69,15 +76,10 @@ export default async function MobileOfficialPage() {
     );
   }
 
-  const fullName = `${user.official.firstName}${
-    user.official.middleName ? ` ${user.official.middleName}` : ""
-  } ${user.official.lastName}`.trim();
-  const termPeriod = `${user.official.termStart.toLocaleDateString()} - ${
-    user.official.termEnd?.toLocaleDateString() ?? "Active"
-  }`;
   const qrValue = `/id/${user.official.id}`;
   const photoUrl =
     user.image && user.image.startsWith("/") ? user.image : "/images/default-official.svg";
+  const fullName = formatOfficialFullName(user.official);
 
   return (
     <div className="space-y-4">
@@ -123,17 +125,27 @@ export default async function MobileOfficialPage() {
       <section className="rounded-2xl border border-glass-border bg-surface p-3">
         <FlippablePortraitID
           fullName={fullName}
-          position={user.official.role}
+          position={formatEnumLabel(user.official.position ?? user.official.role)}
+          skfedPosition={
+            user.official.skFederationOfficer
+              ? formatEnumLabel(user.official.skFederationPosition)
+              : null
+          }
           barangay={user.official.barangay ?? "N/A"}
           municipality={user.official.municipality ?? "N/A"}
-          termPeriod={termPeriod}
-          idNumber={user.official.id.slice(0, 12).toUpperCase()}
+          dateElected={(user.official.dateElected ?? user.official.termStart).toISOString()}
+          termEnd={user.official.termEnd?.toISOString() ?? null}
+          birthDate={user.official.birthDate?.toISOString() ?? null}
+          contactNo={user.official.contactNo}
+          email={user.official.email}
+          address={user.official.address}
+          admissionStatus={user.official.admissionStatus}
+          registryStatus={user.official.status}
+          accountStatus={user.official.status}
+          idNumber={user.official.id.replace(/-/g, "").slice(-12).toUpperCase()}
           qrValue={qrValue}
           photoUrl={photoUrl}
           variant="dashboardPreview"
-          skfedLogoUrl="/assets/logos/sk-logo-new.png"
-          provincialSealUrl="/assets/logos/official-seal-logo-new.png"
-          sktechLogoUrl="/assets/logos/sktech-logo-new.png"
           className="mx-auto max-w-full"
         />
 

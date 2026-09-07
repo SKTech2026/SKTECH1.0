@@ -119,9 +119,6 @@ export default async function OfficialDigitalIdPage() {
               qrValue={`/id/${user.official.id}`}
               photoUrl={photoUrl}
               registryStatus={user.official.status}
-              sktechLogoUrl="/assets/logos/sktech-logo-new.png"
-              provincialSealUrl="/assets/logos/official-seal-logo-new.png"
-              skfedLogoUrl="/assets/logos/sk-logo-new.png"
             />
           </div>
         </article>

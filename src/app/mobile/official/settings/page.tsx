@@ -73,7 +73,7 @@ export default async function MobileOfficialSettingsPage() {
         </div>
         <p className="mt-2 text-sm text-muted">Profile and photo changes require Municipal Staff approval before appearing on your Digital ID.</p>
         {pendingRequest ? <p className="mt-3 rounded-xl border border-amber-300/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">A profile update is awaiting Staff review. Your approved Digital ID data remains active.</p> : null}
-        <Link href="/dashboard/official/profile" className="mt-3 inline-flex rounded-xl border border-glass-border px-3 py-2 text-sm font-semibold text-foreground hover:bg-surface-elevated">Manage Profile</Link>
+        <Link href="/mobile/official/profile" className="mt-3 inline-flex rounded-xl border border-glass-border px-3 py-2 text-sm font-semibold text-foreground hover:bg-surface-elevated">Manage Profile</Link>
       </section>
 
       <section className="rounded-2xl border border-glass-border bg-surface p-4">

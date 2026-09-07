@@ -1,5 +1,6 @@
 import FlippablePortraitID from "@/components/id/FlippablePortraitID";
 import { headers } from "next/headers";
+import { AdmissionStatus, OfficialStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { formatEnumLabel, formatOfficialFullName } from "@/lib/sk-official";
 
@@ -20,9 +21,11 @@ export default async function IDPage({
     .replace(/\/+$/, "");
   const baseUrl = configuredBaseUrl || requestBaseUrl;
 
-  const official = await prisma.sKOfficial.findUnique({
+  const official = await prisma.sKOfficial.findFirst({
     where: {
       id,
+      admissionStatus: AdmissionStatus.APPROVED,
+      status: OfficialStatus.ACTIVE,
     },
     select: {
       id: true,
@@ -30,6 +33,7 @@ export default async function IDPage({
       middleName: true,
       lastName: true,
       suffix: true,
+      birthDate: true,
       role: true,
       position: true,
       skFederationOfficer: true,
@@ -39,6 +43,9 @@ export default async function IDPage({
       sitio: true,
       dateElected: true,
       termStart: true,
+      termEnd: true,
+      contactNo: true,
+      email: true,
       address: true,
       admissionStatus: true,
       status: true,
@@ -105,14 +112,18 @@ export default async function IDPage({
           sitio={official.sitio}
           skfedPosition={skfedPosition}
           dateElected={(official.dateElected ?? official.termStart).toISOString()}
+          termEnd={official.termEnd?.toISOString() ?? null}
+          birthDate={official.birthDate?.toISOString() ?? null}
+          contactNo={official.contactNo}
+          email={official.email}
+          address={official.address}
+          admissionStatus={official.admissionStatus}
+          accountStatus={official.status}
           registryStatus={official.status}
           photoUrl={photoUrl}
           qrValue={`${baseUrl}/id/${official.id}`}
           idNumber={idNumber}
           provinceName="ORIENTAL MINDORO"
-          skfedLogoUrl="/assets/logos/sk-logo-new.png"
-          provincialSealUrl="/assets/logos/official-seal-logo-new.png"
-          sktechLogoUrl="/assets/logos/sktech-logo-new.png"
           variant="mobileViewer"
           closeHref="/"
           issuedDate={new Intl.DateTimeFormat("en-US", {
