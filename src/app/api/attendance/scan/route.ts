@@ -103,8 +103,11 @@ export async function POST(
     }
 
     if (eventId && typeof eventId === "string") {
-      const event = await prisma.event.findUnique({
-        where: { id: eventId },
+      const event = await prisma.event.findFirst({
+        where: {
+          id: eventId,
+          ...(staffMunicipalityId ? { municipalityId: staffMunicipalityId } : {}),
+        },
       });
       if (!event) {
         return NextResponse.json({ error: "Event not found" }, { status: 404 });

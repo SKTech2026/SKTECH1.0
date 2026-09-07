@@ -17,6 +17,7 @@ export type EventManagementItem = {
 type EventsManagementClientProps = {
   initialEvents: EventManagementItem[];
   eventBasePath?: string;
+  compact?: boolean;
 };
 
 const formatDateTime = (value: string) => {
@@ -37,6 +38,7 @@ const formatDateTime = (value: string) => {
 export default function EventsManagementClient({
   initialEvents,
   eventBasePath = "/dashboard/events",
+  compact = false,
 }: EventsManagementClientProps) {
   const [events, setEvents] = useState<EventManagementItem[]>(initialEvents);
   const [isLoadingEvents, setIsLoadingEvents] = useState(
@@ -236,6 +238,49 @@ export default function EventsManagementClient({
           </div>
         ) : null}
 
+        {compact ? (
+          <div className="space-y-3 p-3">
+            {isLoadingEvents ? (
+              <p className="px-2 py-8 text-center text-sm text-muted">Loading events...</p>
+            ) : events.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-glass-border px-3 py-8 text-center text-sm text-muted">
+                No events found.
+              </p>
+            ) : (
+              events.map((event) => (
+                <article key={event.id} className="rounded-xl border border-glass-border bg-surface p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="break-words text-sm font-semibold text-foreground">{event.title}</h3>
+                      <p className="mt-1 text-xs text-muted">{formatDateTime(event.eventDate)}</p>
+                    </div>
+                    <span className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-semibold ${event.announcementStatus === "ACTIVE" ? "bg-emerald-500/15 text-emerald-300" : "bg-surface-elevated text-muted"}`}>
+                      {event.announcementStatus}
+                    </span>
+                  </div>
+                  <p className="mt-3 break-words text-xs leading-5 text-muted">{event.description || "No description"}</p>
+                  <p className="mt-2 text-xs text-muted">Attendance: {event.totalAttendanceCount}</p>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void handleDeleteEvent(event.id, event.title)}
+                      disabled={deletingEventId === event.id}
+                      className="rounded-lg bg-red-700 px-3 py-2 text-xs font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                      {deletingEventId === event.id ? "Deleting..." : "Delete"}
+                    </button>
+                    <Link
+                      href={`${eventBasePath}/${event.id}`}
+                      className="rounded-lg bg-surface-elevated px-3 py-2 text-center text-xs font-medium text-foreground"
+                    >
+                      View Attendance
+                    </Link>
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+        ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm text-foreground">
             <thead className="bg-surface-elevated">
@@ -322,6 +367,7 @@ export default function EventsManagementClient({
             </tbody>
           </table>
         </div>
+        )}
       </div>
 
       {isCreateModalOpen ? (

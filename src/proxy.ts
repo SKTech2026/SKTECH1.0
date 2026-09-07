@@ -16,6 +16,7 @@ type RoleRule = {
     | "/dashboard/officials"
     | "/dashboard/events"
     | "/dashboard/scan"
+    | "/mobile/staff"
     | "/mobile/staff-scanner"
     | "/mobile/official";
   allowed: AppRole[];
@@ -35,6 +36,7 @@ const ROLE_RULES: RoleRule[] = [
   { prefix: "/dashboard/officials", allowed: ["ADMIN", "STAFF"], requiresApproved: true },
   { prefix: "/dashboard/events", allowed: ["ADMIN", "STAFF"], requiresApproved: true },
   { prefix: "/dashboard/scan", allowed: ["ADMIN", "STAFF"], requiresApproved: true },
+  { prefix: "/mobile/staff", allowed: ["STAFF"], requiresApproved: true },
   { prefix: "/mobile/staff-scanner", allowed: ["STAFF"], requiresApproved: true },
   {
     prefix: "/mobile/official",
@@ -138,6 +140,7 @@ export const config = {
     "/dashboard/officials/:path*",
     "/dashboard/events/:path*",
     "/dashboard/scan/:path*",
+    "/mobile/staff/:path*",
     "/mobile/staff-scanner/:path*",
     "/mobile/official/:path*",
   ],

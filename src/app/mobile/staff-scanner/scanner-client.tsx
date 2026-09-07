@@ -1,7 +1,9 @@
 "use client";
 
 import { signOut } from "next-auth/react";
+import Link from "next/link";
 import {
+  ArrowLeft,
   Camera,
   CameraOff,
   CheckCircle2,
@@ -485,6 +487,10 @@ export default function MobileStaffScannerClient() {
 
   return (
     <div className="space-y-4">
+      <Link href="/mobile/staff" className="inline-flex h-10 items-center gap-2 rounded-xl border border-cyan-300/20 bg-slate-900/80 px-3 text-sm font-semibold text-slate-100">
+        <ArrowLeft className="h-4 w-4" />
+        Back to Staff Mobile Dashboard
+      </Link>
       <section className="rounded-2xl border border-cyan-300/20 bg-slate-900/80 p-4 shadow-[0_24px_60px_-34px_rgba(34,211,238,0.55)]">
         <p className="text-[11px] uppercase tracking-[0.16em] text-cyan-300">Portable Staff Scanner</p>
         <h1 className="mt-1 text-xl font-bold text-slate-100">Biometric Attendance Kiosk</h1>

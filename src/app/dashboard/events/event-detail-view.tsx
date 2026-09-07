@@ -17,14 +17,16 @@ const formatDateTime = (value: Date | null) => {
 type EventDetailViewProps = {
   id: string;
   eventBasePath?: string;
+  municipalityId?: string;
 };
 
 export default async function EventDetailView({
   id,
   eventBasePath = "/dashboard/events",
+  municipalityId,
 }: EventDetailViewProps) {
-  const event = await prisma.event.findUnique({
-    where: { id },
+  const event = await prisma.event.findFirst({
+    where: { id, ...(municipalityId ? { municipalityId } : {}) },
     select: {
       id: true,
       title: true,

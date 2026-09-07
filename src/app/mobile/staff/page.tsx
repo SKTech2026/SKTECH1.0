@@ -9,10 +9,10 @@ import { requireRole } from "@/lib/roleGuard";
 export const dynamic = "force-dynamic";
 
 const options = [
-  ["QR Attendance", "Scan official IDs for attendance.", "/dashboard/staff/id-scanning", QrCode],
+  ["QR Attendance", "Scan official IDs for attendance.", "/mobile/staff/qr-attendance", QrCode],
   ["Face Recognition Attendance", "Run the secure face scanner when needed.", "/mobile/staff-scanner", ScanFace],
-  ["Event Management", "Create and manage municipality events.", "/dashboard/staff/events", CalendarDays],
-  ["Chat Feature", "Message your municipality contacts.", "/dashboard/staff/chat", MessageSquare],
+  ["Event Management", "Create and manage municipality events.", "/mobile/staff/events", CalendarDays],
+  ["Chat Feature", "Message your municipality contacts.", "/mobile/staff/chat", MessageSquare],
   ["Post Announcements / Pubmats", "Publish a text announcement to your municipality feed.", "/mobile/staff/announcements", Megaphone],
 ] as const;
 

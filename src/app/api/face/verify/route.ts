@@ -150,7 +150,12 @@ export async function POST(request: NextRequest) {
     }
 
     if (body.eventId) {
-      const event = await prisma.event.findUnique({ where: { id: body.eventId } });
+      const event = await prisma.event.findFirst({
+        where: {
+          id: body.eventId,
+          ...(staffMunicipalityId ? { municipalityId: staffMunicipalityId } : {}),
+        },
+      });
       if (!event) {
         return NextResponse.json({ error: "Event not found." }, { status: 404 });
       }
