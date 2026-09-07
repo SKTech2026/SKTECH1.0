@@ -51,23 +51,56 @@ type MunicipalityAnalytics = {
 };
 
 type GeoJsonFeature = (typeof orientalMindoroMunicipalitiesGeoJson.features)[number];
+type Position = [number, number];
+
+function isPosition(value: unknown): value is Position {
+  return (
+    Array.isArray(value) &&
+    value.length >= 2 &&
+    typeof value[0] === "number" &&
+    Number.isFinite(value[0]) &&
+    typeof value[1] === "number" &&
+    Number.isFinite(value[1])
+  );
+}
+
+function getFeatureRings(feature: GeoJsonFeature): Position[][] {
+  const geometry = feature.geometry as {
+    type?: unknown;
+    coordinates?: unknown;
+  };
+
+  if (geometry.type !== "Polygon" && geometry.type !== "MultiPolygon") {
+    return [];
+  }
+
+  const polygons = geometry.type === "Polygon"
+    ? [geometry.coordinates]
+    : geometry.coordinates;
+
+  if (!Array.isArray(polygons)) return [];
+
+  const rings: Position[][] = [];
+  for (const polygon of polygons) {
+    if (!Array.isArray(polygon)) continue;
+    for (const ring of polygon) {
+      if (!Array.isArray(ring)) continue;
+      const validPositions = ring.filter(isPosition);
+      if (validPositions.length >= 2) rings.push(validPositions);
+    }
+  }
+
+  return rings;
+}
+
+function getAllPositions(feature: GeoJsonFeature): Position[] {
+  return getFeatureRings(feature).flatMap((ring) => ring);
+}
 
 const canonicalBoundaryName = (name: string) =>
   name === "City of Calapan" ? "Calapan City" : name;
 
-const boundaryCoordinates = orientalMindoroMunicipalitiesGeoJson.features.flatMap((feature) => {
-  const coordinates = feature.geometry.coordinates as unknown;
-  const points: [number, number][] = [];
-  const collect = (value: unknown) => {
-    if (Array.isArray(value) && typeof value[0] === "number" && typeof value[1] === "number") {
-      points.push([value[0], value[1]]);
-      return;
-    }
-    if (Array.isArray(value)) value.forEach(collect);
-  };
-  collect(coordinates);
-  return points;
-});
+const boundaryCoordinates = orientalMindoroMunicipalitiesGeoJson.features.flatMap(getAllPositions);
 
 const boundaryBounds = boundaryCoordinates.reduce(
   (bounds, [longitude, latitude]) => ({
@@ -94,34 +127,18 @@ const projectBoundaryPoint = ([longitude, latitude]: [number, number]) => {
 };
 
 const geometryPath = (feature: GeoJsonFeature) => {
-  const commands: string[] = [];
-  const collectRing = (ring: unknown) => {
-    if (!Array.isArray(ring) || ring.length === 0) return;
-    const points = ring as [number, number][];
-    const projected = points.map(projectBoundaryPoint);
-    commands.push(`M ${projected.map(([x, y]) => `${x.toFixed(2)} ${y.toFixed(2)}`).join(" L ")} Z`);
-  };
-  const collect = (value: unknown, depth = 0) => {
-    if (depth === 2) {
-      collectRing(value);
-      return;
-    }
-    if (Array.isArray(value)) value.forEach((item) => collect(item, depth + 1));
-  };
-  collect(feature.geometry.coordinates);
-  return commands.join(" ");
+  return getFeatureRings(feature)
+    .map((ring) => {
+      const projected = ring.map(projectBoundaryPoint);
+      return `M ${projected.map(([x, y]) => `${x.toFixed(2)} ${y.toFixed(2)}`).join(" L ")} Z`;
+    })
+    .join(" ");
 };
 
 const geometryCenter = (feature: GeoJsonFeature) => {
-  const points: [number, number][] = [];
-  const collect = (value: unknown) => {
-    if (Array.isArray(value) && typeof value[0] === "number" && typeof value[1] === "number") {
-      points.push([value[0], value[1]]);
-      return;
-    }
-    if (Array.isArray(value)) value.forEach(collect);
-  };
-  collect(feature.geometry.coordinates);
+  const points = getAllPositions(feature);
+  if (points.length === 0) return null;
+
   const center = points.reduce(
     (sum, point) => [sum[0] + point[0] / points.length, sum[1] + point[1] / points.length],
     [0, 0],
@@ -479,7 +496,10 @@ export default async function AdminAnalyticsPage() {
                   const municipalityName = canonicalBoundaryName(feature.properties.name);
                   const municipality = municipalities.find((item) => item.name === municipalityName);
                   if (!municipality) return null;
-                  const [labelX, labelY] = geometryCenter(feature);
+                  const rings = getFeatureRings(feature);
+                  const center = geometryCenter(feature);
+                  if (rings.length === 0 || !center) return null;
+                  const [labelX, labelY] = center;
                   return (
                     <a
                       key={feature.properties.sourceId}
