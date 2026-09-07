@@ -38,7 +38,7 @@ function getMobileRoute(role: string | null | undefined) {
   }
 
   if (role === "STAFF") {
-    return "/mobile/staff-scanner";
+    return "/mobile/staff";
   }
 
   return null;
