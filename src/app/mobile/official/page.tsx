@@ -1,27 +1,26 @@
 import Link from "next/link";
+import { Role } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import {
-  CalendarDays,
-  CheckCircle2,
   Clock3,
   IdCard,
   Megaphone,
   MessageSquare,
-  RefreshCcw,
 } from "lucide-react";
 
-import FlippablePortraitID from "@/components/id/FlippablePortraitID";
 import { authOptions } from "@/lib/auth";
-import { getActiveAnnouncements } from "@/lib/announcements";
 import { prisma } from "@/lib/db";
-import { requireOfficialFeatureAccess } from "@/lib/roleGuard";
-import { formatEnumLabel, formatOfficialFullName } from "@/lib/sk-official";
+import { requireDashboardRole } from "@/lib/roleGuard";
+import { formatOfficialFullName } from "@/lib/sk-official";
 
 export const dynamic = "force-dynamic";
 
 export default async function MobileOfficialPage() {
   const session = await getServerSession(authOptions);
-  const authorized = await requireOfficialFeatureAccess(session);
+  const authorized = requireDashboardRole(session, [Role.OFFICIAL], {
+    unauthenticatedRedirect: "/official/auth",
+    requireApproved: false,
+  });
 
   const user = await prisma.user.findUnique({
     where: { id: authorized.user.id },
@@ -30,6 +29,7 @@ export default async function MobileOfficialPage() {
       name: true,
       image: true,
       faceRegistered: true,
+      status: true,
       official: {
         select: {
           id: true,
@@ -41,32 +41,13 @@ export default async function MobileOfficialPage() {
           municipality: true,
           role: true,
           position: true,
-          skFederationOfficer: true,
-          skFederationPosition: true,
-          dateElected: true,
-          termStart: true,
-          termEnd: true,
-          birthDate: true,
-          contactNo: true,
-          email: true,
-          address: true,
           admissionStatus: true,
           status: true,
-          attendances: {
-            orderBy: { createdAt: "desc" },
-            take: 15,
-            include: {
-              event: {
-                select: { title: true },
-              },
-            },
-          },
+          updatedAt: true,
         },
       },
     },
   });
-
-  const announcements = await getActiveAnnouncements(5);
 
   if (!user?.official) {
     return (
@@ -76,152 +57,83 @@ export default async function MobileOfficialPage() {
     );
   }
 
-  const qrValue = `/id/${user.official.id}`;
-  const photoUrl =
-    user.image && user.image.startsWith("/") ? user.image : "/images/default-official.svg";
   const fullName = formatOfficialFullName(user.official);
+  const isApproved =
+    user.status === "APPROVED" &&
+    user.official.admissionStatus === "APPROVED" &&
+    user.official.status === "ACTIVE";
+  const isRejected = user.official.admissionStatus === "REJECTED";
+
+  if (!isApproved) {
+    return (
+      <div className="space-y-4">
+        <section className="rounded-2xl border border-glass-border bg-surface p-4 shadow-xl">
+          <p className="text-[11px] uppercase tracking-[0.16em] text-accent">Official Mobile</p>
+          <h1 className="mt-1 text-xl font-bold text-foreground">Official Dashboard</h1>
+          <p className="mt-1 text-sm text-muted">Welcome, {fullName}. Complete your official admission to continue.</p>
+        </section>
+        <section className="rounded-2xl border border-amber-300/30 bg-amber-500/10 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-200">{isRejected ? "Admission resubmission required" : user.official.updatedAt ? "Admission pending review" : "Admission details required"}</p>
+          <h2 className="mt-2 text-lg font-semibold text-foreground">Complete Admission Details</h2>
+          <p className="mt-1 text-sm text-muted">
+            {isRejected
+              ? "Review and resubmit your credentials for Municipal Staff review."
+              : user.official.updatedAt
+                ? "Your credentials are with Municipal Staff for review. Official features remain locked until approval."
+                : "Submit your credentials for Staff review before accessing Official features."}
+          </p>
+          <Link href="/dashboard/official/admission" className="mt-4 inline-flex h-11 items-center justify-center rounded-xl bg-accent px-4 text-sm font-semibold text-accent-foreground">
+            {isRejected ? "Review Admission Details" : "Complete Admission Details"}
+          </Link>
+        </section>
+        <section className="rounded-2xl border border-glass-border bg-surface p-4 text-sm text-muted">
+          Current status: <span className="font-semibold text-amber-200">{user.official.admissionStatus}</span>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
       <section className="rounded-2xl border border-glass-border bg-surface p-4 shadow-xl">
-        <p className="text-[11px] uppercase tracking-[0.16em] text-accent">Official Mobile Access</p>
-        <h1 className="mt-1 text-xl font-bold text-foreground">Digital ID Wallet</h1>
-        <p className="mt-1 text-xs text-muted">
-          Swipe-ready identity, attendance history, and federation announcements.
-        </p>
+        <p className="text-[11px] uppercase tracking-[0.16em] text-accent">Official Mobile</p>
+        <h1 className="mt-1 text-xl font-bold text-foreground">Official Dashboard</h1>
+        <p className="mt-1 text-sm text-muted">Welcome, {fullName}. Choose what you want to access.</p>
       </section>
 
-      <section className="grid grid-cols-2 gap-2">
-        <Link
-          href="/mobile/official"
-          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-glass-border bg-surface px-3 text-xs font-semibold text-foreground"
-        >
-          <IdCard className="h-4 w-4 text-cyan-300" />
-          Mobile Home
+      <section className="rounded-2xl border border-glass-border bg-surface p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Official access</h2>
+            <p className="mt-1 text-xs text-muted">Approved account status: {user.official.status}</p>
+          </div>
+          <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase ${isApproved ? "bg-emerald-400/15 text-emerald-300" : "bg-amber-400/15 text-amber-200"}`}>
+            {isApproved ? "Approved" : "Pending"}
+          </span>
+        </div>
+      </section>
+
+      <section className="grid gap-3 sm:grid-cols-2">
+        <Link href={`/id/${user.official.id}`} className="rounded-2xl border border-glass-border bg-surface p-4 transition hover:bg-surface-elevated">
+          <IdCard className="h-6 w-6 text-cyan-300" />
+          <h2 className="mt-3 text-base font-semibold text-foreground">Digital ID</h2>
+          <p className="mt-1 text-xs text-muted">Open your landscape digital identity card.</p>
         </Link>
-        <Link
-          href="/mobile/official/chat"
-          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-glass-border bg-surface px-3 text-xs font-semibold text-foreground"
-        >
-          <MessageSquare className="h-4 w-4 text-cyan-300" />
-          Chat
+        <Link href="/mobile/official/announcements" className="rounded-2xl border border-glass-border bg-surface p-4 transition hover:bg-surface-elevated">
+          <Megaphone className="h-6 w-6 text-cyan-300" />
+          <h2 className="mt-3 text-base font-semibold text-foreground">Announcements</h2>
+          <p className="mt-1 text-xs text-muted">Read active federation announcements.</p>
         </Link>
-        <a
-          href="#announcements"
-          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-glass-border bg-surface px-3 text-xs font-semibold text-foreground"
-        >
-          <Megaphone className="h-4 w-4 text-cyan-300" />
-          Announcements
-        </a>
-        <a
-          href="#attendance"
-          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-glass-border bg-surface px-3 text-xs font-semibold text-foreground"
-        >
-          <Clock3 className="h-4 w-4 text-cyan-300" />
-          Attendance
-        </a>
-      </section>
-
-      <section className="rounded-2xl border border-glass-border bg-surface p-3">
-        <FlippablePortraitID
-          fullName={fullName}
-          position={formatEnumLabel(user.official.position ?? user.official.role)}
-          skfedPosition={
-            user.official.skFederationOfficer
-              ? formatEnumLabel(user.official.skFederationPosition)
-              : null
-          }
-          barangay={user.official.barangay ?? "N/A"}
-          municipality={user.official.municipality ?? "N/A"}
-          dateElected={(user.official.dateElected ?? user.official.termStart).toISOString()}
-          termEnd={user.official.termEnd?.toISOString() ?? null}
-          birthDate={user.official.birthDate?.toISOString() ?? null}
-          contactNo={user.official.contactNo}
-          email={user.official.email}
-          address={user.official.address}
-          admissionStatus={user.official.admissionStatus}
-          registryStatus={user.official.status}
-          accountStatus={user.official.status}
-          idNumber={user.official.id.replace(/-/g, "").slice(-12).toUpperCase()}
-          qrValue={qrValue}
-          photoUrl={photoUrl}
-          variant="dashboardPreview"
-          className="mx-auto max-w-full"
-        />
-
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <Link
-            href={`/id/${user.official.id}`}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-accent px-3 text-sm font-semibold text-accent-foreground"
-          >
-            <IdCard className="h-4 w-4" />
-            Open ID
-          </Link>
-          <Link
-            href="/mobile/official/facial-registration"
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-glass-border bg-surface-elevated px-3 text-sm font-semibold text-foreground"
-          >
-            <RefreshCcw className="h-4 w-4" />
-            Re-Register Face
-          </Link>
-        </div>
-      </section>
-
-      <section id="attendance" className="scroll-mt-24 rounded-2xl border border-glass-border bg-surface p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-foreground">Attendance History</h2>
-          <span className="text-xs text-muted">{user.official.attendances.length} recent records</span>
-        </div>
-        <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
-          {user.official.attendances.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-glass-border px-3 py-3 text-xs text-muted">
-              No attendance logs yet.
-            </p>
-          ) : (
-            user.official.attendances.map((record) => (
-              <article
-                key={record.id}
-                className="rounded-xl border border-glass-border bg-surface-elevated px-3 py-2"
-              >
-                <p className="text-xs font-semibold text-foreground">
-                  {record.event?.title ?? "General Attendance"}
-                </p>
-                <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted">
-                  <Clock3 className="h-3.5 w-3.5 text-cyan-300" />
-                  {record.timeIn.toLocaleString()}
-                </p>
-                <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-emerald-300">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  {record.timeOut ? "Checked out" : "Checked in"}
-                </p>
-              </article>
-            ))
-          )}
-        </div>
-      </section>
-
-      <section id="announcements" className="scroll-mt-24 rounded-2xl border border-glass-border bg-surface p-4">
-        <h2 className="text-sm font-semibold text-foreground">Active Announcements</h2>
-        <div className="mt-3 space-y-2">
-          {announcements.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-glass-border px-3 py-3 text-xs text-muted">
-              No announcements available.
-            </p>
-          ) : (
-            announcements.map((item) => (
-              <article key={item.id} className="rounded-xl border border-glass-border bg-surface-elevated px-3 py-2">
-                <p className="text-xs font-semibold text-foreground">{item.title}</p>
-                <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-cyan-300">
-                  <CalendarDays className="h-3.5 w-3.5" />
-                  {item.eventDate.toLocaleDateString()}
-                </p>
-                <p className="mt-1 text-[11px] text-muted">
-                  {item.description ?? "No details provided."}
-                </p>
-              </article>
-            ))
-          )}
-        </div>
+        <Link href="/mobile/official/chat" className="rounded-2xl border border-glass-border bg-surface p-4 transition hover:bg-surface-elevated">
+          <MessageSquare className="h-6 w-6 text-cyan-300" />
+          <h2 className="mt-3 text-base font-semibold text-foreground">Chat</h2>
+          <p className="mt-1 text-xs text-muted">Message approved SKTECH contacts.</p>
+        </Link>
+        <Link href="/mobile/official/attendance-logs" className="rounded-2xl border border-glass-border bg-surface p-4 transition hover:bg-surface-elevated">
+          <Clock3 className="h-6 w-6 text-cyan-300" />
+          <h2 className="mt-3 text-base font-semibold text-foreground">Attendance Logs</h2>
+          <p className="mt-1 text-xs text-muted">Review your recent attendance records.</p>
+        </Link>
       </section>
 
       <section className="rounded-2xl border border-glass-border bg-surface p-4 text-xs text-muted">

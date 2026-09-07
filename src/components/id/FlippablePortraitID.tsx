@@ -168,7 +168,7 @@ export default function FlippablePortraitID({
     startTilt();
   };
 
-  const transform = `rotateX(${tilt.x.toFixed(2)}deg) rotateY(${(tilt.y + (isFlipped ? 180 : 0)).toFixed(2)}deg)`;
+  const transform = `scale(var(--id-scale, 1)) rotateX(${tilt.x.toFixed(2)}deg) rotateY(${(tilt.y + (isFlipped ? 180 : 0)).toFixed(2)}deg)`;
 
   const logo = (src: string, alt: string, className: string) => (
     <span className={`relative block ${className}`}>
@@ -203,13 +203,6 @@ export default function FlippablePortraitID({
     <div className="min-w-0 rounded-xl border border-[#d5e0ed] bg-white px-3 py-2">
       <dt className="text-[0.66rem] font-black uppercase tracking-wide text-[#61728b]">{label}</dt>
       <dd className="mt-1 break-words text-sm font-bold leading-snug text-[#172653]">{value}</dd>
-    </div>
-  );
-
-  const mobileInfoBlock = (label: string, value: string) => (
-    <div className="min-w-0 rounded-md border border-[#d5e0ed] bg-white px-2 py-1">
-      <dt className="text-[0.4rem] font-black uppercase tracking-wide text-[#61728b]">{label}</dt>
-      <dd className="mt-0.5 break-words text-[0.52rem] font-bold leading-tight text-[#172653]">{value}</dd>
     </div>
   );
 
@@ -336,83 +329,6 @@ export default function FlippablePortraitID({
     </section>
   );
 
-  const MobileFront = () => (
-    <section className="id-face id-mobile-face absolute inset-0 rounded-[0.72rem] border border-[#c9d6e7] bg-[#f7faff] text-[#09235d] [backface-visibility:hidden]">
-      <div className="flex h-full min-w-0 flex-col p-[3.2%]">
-        <header className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md bg-[#09235d] px-2 py-1.5 text-white">
-          {logo(sktechLogoUrl, "SKTECH logo", "h-[2rem] w-[4.2rem]")}
-          <div className="min-w-0 text-center">
-            <p className="truncate text-[0.55rem] font-black uppercase tracking-wide">{provinceName}</p>
-            <p className="truncate text-[0.43rem] font-semibold uppercase text-[#f6ca4a]">SK Federation Digital ID</p>
-          </div>
-          {logo(skfedLogoUrl, "Sangguniang Kabataan logo", "h-[2.15rem] w-[2.7rem]")}
-        </header>
-
-        <div className="mt-2 grid min-h-0 flex-1 grid-cols-[21%_1fr_17%] gap-2">
-          <div className="min-w-0 rounded-md border border-[#d5e0ed] bg-white p-1.5">
-            <div className="relative aspect-[4/5] overflow-hidden rounded bg-[#eef3f9]">{photo("120px")}</div>
-            <p className="mt-1 truncate text-center text-[0.43rem] font-black uppercase text-[#61728b]">Photo</p>
-          </div>
-
-          <dl className="grid min-w-0 content-start gap-1 rounded-md border border-[#d5e0ed] bg-white p-2 text-[#09235d]">
-            <div className="min-w-0"><dt className="text-[0.43rem] font-black uppercase text-[#61728b]">Full Name</dt><dd className="break-words text-[0.7rem] font-black uppercase leading-tight">{fullName}</dd></div>
-            <div className="min-w-0"><dt className="text-[0.43rem] font-black uppercase text-[#61728b]">SK Position</dt><dd className="break-words text-[0.62rem] font-black uppercase leading-tight">{displayPosition}</dd></div>
-            <div className="grid min-w-0 grid-cols-2 gap-1">
-              <div className="min-w-0"><dt className="text-[0.4rem] font-black uppercase text-[#61728b]">Municipality</dt><dd className="break-words text-[0.55rem] font-bold uppercase leading-tight">{municipality}</dd></div>
-              <div className="min-w-0"><dt className="text-[0.4rem] font-black uppercase text-[#61728b]">Barangay</dt><dd className="break-words text-[0.55rem] font-bold uppercase leading-tight">{barangay}</dd></div>
-            </div>
-            <div className="grid min-w-0 grid-cols-2 gap-1">
-              <div className="min-w-0"><dt className="text-[0.4rem] font-black uppercase text-[#61728b]">SKTECH ID</dt><dd className="break-words text-[0.52rem] font-black uppercase leading-tight">{documentId}</dd></div>
-              <div className="min-w-0"><dt className="text-[0.4rem] font-black uppercase text-[#61728b]">Term</dt><dd className="break-words text-[0.52rem] font-black uppercase leading-tight">{serviceTerm}</dd></div>
-            </div>
-          </dl>
-
-          <div className="flex min-w-0 flex-col items-center justify-center gap-1 rounded-md border border-[#d5e0ed] bg-white p-1.5">
-            <span className={`max-w-full break-words rounded-full px-1.5 py-1 text-center text-[0.4rem] font-black uppercase leading-tight ${verified ? "bg-[#e8f5ef] text-[#167447]" : "bg-[#fff4d6] text-[#946700]"}`}>{statusLabel}</span>
-            <QRCodeSVG value={qrValue} size={72} level="M" includeMargin />
-            <span className="text-center text-[0.42rem] font-black uppercase leading-tight">Verify</span>
-          </div>
-        </div>
-        <p className="mt-1 truncate text-center text-[0.38rem] font-black uppercase tracking-wide text-[#09235d]/55">{WATERMARK}</p>
-      </div>
-    </section>
-  );
-
-  const MobileBack = () => (
-    <section className="id-face id-mobile-face absolute inset-0 rounded-[0.72rem] border border-[#c9d6e7] bg-[#f7faff] text-[#172653] [backface-visibility:hidden] [transform:rotateY(180deg)]">
-      <div className="flex h-full min-w-0 flex-col p-[3.2%]">
-        <header className="rounded-md bg-[#09235d] px-2 py-1.5 text-center text-white">
-          <p className="text-[0.52rem] font-black uppercase tracking-wide">Credential Verification</p>
-          <p className="mt-0.5 text-[0.42rem] text-[#f6ca4a]">SKTECH secure registry record</p>
-        </header>
-        <div className="mt-2 grid min-h-0 flex-1 grid-cols-[1fr_1fr_22%] gap-2">
-          <dl className="grid min-w-0 content-start gap-1 rounded-md border border-[#d5e0ed] bg-white p-2">
-            {mobileInfoBlock("Birth Date", formatDisplayDate(birthDate))}
-            {mobileInfoBlock("Contact Number", contactNo || "Not recorded")}
-            {mobileInfoBlock("Email Address", email || "Not recorded")}
-            {mobileInfoBlock("Complete Address", addressLine || "Not recorded")}
-          </dl>
-          <dl className="grid min-w-0 content-start gap-1 rounded-md border border-[#d5e0ed] bg-white p-2">
-            {mobileInfoBlock("Date Elected", formatDisplayDate(dateElected))}
-            {mobileInfoBlock("Term Expiration", formatDisplayDate(termEnd))}
-            {mobileInfoBlock("Account Status", accountStatus || registryStatus || "Not recorded")}
-            <div className="rounded-md border border-[#d5e0ed] bg-[#f7faff] px-2 py-1"><dt className="text-[0.4rem] font-black uppercase text-[#61728b]">Website</dt><dd className="break-words text-[0.52rem] font-black">{websiteUrl}</dd></div>
-          </dl>
-          <div className="flex min-w-0 flex-col items-center rounded-md border border-[#d5e0ed] bg-white p-1.5">
-            <p className="text-center text-[0.42rem] font-black uppercase leading-tight">QR Verify</p>
-            <QRCodeSVG value={qrValue} size={74} level="M" includeMargin />
-            <p className="mt-1 break-words text-center text-[0.4rem] leading-tight text-[#61728b]">{issued}</p>
-          </div>
-        </div>
-        <div className="mt-1 flex items-end justify-between gap-2">
-          <div className="w-[24%]"><p className="text-center text-[0.4rem] font-black uppercase">Signature</p><div className="mt-0.5 h-2 border-b border-[#172653]" /></div>
-          <p className="min-w-0 flex-1 break-words text-center text-[0.38rem] font-medium leading-tight text-[#172653]">{contactInfo}</p>
-          <p className="w-[24%] break-words text-right text-[0.38rem] font-black uppercase text-[#09235d]/55">{WATERMARK}</p>
-        </div>
-      </div>
-    </section>
-  );
-
   const LandscapeCard = ({
     actions = false,
     controls = true,
@@ -473,11 +389,11 @@ export default function FlippablePortraitID({
           }
           className={`id-landscape-card absolute inset-0 h-full w-full rounded-[0.72rem] outline-none [transform-style:preserve-3d] transition-transform duration-700 [transition-timing-function:cubic-bezier(0.2,0.8,0.2,1)] focus-visible:ring-2 focus-visible:ring-[#f5b300] ${preview ? "" : "cursor-pointer"}`}
           style={{
-            transform: preview ? undefined : transform,
+            transform: preview ? "scale(var(--id-scale, 1))" : transform,
           }}
         >
-          {preview ? <MobileFront /> : variant === "mobileFull" || variant === "mobileViewer" ? <MobileFront /> : <DesktopFront />}
-          {preview ? null : variant === "mobileFull" || variant === "mobileViewer" ? <MobileBack /> : <DesktopBack />}
+          <DesktopFront />
+          <DesktopBack />
         </div>
       </div>
 
@@ -599,6 +515,17 @@ function IDStyles() {
         pointer-events: none;
         position: absolute;
         z-index: 0;
+      }
+
+      @media (max-width: 640px) {
+        .id-screen-card > .id-landscape-card {
+          --id-scale: calc(100vw / 856);
+          right: auto;
+          bottom: auto;
+          width: 856px;
+          height: 539.8px;
+          transform-origin: top left;
+        }
       }
 
       @page {

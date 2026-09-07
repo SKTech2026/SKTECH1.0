@@ -415,7 +415,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         if (existingUser.status !== UserStatus.APPROVED) {
-          return "/login?error=official_pending";
+          return "/official/auth?error=official_pending";
         }
       }
 

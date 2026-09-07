@@ -1,3 +1,5 @@
+
+
 import { getToken } from "next-auth/jwt";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -34,7 +36,12 @@ const ROLE_RULES: RoleRule[] = [
   { prefix: "/dashboard/events", allowed: ["ADMIN", "STAFF"], requiresApproved: true },
   { prefix: "/dashboard/scan", allowed: ["ADMIN", "STAFF"], requiresApproved: true },
   { prefix: "/mobile/staff-scanner", allowed: ["STAFF"], requiresApproved: true },
-  { prefix: "/mobile/official", allowed: ["OFFICIAL"], requiresApproved: true },
+  {
+    prefix: "/mobile/official",
+    allowed: ["OFFICIAL"],
+    requiresApproved: false,
+    pendingAllowedPaths: ["/mobile/official"],
+  },
 ];
 
 function matchRoleRule(pathname: string): RoleRule | undefined {
