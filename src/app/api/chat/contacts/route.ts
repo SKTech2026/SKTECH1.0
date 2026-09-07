@@ -12,7 +12,7 @@ export async function GET() {
   try {
     const current = await requireChatUser();
     const contacts = await getEligibleChatContacts(current);
-    return NextResponse.json({ contacts }, { status: 200 });
+    return NextResponse.json({ contacts, onlineStatusAvailable: false }, { status: 200 });
   } catch (error) {
     const status = error instanceof ChatAuthError ? error.status : 500;
     const message = error instanceof Error ? error.message : "Failed to load chat contacts.";

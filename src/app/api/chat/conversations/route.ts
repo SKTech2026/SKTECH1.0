@@ -78,6 +78,7 @@ function serializeConversation(
           senderId: latestMessage.senderId,
           content: latestMessage.content,
           createdAt: latestMessage.createdAt,
+          unsentAt: latestMessage.unsentAt,
           attachmentCount: latestMessage.attachments.length,
         }
       : null,
@@ -140,6 +141,7 @@ export async function GET() {
 
     return NextResponse.json(
       {
+        currentUserId: current.userId,
         conversations: conversations.map((conversation) =>
           serializeConversation(conversation, current.userId),
         ),

@@ -25,6 +25,8 @@ function serializeMessage(message: Awaited<ReturnType<typeof getMessages>>[numbe
     senderId: message.senderId,
     content: message.content,
     createdAt: message.createdAt,
+    editedAt: message.editedAt,
+    unsentAt: message.unsentAt,
     sender: {
       id: message.sender.id,
       name:
@@ -116,6 +118,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     return NextResponse.json(
       {
+        currentUserId: current.userId,
         messages: messages.reverse().map(serializeMessage),
       },
       { status: 200 },

@@ -1,0 +1,3 @@
+ALTER TABLE "ChatMessage"
+ADD COLUMN "editedAt" TIMESTAMP(3),
+ADD COLUMN "unsentAt" TIMESTAMP(3);

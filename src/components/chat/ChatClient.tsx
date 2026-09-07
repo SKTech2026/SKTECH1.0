@@ -8,6 +8,7 @@ import {
   Loader2,
   Mic,
   MicOff,
+  MoreHorizontal,
   Paperclip,
   Phone,
   PhoneOff,
@@ -26,6 +27,7 @@ type ChatContact = {
   barangay: string | null;
   photoUrl: string | null;
   municipality: string | null;
+  onlineStatus?: "UNAVAILABLE";
 };
 
 type ChatConversation = {
@@ -36,6 +38,7 @@ type ChatConversation = {
   latestMessage: {
     content: string | null;
     createdAt: string;
+    unsentAt: string | null;
     attachmentCount: number;
   } | null;
 };
@@ -45,6 +48,8 @@ type ChatMessage = {
   senderId: string;
   content: string | null;
   createdAt: string;
+  editedAt: string | null;
+  unsentAt: string | null;
   sender: {
     id: string;
     name: string;
@@ -168,6 +173,12 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [contactsOpen, setContactsOpen] = useState(false);
+  const [openMessageMenuId, setOpenMessageMenuId] = useState<string | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState("");
+  const [hiddenMessageIds, setHiddenMessageIds] = useState<Set<string>>(new Set());
   const [callStatus, setCallStatus] = useState<CallStatus>("idle");
   const [callMode, setCallMode] = useState<CallMode>("voice");
   const [incomingOffer, setIncomingOffer] = useState<CallSignal | null>(null);
@@ -476,6 +487,7 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
         error?: string;
       };
       const conversationsPayload = (await conversationsResponse.json()) as {
+        currentUserId?: string;
         conversations?: ChatConversation[];
         error?: string;
       };
@@ -488,6 +500,7 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
       }
 
       setContacts(Array.isArray(contactsPayload.contacts) ? contactsPayload.contacts : []);
+      if (conversationsPayload.currentUserId) setCurrentUserId(conversationsPayload.currentUserId);
       setConversations(
         Array.isArray(conversationsPayload.conversations)
           ? conversationsPayload.conversations
@@ -507,6 +520,7 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
         cache: "no-store",
       });
       const payload = (await response.json()) as {
+        currentUserId?: string;
         messages?: ChatMessage[];
         error?: string;
       };
@@ -516,12 +530,54 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
       }
 
       setMessages(Array.isArray(payload.messages) ? payload.messages : []);
+      if (payload.currentUserId) setCurrentUserId(payload.currentUserId);
       setError(null);
       void loadContactsAndConversations();
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Failed to load messages.");
     }
   }, [loadContactsAndConversations]);
+
+  const editMessage = async (message: ChatMessage) => {
+    if (!currentUserId || message.senderId !== currentUserId || !message.content) return;
+    setOpenMessageMenuId(null);
+    setEditingMessageId(message.id);
+    setEditingText(message.content);
+  };
+
+  const saveEditedMessage = async (messageId: string) => {
+    try {
+      const response = await fetch(`/api/chat/conversations/${selectedConversationId}/messages/${messageId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: editingText }),
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "Failed to edit message.");
+      setEditingMessageId(null);
+      setEditingText("");
+      if (selectedConversationId) await loadMessages(selectedConversationId);
+    } catch (editError) {
+      setError(editError instanceof Error ? editError.message : "Failed to edit message.");
+    }
+  };
+
+  const unsendMessage = async (messageId: string) => {
+    try {
+      const response = await fetch(`/api/chat/conversations/${selectedConversationId}/messages/${messageId}?action=unsend`, { method: "DELETE" });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "Failed to unsend message.");
+      setOpenMessageMenuId(null);
+      if (selectedConversationId) await loadMessages(selectedConversationId);
+    } catch (unsendError) {
+      setError(unsendError instanceof Error ? unsendError.message : "Failed to unsend message.");
+    }
+  };
+
+  const hideMessage = (messageId: string) => {
+    setOpenMessageMenuId(null);
+    setHiddenMessageIds((current) => new Set(current).add(messageId));
+  };
 
   useEffect(() => {
     void loadContactsAndConversations();
@@ -842,7 +898,9 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
                         ) : null}
                       </div>
                       <p className="mt-1 truncate text-xs text-muted">
-                        {conversation.latestMessage?.content ||
+                        {conversation.latestMessage?.unsentAt
+                          ? "Message unsent"
+                          : conversation.latestMessage?.content ||
                           (conversation.latestMessage?.attachmentCount
                             ? "Attachment"
                             : roleLabel(
@@ -860,9 +918,17 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
             </div>
           </div>
 
-          <div className="border-t border-glass-border pt-4">
-            <h3 className="text-sm font-semibold text-foreground">Contacts</h3>
-            <div className="mt-3 max-h-[310px] space-y-2 overflow-y-auto pr-1">
+          <div className="border-t border-glass-border pt-3">
+            <button
+              type="button"
+              onClick={() => setContactsOpen((open) => !open)}
+              className="flex w-full items-center justify-between rounded-xl border border-glass-border bg-surface-elevated/45 px-3 py-2 text-left text-sm font-semibold text-foreground"
+              aria-expanded={contactsOpen}
+            >
+              <span>CONTACTS</span>
+              <span className="text-xs text-muted">{contactsOpen ? "Hide" : "Show"}</span>
+            </button>
+            {contactsOpen ? <div className="mt-3 max-h-[230px] space-y-2 overflow-y-auto pr-1">
               {contacts.length === 0 ? (
                 <p className="rounded-xl border border-dashed border-glass-border p-3 text-sm text-muted">
                   No eligible contacts found.
@@ -879,11 +945,13 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-foreground">{contact.name}</p>
                       <p className="mt-1 truncate text-xs text-muted">{roleLabel(contact)}</p>
+                      <p className="mt-0.5 truncate text-[11px] text-muted">{contact.barangay ? `Barangay ${contact.barangay}` : "Status unavailable"}</p>
                     </div>
+                    <span className="shrink-0 text-[10px] text-muted">Status unavailable</span>
                   </button>
                 ))
               )}
-            </div>
+            </div> : null}
           </div>
         </aside>
 
@@ -1047,8 +1115,9 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
                 No messages yet.
               </div>
             ) : (
-              messages.map((message) => {
-                const isCurrentUser = message.senderId !== selectedPeer?.userId;
+              messages.filter((message) => !hiddenMessageIds.has(message.id)).map((message) => {
+                const isCurrentUser = message.senderId === currentUserId;
+                const isUnsent = Boolean(message.unsentAt);
 
                 return (
                   <div
@@ -1072,10 +1141,20 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
                       {!isCurrentUser ? (
                         <p className="mb-1 text-xs font-semibold text-muted">{message.sender.name}</p>
                       ) : null}
-                      {message.content ? (
+                      {isUnsent ? (
+                        <p className="text-sm italic opacity-70">{isCurrentUser ? "You unsent a message" : "This message was unsent"}</p>
+                      ) : editingMessageId === message.id ? (
+                        <div className="space-y-2">
+                          <textarea value={editingText} onChange={(event) => setEditingText(event.target.value)} rows={2} className="w-full rounded-lg border border-glass-border bg-surface-elevated px-2 py-1.5 text-sm text-foreground" />
+                          <div className="flex justify-end gap-2 text-xs">
+                            <button type="button" onClick={() => setEditingMessageId(null)} className="rounded-md border border-glass-border px-2 py-1">Cancel</button>
+                            <button type="button" onClick={() => void saveEditedMessage(message.id)} className="rounded-md bg-accent px-2 py-1 text-accent-foreground">Save</button>
+                          </div>
+                        </div>
+                      ) : message.content ? (
                         <p className="whitespace-pre-wrap break-words text-sm">{message.content}</p>
                       ) : null}
-                      {message.attachments.length > 0 ? (
+                      {!isUnsent && message.attachments.length > 0 ? (
                         <div className="mt-2 space-y-2">
                           {message.attachments.map((item) => (
                             <a
@@ -1093,13 +1172,30 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
                           ))}
                         </div>
                       ) : null}
+                      <div className="mt-1 flex items-center justify-between gap-2">
                       <p
                         className={`mt-1 text-[10px] ${
                           isCurrentUser ? "text-accent-foreground/70" : "text-muted"
                         }`}
                       >
                         {formatTime(message.createdAt)}
+                        {message.editedAt ? " - Edited." : ""}
                       </p>
+                      {isCurrentUser && !isUnsent ? (
+                        <div className="relative">
+                          <button type="button" onClick={() => setOpenMessageMenuId((id) => id === message.id ? null : message.id)} className="inline-flex h-6 w-6 items-center justify-center rounded-full text-current opacity-70 hover:bg-black/10" aria-label="Message actions">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </button>
+                          {openMessageMenuId === message.id ? (
+                            <div className="absolute bottom-7 right-0 z-20 w-28 rounded-lg border border-glass-border bg-surface p-1 text-left text-xs text-foreground shadow-xl">
+                              {message.content ? <button type="button" onClick={() => void editMessage(message)} className="block w-full rounded-md px-2 py-1.5 text-left hover:bg-surface-elevated">Edit</button> : null}
+                              <button type="button" onClick={() => void unsendMessage(message.id)} className="block w-full rounded-md px-2 py-1.5 text-left hover:bg-surface-elevated">Unsend</button>
+                              <button type="button" onClick={() => hideMessage(message.id)} className="block w-full rounded-md px-2 py-1.5 text-left hover:bg-surface-elevated">Delete</button>
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+                      </div>
                     </div>
                   </div>
                 );
