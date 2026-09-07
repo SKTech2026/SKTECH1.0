@@ -113,7 +113,8 @@ export default async function IDPage({
           skfedLogoUrl="/assets/logos/sk-logo-new.png"
           provincialSealUrl="/assets/logos/official-seal-logo-new.png"
           sktechLogoUrl="/assets/logos/sktech-logo-new.png"
-          variant="mobileFull"
+          variant="mobileViewer"
+          closeHref="/"
           issuedDate={new Intl.DateTimeFormat("en-US", {
             month: "long",
             day: "2-digit",

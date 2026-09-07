@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useRef, useState } from "react";
 
@@ -35,7 +36,8 @@ type FlippablePortraitIDProps = {
   issuedDate?: string;
   websiteUrl?: string;
   className?: string;
-  variant?: "full" | "dashboardPreview" | "mobilePreview" | "mobileFull";
+  variant?: "full" | "dashboardPreview" | "mobilePreview" | "mobileFull" | "mobileViewer";
+  closeHref?: string;
 };
 
 const MAX_TILT = 4;
@@ -95,9 +97,10 @@ export default function FlippablePortraitID({
   websiteUrl = "sktech-ormin.com",
   className,
   variant = "full",
+  closeHref = "/mobile/official",
 }: FlippablePortraitIDProps) {
   const isMobilePreview = variant === "mobilePreview" || variant === "dashboardPreview";
-  const isMobileFull = variant === "mobileFull";
+  const isMobileFull = variant === "mobileFull" || variant === "mobileViewer";
   const [isFlipped, setIsFlipped] = useState(false);
   const [isNarrowViewport, setIsNarrowViewport] = useState(false);
   const [failedPhotoUrl, setFailedPhotoUrl] = useState<string | null>(null);
@@ -421,7 +424,20 @@ export default function FlippablePortraitID({
 
   return (
     <div className={className ?? ""}>
-      <div className={`mx-auto w-full ${useMobileFace ? "max-w-[430px]" : isMobilePreview ? "max-w-[760px]" : "max-w-[920px]"}`}>
+      <div className={`${useMobileFace ? "mx-auto w-full max-w-[430px]" : "mx-auto w-full max-w-[920px]"} ${useMobileFace ? "rounded-3xl border border-glass-border bg-surface p-3 shadow-[0_24px_70px_-34px_var(--shadow-color)]" : ""}`}>
+        {useMobileFace ? (
+          <header className="mb-3 flex items-start justify-between gap-3 px-1">
+            <div>
+              <p className="text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-accent">SKTECH Governance Registry</p>
+              <h2 className="mt-1 text-lg font-bold text-foreground">Digital ID</h2>
+              <p className="mt-0.5 text-[0.64rem] text-muted">Sangguniang Kabataan Official Credential</p>
+            </div>
+            <span className={`mt-1 rounded-full px-2.5 py-1 text-[0.62rem] font-black uppercase tracking-wide ${verified ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300" : "bg-amber-500/15 text-amber-700 dark:text-amber-300"}`}>
+              {verified ? "Digital ID is Active" : "Digital ID is Pending"}
+            </span>
+          </header>
+        ) : null}
+
         <div className="id-screen-controls mb-3 grid w-full max-w-[18rem] grid-cols-2 rounded-lg border border-white/10 bg-surface-elevated/55 p-1 text-xs font-semibold text-muted">
           <button
             type="button"
@@ -438,6 +454,10 @@ export default function FlippablePortraitID({
             Back
           </button>
         </div>
+
+        {useMobileFace ? (
+          <p className="mb-2 text-center text-xs text-muted">{isFlipped ? "Back of credential" : "Front of credential"}</p>
+        ) : null}
 
         <div
           ref={previewFrameRef}
@@ -479,6 +499,17 @@ export default function FlippablePortraitID({
             <BackFace />
           </div>
         </div>
+
+        {useMobileFace ? (
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <Link href={closeHref} className="inline-flex h-11 items-center justify-center rounded-xl border border-glass-border bg-surface-elevated px-3 text-sm font-semibold text-foreground">
+              Close / Back
+            </Link>
+            <a href={qrValue} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center justify-center rounded-xl bg-accent px-3 text-sm font-semibold text-accent-foreground">
+              Verify QR
+            </a>
+          </div>
+        ) : null}
       </div>
 
       <style>{`
