@@ -168,7 +168,7 @@ export default function FlippablePortraitID({
     startTilt();
   };
 
-  const transform = `scale(var(--id-scale, 1)) rotateX(${tilt.x.toFixed(2)}deg) rotateY(${(tilt.y + (isFlipped ? 180 : 0)).toFixed(2)}deg)`;
+  const transform = `rotateX(${tilt.x.toFixed(2)}deg) rotateY(${(tilt.y + (isFlipped ? 180 : 0)).toFixed(2)}deg)`;
 
   const logo = (src: string, alt: string, className: string) => (
     <span className={`relative block ${className}`}>
@@ -338,7 +338,7 @@ export default function FlippablePortraitID({
     controls?: boolean;
     preview?: boolean;
   }) => (
-    <section className="mx-auto w-full max-w-[856px]">
+    <section className={`id-wallet-card mx-auto w-full max-w-[856px] ${variant === "mobileViewer" ? "id-wallet-mobile-view" : ""}`}>
       {controls ? (
         <div className="id-screen-controls mb-3 grid w-full max-w-[18rem] grid-cols-2 rounded-lg border border-white/10 bg-surface-elevated/55 p-1 text-xs font-semibold text-muted">
           <button
@@ -362,7 +362,8 @@ export default function FlippablePortraitID({
         className="id-screen-card relative w-full max-w-full [perspective:1800px]"
         style={{ aspectRatio: `${CR80_WIDTH} / ${CR80_HEIGHT}` }}
       >
-        <div
+        <div className="id-landscape-scale absolute inset-0">
+          <div
           ref={preview ? undefined : cardRef}
           role={preview ? "img" : "button"}
           tabIndex={preview ? undefined : 0}
@@ -391,9 +392,10 @@ export default function FlippablePortraitID({
           style={{
             transform: preview ? "scale(var(--id-scale, 1))" : transform,
           }}
-        >
-          <DesktopFront />
-          <DesktopBack />
+          >
+            <DesktopFront />
+            <DesktopBack />
+          </div>
         </div>
       </div>
 
@@ -518,14 +520,25 @@ function IDStyles() {
       }
 
       @media (max-width: 640px) {
-        .id-screen-card > .id-landscape-card {
-          --id-scale: calc(100vw / 856);
+        .id-wallet-mobile-view {
+          width: min(100%, calc(100vw - 2rem));
+          max-width: calc(100vw - 2rem);
+        }
+
+        .id-wallet-mobile-view .id-screen-card {
+          overflow: visible;
+        }
+
+        .id-wallet-mobile-view .id-landscape-scale {
+          left: 50%;
           right: auto;
           bottom: auto;
           width: 856px;
           height: 539.8px;
-          transform-origin: top left;
+          transform: translateX(-50%) scale(calc((100vw - 2rem) / 856px));
+          transform-origin: top center;
         }
+
       }
 
       @page {
