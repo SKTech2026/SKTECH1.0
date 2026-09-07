@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import MobileAutoRedirect from "@/components/mobile/MobileAutoRedirect";
+import PwaUpdateHandler from "@/components/PwaUpdateHandler";
 import { ThemeProvider } from "@/context/ThemeContext";
 
 import "@aws-amplify/ui-react/styles.css";
@@ -77,6 +78,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ThemeProvider>
+          <PwaUpdateHandler />
           <MobileAutoRedirect />
           {children}
         </ThemeProvider>
