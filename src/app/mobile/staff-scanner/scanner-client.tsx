@@ -60,6 +60,8 @@ type QueueItem = {
   confidence: number;
   timestamp: string;
 };
+type EventOption = { id: string; title: string; eventDate: string };
+type AttendanceType = "TIME_IN" | "TIME_OUT";
 
 const SCAN_INTERVAL_MS = 500;
 const VERIFICATION_FRAME_COUNT = 4;
@@ -125,15 +127,45 @@ export default function MobileStaffScannerClient() {
   const [scanBusy, setScanBusy] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
   const [torchSupported, setTorchSupported] = useState(false);
-  const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
+  const [cameraCount, setCameraCount] = useState(0);
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("environment");
   const [frameSize, setFrameSize] = useState<{ width: number; height: number } | null>(null);
   const [faces, setFaces] = useState<FaceResult[]>([]);
   const [latestMatch, setLatestMatch] = useState<FaceResult | null>(null);
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [eventId, setEventId] = useState("");
+  const [events, setEvents] = useState<EventOption[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
+  const [attendanceType, setAttendanceType] = useState<AttendanceType>("TIME_IN");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [livenessScore, setLivenessScore] = useState<number | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    void fetch("/api/events", { cache: "no-store" })
+      .then(async (response) => {
+        const payload = (await response.json()) as unknown;
+        if (!response.ok || !Array.isArray(payload)) throw new Error("Failed to load events.");
+        return payload.filter((item): item is EventOption => {
+          if (!item || typeof item !== "object") return false;
+          const event = item as Partial<EventOption>;
+          return typeof event.id === "string" && typeof event.title === "string" && typeof event.eventDate === "string" && new Date(event.eventDate).getTime() >= Date.now();
+        });
+      })
+      .then((availableEvents) => {
+        if (mounted) setEvents(availableEvents);
+      })
+      .catch(() => {
+        if (mounted) setEvents([]);
+      })
+      .finally(() => {
+        if (mounted) setEventsLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const playSuccessTone = useCallback(() => {
     try {
@@ -262,6 +294,8 @@ export default function MobileStaffScannerClient() {
       video.srcObject = stream;
       await video.play();
       const track = stream.getVideoTracks()[0] ?? null;
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      setCameraCount(devices.filter((device) => device.kind === "videoinput").length);
       setTorchSupported(isSupportedTorch(track));
       setCameraEnabled(true);
     } catch (cameraError) {
@@ -285,6 +319,11 @@ export default function MobileStaffScannerClient() {
   const runVerification = useCallback(async () => {
     const video = videoRef.current;
     if (!video || busyRef.current || !cameraEnabled) return;
+    if (!eventId || !attendanceType) {
+      setError("Select an event and attendance type before scanning.");
+      setScanActive(false);
+      return;
+    }
 
     busyRef.current = true;
     setScanBusy(true);
@@ -314,7 +353,8 @@ export default function MobileStaffScannerClient() {
         body: JSON.stringify({
           imageBase64: primary.data,
           livenessFrames: frames.map((frame) => frame.data),
-          eventId: eventId.trim() || undefined,
+          eventId: eventId.trim(),
+          attendanceType,
           autoRecord: true,
         }),
       });
@@ -372,7 +412,7 @@ export default function MobileStaffScannerClient() {
       busyRef.current = false;
       setScanBusy(false);
     }
-  }, [cameraEnabled, eventId, playSuccessTone]);
+  }, [attendanceType, cameraEnabled, eventId, playSuccessTone]);
 
   useEffect(() => {
     if (!scanActive || !cameraEnabled) {
@@ -548,16 +588,31 @@ export default function MobileStaffScannerClient() {
           </button>
         </div>
 
-        <div className="mt-2">
-          <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-            Event ID (optional)
+        <div className="mt-3 space-y-2">
+          <label className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+            Select Event
           </label>
-          <input
+          <select
             value={eventId}
             onChange={(event) => setEventId(event.target.value)}
-            placeholder="e.g. SPORTS-FEST-2026"
-            className="h-11 w-full rounded-xl border border-white/20 bg-slate-800/70 px-3 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/50"
-          />
+            disabled={eventsLoading}
+            className="h-11 w-full rounded-xl border border-white/20 bg-slate-800/70 px-3 text-sm text-slate-100 outline-none focus:border-cyan-300/50 disabled:opacity-60"
+          >
+            <option value="">{eventsLoading ? "Loading events..." : "Select an event"}</option>
+            {events.map((event) => (
+              <option key={event.id} value={event.id}>{event.title}</option>
+            ))}
+          </select>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => setAttendanceType("TIME_IN")} className={`h-11 rounded-xl text-sm font-semibold ${attendanceType === "TIME_IN" ? "bg-cyan-400 text-slate-950" : "border border-white/20 bg-slate-800/70 text-slate-300"}`}>Time In</button>
+            <button type="button" onClick={() => setAttendanceType("TIME_OUT")} className={`h-11 rounded-xl text-sm font-semibold ${attendanceType === "TIME_OUT" ? "bg-cyan-400 text-slate-950" : "border border-white/20 bg-slate-800/70 text-slate-300"}`}>Time Out</button>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" disabled={cameraCount < 2} onClick={() => setFacingMode("user")} className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-semibold ${facingMode === "user" ? "bg-cyan-400 text-slate-950" : "border border-white/20 bg-slate-800/70 text-slate-300"} disabled:cursor-not-allowed disabled:opacity-50`}><Camera className="h-4 w-4" />Front camera</button>
+            <button type="button" disabled={cameraCount < 2} onClick={() => setFacingMode("environment")} className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-semibold ${facingMode === "environment" ? "bg-cyan-400 text-slate-950" : "border border-white/20 bg-slate-800/70 text-slate-300"} disabled:cursor-not-allowed disabled:opacity-50`}><Camera className="h-4 w-4" />Rear camera</button>
+          </div>
+          {cameraCount < 2 ? <p className="text-xs text-slate-400">Only one camera is available on this device.</p> : null}
+          {!events.length && !eventsLoading ? <p className="text-xs text-amber-300">No events available. Create one in Event Management before scanning.</p> : null}
         </div>
 
         {message ? (

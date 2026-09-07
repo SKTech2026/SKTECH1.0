@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import {
   Clock3,
   IdCard,
+  MapPin,
   Megaphone,
   MessageSquare,
 } from "lucide-react";
@@ -123,57 +124,65 @@ export default async function MobileOfficialPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-2xl border border-glass-border bg-surface p-4 shadow-xl">
-        <p className="text-[11px] uppercase tracking-[0.16em] text-accent">Official Mobile</p>
-        <h1 className="mt-1 text-xl font-bold text-foreground">Official Dashboard</h1>
-        <p className="mt-1 text-sm text-muted">Welcome, {fullName}. Choose what you want to access.</p>
-      </section>
-
-      <section className="rounded-2xl border border-glass-border bg-surface p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-semibold text-foreground">Official access</h2>
-            <p className="mt-1 text-xs text-muted">Approved account status: {user.official.status}</p>
-          </div>
-          <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase ${isApproved ? "bg-emerald-400/15 text-emerald-300" : "bg-amber-400/15 text-amber-200"}`}>
-            {isApproved ? "Approved" : "Pending"}
-          </span>
+    <div className="-mx-3 min-h-[calc(100dvh-4.5rem)] space-y-4 bg-[#f4f7fb] px-3 pb-8 pt-2 text-[#10233f]">
+      <section className="rounded-[1.75rem] bg-white p-5 shadow-[0_18px_45px_-32px_rgba(15,35,63,0.55)]">
+        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#1452d9]">SKTECH Official Services</p>
+        <h1 className="mt-2 text-2xl font-black tracking-tight text-[#10233f]">Good day, {fullName}</h1>
+        <div className="mt-4 flex items-center gap-2 text-sm font-semibold text-[#4d6380]">
+          <MapPin className="h-4 w-4 text-[#cf2638]" />
+          <span>{user.official.municipality ?? "Your municipality"}</span>
+          <span className="ml-auto rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold uppercase text-emerald-700">Verified</span>
         </div>
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-2">
-        <Link href={`/id/${user.official.id}`} className="rounded-2xl border border-glass-border bg-surface p-4 transition hover:bg-surface-elevated">
-          <IdCard className="h-6 w-6 text-cyan-300" />
-          <h2 className="mt-3 text-base font-semibold text-foreground">Digital ID</h2>
-          <p className="mt-1 text-xs text-muted">Open your landscape digital identity card.</p>
-        </Link>
-        <Link href="/mobile/official/announcements" className="rounded-2xl border border-glass-border bg-surface p-4 transition hover:bg-surface-elevated">
-          <Megaphone className="h-6 w-6 text-cyan-300" />
-          <h2 className="mt-3 text-base font-semibold text-foreground">Announcements</h2>
-          <p className="mt-1 text-xs text-muted">Read active federation announcements.</p>
-        </Link>
-        <Link href="/mobile/official/feed" className="rounded-2xl border border-glass-border bg-surface p-4 transition hover:bg-surface-elevated">
-          <Megaphone className="h-6 w-6 text-cyan-300" />
-          <h2 className="mt-3 text-base font-semibold text-foreground">Municipal SK Federation Feed</h2>
-          <p className="mt-1 text-xs text-muted">See Staff posts for your municipality.</p>
-        </Link>
-        <Link href="/mobile/official/chat" className="rounded-2xl border border-glass-border bg-surface p-4 transition hover:bg-surface-elevated">
-          <MessageSquare className="h-6 w-6 text-cyan-300" />
-          <h2 className="mt-3 text-base font-semibold text-foreground">Chat</h2>
-          <p className="mt-1 text-xs text-muted">Message approved SKTECH contacts.</p>
-        </Link>
-        <Link href="/mobile/official/attendance-logs" className="rounded-2xl border border-glass-border bg-surface p-4 transition hover:bg-surface-elevated">
-          <Clock3 className="h-6 w-6 text-cyan-300" />
-          <h2 className="mt-3 text-base font-semibold text-foreground">Attendance Logs</h2>
-          <p className="mt-1 text-xs text-muted">Review your recent attendance records.</p>
-        </Link>
+      <section className="rounded-[1.5rem] bg-[#1452d9] p-4 text-white shadow-[0_20px_40px_-28px_rgba(20,82,217,0.9)]">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-blue-100">Official access</p>
+            <h2 className="mt-1 text-lg font-bold">Your services are ready</h2>
+          </div>
+          <IdCard className="h-8 w-8 text-[#f3c72b]" />
+        </div>
       </section>
 
-      <section className="rounded-2xl border border-glass-border bg-surface p-4 text-xs text-muted">
+      <section className="space-y-3">
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-base font-black text-[#10233f]">My services</h2>
+          <span className="text-xs font-semibold text-[#6d819b]">SKTECH portal</span>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+        <Link href={`/id/${user.official.id}`} className="rounded-2xl border border-[#e2eaf4] bg-white p-4 shadow-[0_12px_28px_-24px_rgba(15,35,63,0.5)] transition hover:border-[#1452d9]">
+          <IdCard className="h-6 w-6 text-[#1452d9]" />
+          <h2 className="mt-3 text-sm font-bold text-[#10233f]">Digital ID</h2>
+          <p className="mt-1 text-xs leading-5 text-[#6d819b]">Open your digital identity card.</p>
+        </Link>
+        <Link href="/mobile/official/announcements" className="rounded-2xl border border-[#e2eaf4] bg-white p-4 shadow-[0_12px_28px_-24px_rgba(15,35,63,0.5)] transition hover:border-[#cf2638]">
+          <Megaphone className="h-6 w-6 text-[#cf2638]" />
+          <h2 className="mt-3 text-sm font-bold text-[#10233f]">Announcements</h2>
+          <p className="mt-1 text-xs leading-5 text-[#6d819b]">Read federation advisories.</p>
+        </Link>
+        <Link href="/mobile/official/feed" className="rounded-2xl border border-[#e2eaf4] bg-white p-4 shadow-[0_12px_28px_-24px_rgba(15,35,63,0.5)] transition hover:border-[#f3c72b]">
+          <Megaphone className="h-6 w-6 text-[#e7b720]" />
+          <h2 className="mt-3 text-sm font-bold text-[#10233f]">Municipal Feed</h2>
+          <p className="mt-1 text-xs leading-5 text-[#6d819b]">See Staff posts for your municipality.</p>
+        </Link>
+        <Link href="/mobile/official/chat" className="rounded-2xl border border-[#e2eaf4] bg-white p-4 shadow-[0_12px_28px_-24px_rgba(15,35,63,0.5)] transition hover:border-[#1452d9]">
+          <MessageSquare className="h-6 w-6 text-[#1452d9]" />
+          <h2 className="mt-3 text-sm font-bold text-[#10233f]">Chat</h2>
+          <p className="mt-1 text-xs leading-5 text-[#6d819b]">Message approved contacts.</p>
+        </Link>
+        <Link href="/mobile/official/attendance-logs" className="rounded-2xl border border-[#e2eaf4] bg-white p-4 shadow-[0_12px_28px_-24px_rgba(15,35,63,0.5)] transition hover:border-[#cf2638]">
+          <Clock3 className="h-6 w-6 text-[#cf2638]" />
+          <h2 className="mt-3 text-sm font-bold text-[#10233f]">Attendance Logs</h2>
+          <p className="mt-1 text-xs leading-5 text-[#6d819b]">Review recent attendance.</p>
+        </Link>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-[#e2eaf4] bg-white p-4 text-xs text-[#6d819b]">
         <p>
           Face registration status:{" "}
-          <span className={user.faceRegistered ? "text-emerald-300" : "text-amber-300"}>
+          <span className={user.faceRegistered ? "font-bold text-emerald-700" : "font-bold text-amber-700"}>
             {user.faceRegistered ? "Registered" : "Not registered"}
           </span>
         </p>

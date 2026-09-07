@@ -11,7 +11,8 @@ export const dynamic = "force-dynamic";
 
 interface ScanRequest {
   officialId: string;
-  eventId?: string;
+  eventId: string;
+  attendanceType: "TIME_IN" | "TIME_OUT";
 }
 
 interface ScanResponse {
@@ -68,11 +69,25 @@ export async function POST(
     }
 
     const body = (await request.json()) as ScanRequest;
-    const { officialId, eventId } = body;
+    const { officialId, eventId, attendanceType } = body;
 
     if (!officialId || typeof officialId !== "string") {
       return NextResponse.json(
         { error: "officialId is required and must be a string" },
+        { status: 400 },
+      );
+    }
+
+    if (!eventId || typeof eventId !== "string") {
+      return NextResponse.json(
+        { error: "eventId is required and must be a string" },
+        { status: 400 },
+      );
+    }
+
+    if (attendanceType !== "TIME_IN" && attendanceType !== "TIME_OUT") {
+      return NextResponse.json(
+        { error: "attendanceType must be TIME_IN or TIME_OUT" },
         { status: 400 },
       );
     }
@@ -102,68 +117,58 @@ export async function POST(
       );
     }
 
-    if (eventId && typeof eventId === "string") {
-      const event = await prisma.event.findFirst({
-        where: {
-          id: eventId,
-          ...(staffMunicipalityId ? { municipalityId: staffMunicipalityId } : {}),
-        },
-      });
-      if (!event) {
-        return NextResponse.json({ error: "Event not found" }, { status: 404 });
-      }
+    const event = await prisma.event.findFirst({
+      where: {
+        id: eventId,
+        ...(staffMunicipalityId ? { municipalityId: staffMunicipalityId } : {}),
+      },
+    });
+    if (!event) {
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
-
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
-
-    const tomorrow = new Date(today);
-    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
 
     const existingAttendance = await prisma.officialAttendance.findFirst({
       where: {
         officialId,
-        createdAt: {
-          gte: today,
-          lt: tomorrow,
-        },
+        eventId,
+        timeOut: null,
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: { timeIn: "desc" },
     });
 
     let attendance;
     let action: "CHECK_IN" | "CHECK_OUT";
     let message: string;
 
-    if (!existingAttendance) {
-      attendance = await prisma.officialAttendance.create({
-        data: {
-          officialId,
-          eventId: eventId && typeof eventId === "string" ? eventId : null,
-          timeIn: new Date(),
-        },
-      });
-      action = "CHECK_IN";
-      message = `${official.firstName} ${official.lastName} checked in`;
-    } else if (existingAttendance.timeOut === null) {
+    if (attendanceType === "TIME_OUT") {
+      if (!existingAttendance) {
+        return NextResponse.json(
+          { error: "No open Time In record exists for this official and event." },
+          { status: 409 },
+        );
+      }
+
       attendance = await prisma.officialAttendance.update({
         where: { id: existingAttendance.id },
-        data: {
-          timeOut: new Date(),
-        },
+        data: { timeOut: new Date() },
       });
       action = "CHECK_OUT";
-      message = `${official.firstName} ${official.lastName} checked out`;
-    } else {
+      message = `${official.firstName} ${official.lastName} timed out`;
+    } else if (!existingAttendance) {
       attendance = await prisma.officialAttendance.create({
         data: {
           officialId,
-          eventId: eventId && typeof eventId === "string" ? eventId : null,
+          eventId,
           timeIn: new Date(),
         },
       });
       action = "CHECK_IN";
-      message = `${official.firstName} ${official.lastName} checked in (new session)`;
+      message = `${official.firstName} ${official.lastName} timed in`;
+    } else {
+      return NextResponse.json(
+        { error: "An open Time In record already exists for this official and event." },
+        { status: 409 },
+      );
     }
 
     const response: ScanResponse = {

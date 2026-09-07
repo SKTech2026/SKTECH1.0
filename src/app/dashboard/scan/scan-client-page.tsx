@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Html5Qrcode } from "html5-qrcode";
+import { Html5Qrcode, type CameraDevice } from "html5-qrcode";
+import { Camera } from "lucide-react";
 
 type ScanResult = {
   success: boolean;
@@ -18,6 +19,7 @@ type EventOption = {
   title: string;
   eventDate: string;
 };
+type AttendanceType = "TIME_IN" | "TIME_OUT";
 
 type RecentAttendanceItem = {
   id: string;
@@ -75,6 +77,11 @@ export default function ScanPage() {
   const [events, setEvents] = useState<EventOption[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [selectedEventId, setSelectedEventId] = useState<EventOption["id"] | null>(null);
+  const [attendanceType, setAttendanceType] = useState<AttendanceType>("TIME_IN");
+  const attendanceTypeRef = useRef<AttendanceType>("TIME_IN");
+  const [cameras, setCameras] = useState<CameraDevice[]>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState("");
+  const selectedCameraIdRef = useRef("");
   const [recentAttendance, setRecentAttendance] = useState<RecentAttendanceItem[]>([]);
 
   const scannerRef = useRef<Html5Qrcode | null>(null);
@@ -133,6 +140,14 @@ export default function ScanPage() {
   useEffect(() => {
     selectedEventIdRef.current = selectedEventId;
   }, [selectedEventId]);
+
+  useEffect(() => {
+    selectedCameraIdRef.current = selectedCameraId;
+  }, [selectedCameraId]);
+
+  useEffect(() => {
+    attendanceTypeRef.current = attendanceType;
+  }, [attendanceType]);
 
   const fetchRecentAttendance = useCallback(async () => {
     const eventId = selectedEventIdRef.current;
@@ -201,7 +216,7 @@ export default function ScanPage() {
         const validEvents = data.filter((event): event is EventOption => {
           if (!event || typeof event !== "object") return false;
           const candidate = event as Partial<EventOption>;
-          return (
+          return new Date(String(candidate.eventDate)).getTime() >= Date.now() && (
             (typeof candidate.id === "string" || typeof candidate.id === "number") &&
             typeof candidate.title === "string" &&
             typeof candidate.eventDate === "string"
@@ -232,14 +247,28 @@ export default function ScanPage() {
     };
   }, []);
 
-  useEffect(() => {
-    const onScanSuccess = async (decodedText: string) => {
+  const stopScanner = useCallback(async () => {
+    const scanner = scannerRef.current;
+    scannerRef.current = null;
+    setScannerReady(false);
+    if (scanner) {
+      await scanner.stop().catch(() => {});
+      scanner.clear();
+    }
+  }, []);
+
+  const onScanSuccess = useCallback(async (decodedText: string) => {
       // Extract official ID from URL like /id/{officialId}
       const idMatch = decodedText.match(/\/id\/([^\/?#]+)/i);
       if (!idMatch || !idMatch[1]) {
         setLastScan({ error: "Invalid QR code. Please scan an SK Official ID card." });
         setFlashType("error");
         playTone(errorAudioRef.current);
+        return;
+      }
+      if (!selectedEventIdRef.current) {
+        setLastScan({ error: "Select an event before scanning." });
+        setFlashType("error");
         return;
       }
       const officialId = idMatch[1];
@@ -253,7 +282,8 @@ export default function ScanPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             officialId,
-            eventId: selectedEventIdRef.current,
+                eventId: selectedEventIdRef.current,
+                attendanceType: attendanceTypeRef.current,
           }),
         });
 
@@ -283,53 +313,50 @@ export default function ScanPage() {
         processingRef.current = false;
         setIsProcessing(false);
       }, 2000);
-    };
+    }, []);
 
-    const onScanError = () => {
-      // ignore intermediate scan errors
-    };
-
-    const startScanner = async () => {
+  const startScanner = useCallback(async (requestedCameraId?: string) => {
+      await stopScanner();
       try {
-        const cameras = await Html5Qrcode.getCameras();
-        if (cameras && cameras.length) {
-          const cameraId = cameras[0].id;
-          const scanner = new Html5Qrcode("qr-reader");
-          scannerRef.current = scanner;
-
-          await scanner.start(
-            cameraId,
-            { fps: 10, qrbox: { width: 300, height: 300 }, aspectRatio: 1 },
-            onScanSuccess,
-            onScanError
-          );
-
-          setScannerReady(true);
-        } else {
+        const availableCameras = await Html5Qrcode.getCameras();
+        setCameras(availableCameras);
+        if (!availableCameras.length) {
           setLastScan({ error: "No camera devices found." });
+          return;
         }
+
+        const cameraId = requestedCameraId || selectedCameraIdRef.current ||
+          availableCameras.find((camera) => /back|rear|environment/i.test(camera.label))?.id ||
+          availableCameras[0].id;
+        setSelectedCameraId(cameraId);
+        selectedCameraIdRef.current = cameraId;
+        const scanner = new Html5Qrcode("qr-reader");
+        scannerRef.current = scanner;
+        await scanner.start(
+          cameraId,
+          { fps: 10, qrbox: { width: 300, height: 300 }, aspectRatio: 1 },
+          onScanSuccess,
+          () => {},
+        );
+        setScannerReady(true);
       } catch (err) {
-        if (process.env.NODE_ENV !== "production") {
-          console.error("Failed to start scanner", err);
-        }
+        if (process.env.NODE_ENV !== "production") console.error("Failed to start scanner", err);
         setLastScan({ error: "Failed to initialize camera. Check permissions." });
       }
-    };
+    }, [onScanSuccess, stopScanner]);
 
-    startScanner();
-
+  useEffect(() => {
+    void startScanner();
     return () => {
-      if (scannerRef.current) {
-        scannerRef.current
-          .stop()
-          .catch(() => {})
-          .finally(() => {
-            scannerRef.current?.clear();
-            scannerRef.current = null;
-          });
-      }
+      void stopScanner();
     };
-  }, []);
+  }, [startScanner, stopScanner]);
+
+  const handleCameraChange = (cameraId: string) => {
+    setSelectedCameraId(cameraId);
+    selectedCameraIdRef.current = cameraId;
+    void startScanner(cameraId);
+  };
 
   return (
     <div className="relative overflow-hidden rounded-3xl border border-glass-border bg-surface p-6 shadow-[0_24px_48px_-24px_var(--shadow-color)] backdrop-blur-md">
@@ -379,13 +406,46 @@ export default function ScanPage() {
                 }}
                 disabled={eventsLoading}
               >
-                <option value="">General Attendance</option>
+                <option value="">Select an event</option>
                 {events.map((event) => (
                   <option key={event.id} value={String(event.id)}>
                     {event.title} ({formatEventDate(event.eventDate)})
                   </option>
                 ))}
               </select>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAttendanceType("TIME_IN")}
+                  className={`rounded-md px-3 py-2 text-sm font-semibold ${attendanceType === "TIME_IN" ? "bg-accent text-accent-foreground" : "border border-glass-border text-muted"}`}
+                >
+                  Time In
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAttendanceType("TIME_OUT")}
+                  className={`rounded-md px-3 py-2 text-sm font-semibold ${attendanceType === "TIME_OUT" ? "bg-accent text-accent-foreground" : "border border-glass-border text-muted"}`}
+                >
+                  Time Out
+                </button>
+              </div>
+              <div className="mt-3 flex items-center gap-2 text-xs text-muted">
+                <Camera className="h-4 w-4 text-accent" />
+                <select
+                  aria-label="QR camera"
+                  value={selectedCameraId}
+                  onChange={(event) => handleCameraChange(event.target.value)}
+                  disabled={cameras.length < 2}
+                  className="min-w-0 flex-1 rounded-md border border-glass-border bg-surface-elevated px-2 py-2 text-xs text-foreground disabled:opacity-60"
+                >
+                  {cameras.length === 0 ? <option value="">Camera unavailable</option> : null}
+                  {cameras.map((camera, index) => (
+                    <option key={camera.id} value={camera.id}>{camera.label || `Camera ${index + 1}`}</option>
+                  ))}
+                </select>
+                {cameras.length < 2 ? <span>Only one camera available</span> : null}
+              </div>
+              {!selectedEventId ? <p className="mt-2 text-xs text-amber-300">Select an event before scanning.</p> : null}
             </div>
 
             <div className="bg-black rounded-lg p-3 border-2 border-glass-border">

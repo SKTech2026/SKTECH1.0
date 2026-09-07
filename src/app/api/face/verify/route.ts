@@ -14,7 +14,8 @@ interface VerifyFaceRequestBody {
   imageBase64?: string;
   livenessFrames?: string[];
   threshold?: number;
-  eventId?: string;
+  eventId: string;
+  attendanceType: "TIME_IN" | "TIME_OUT";
   autoRecord?: boolean;
 }
 
@@ -26,7 +27,6 @@ type FaceStatus =
   | "LIVENESS_FAILED";
 
 const VERIFIED_CONFIDENCE_THRESHOLD = 0.7;
-const DUPLICATE_ATTENDANCE_WINDOW_MS = 30_000;
 
 interface FacePayload {
   faceIndex: number;
@@ -65,44 +65,47 @@ const requireAdminOrStaff = async () => {
   return { session };
 };
 
-async function markAttendanceOnce(officialId: string, eventId?: string | null) {
+async function markAttendanceOnce(
+  officialId: string,
+  eventId: string,
+  attendanceType: "TIME_IN" | "TIME_OUT",
+) {
   const now = new Date();
-  const duplicateSince = new Date(now.getTime() - DUPLICATE_ATTENDANCE_WINDOW_MS);
-  const normalizedEventId = eventId ?? null;
-
-  const duplicateWhere = normalizedEventId
-    ? {
-        officialId,
-        eventId: normalizedEventId,
-        timeIn: {
-          gte: duplicateSince,
-        },
-      }
-    : {
-        officialId,
-        eventId: null as null,
-        timeIn: {
-          gte: duplicateSince,
-        },
-      };
 
   const existing = await prisma.officialAttendance.findFirst({
-    where: duplicateWhere,
+    where: { officialId, eventId, timeOut: null },
     orderBy: { timeIn: "desc" },
   });
+
+  if (attendanceType === "TIME_OUT") {
+    if (!existing) {
+      return { status: "NO_OPEN_RECORD" as const, attendanceId: null, timestamp: null };
+    }
+
+    const attendance = await prisma.officialAttendance.update({
+      where: { id: existing.id },
+      data: { timeOut: now },
+    });
+
+    return {
+      status: "MARKED" as const,
+      attendanceId: attendance.id,
+      timestamp: attendance.timeOut?.toISOString() ?? now.toISOString(),
+    };
+  }
 
   if (existing) {
     return {
       status: "SKIPPED_DUPLICATE" as const,
-      attendanceId: existing.id,
-      timestamp: existing.timeIn.toISOString(),
+      attendanceId: existing?.id ?? null,
+      timestamp: existing?.timeIn.toISOString() ?? null,
     };
   }
 
   const attendance = await prisma.officialAttendance.create({
     data: {
       officialId,
-      eventId: normalizedEventId,
+      eventId,
       timeIn: now,
     },
   });
@@ -145,20 +148,22 @@ export async function POST(request: NextRequest) {
       ? body.livenessFrames.filter((frame) => typeof frame === "string")
       : [];
 
-    if (body.eventId && typeof body.eventId !== "string") {
+    if (!body.eventId || typeof body.eventId !== "string") {
       return NextResponse.json({ error: "eventId must be a string." }, { status: 400 });
     }
 
-    if (body.eventId) {
-      const event = await prisma.event.findFirst({
-        where: {
-          id: body.eventId,
-          ...(staffMunicipalityId ? { municipalityId: staffMunicipalityId } : {}),
-        },
-      });
-      if (!event) {
-        return NextResponse.json({ error: "Event not found." }, { status: 404 });
-      }
+    if (body.attendanceType !== "TIME_IN" && body.attendanceType !== "TIME_OUT") {
+      return NextResponse.json({ error: "attendanceType must be TIME_IN or TIME_OUT." }, { status: 400 });
+    }
+
+    const event = await prisma.event.findFirst({
+      where: {
+        id: body.eventId,
+        ...(staffMunicipalityId ? { municipalityId: staffMunicipalityId } : {}),
+      },
+    });
+    if (!event) {
+      return NextResponse.json({ error: "Event not found." }, { status: 404 });
     }
 
     const aiResponse = await verifyFaceAgainstEmbeddings({
@@ -291,8 +296,12 @@ export async function POST(request: NextRequest) {
             timestamp: null,
           };
         } else {
-          const marked = await markAttendanceOnce(official.id, body.eventId ?? null);
-          attendance = marked;
+          const marked = await markAttendanceOnce(official.id, body.eventId, body.attendanceType);
+          if (marked.status === "NO_OPEN_RECORD") {
+            throw new Error("No open Time In record exists for this official and event.");
+          } else {
+            attendance = marked;
+          }
           alreadyProcessedInFrame.add(face.userId);
 
           if (marked.status === "MARKED") {
