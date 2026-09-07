@@ -10,9 +10,9 @@ import {
 } from "lucide-react";
 
 import { authOptions } from "@/lib/auth";
+import { orientalMindoroMunicipalitiesGeoJson } from "@/data/oriental-mindoro-municipalities";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/roleGuard";
-import orientalMindoroBoundaries from "@/data/oriental-mindoro-municipalities.geojson";
 
 export const dynamic = "force-dynamic";
 
@@ -50,12 +50,12 @@ type MunicipalityAnalytics = {
   activePercentage: number | null;
 };
 
-type GeoJsonFeature = (typeof orientalMindoroBoundaries.features)[number];
+type GeoJsonFeature = (typeof orientalMindoroMunicipalitiesGeoJson.features)[number];
 
 const canonicalBoundaryName = (name: string) =>
   name === "City of Calapan" ? "Calapan City" : name;
 
-const boundaryCoordinates = orientalMindoroBoundaries.features.flatMap((feature) => {
+const boundaryCoordinates = orientalMindoroMunicipalitiesGeoJson.features.flatMap((feature) => {
   const coordinates = feature.geometry.coordinates as unknown;
   const points: [number, number][] = [];
   const collect = (value: unknown) => {
@@ -475,7 +475,7 @@ export default async function AdminAnalyticsPage() {
                 className="mx-auto min-w-[620px] w-full max-w-[980px]"
               >
                 <title>Oriental Mindoro municipal analytics map</title>
-                {orientalMindoroBoundaries.features.map((feature) => {
+                {orientalMindoroMunicipalitiesGeoJson.features.map((feature) => {
                   const municipalityName = canonicalBoundaryName(feature.properties.name);
                   const municipality = municipalities.find((item) => item.name === municipalityName);
                   if (!municipality) return null;
