@@ -1,6 +1,5 @@
 import FlippablePortraitID from "@/components/id/FlippablePortraitID";
 import { headers } from "next/headers";
-import { AdmissionStatus, OfficialStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { formatEnumLabel, formatOfficialFullName } from "@/lib/sk-official";
 
@@ -24,8 +23,11 @@ export default async function IDPage({
   const official = await prisma.sKOfficial.findFirst({
     where: {
       id,
-      admissionStatus: AdmissionStatus.APPROVED,
-      status: OfficialStatus.ACTIVE,
+      admissionStatus: "APPROVED",
+      status: "ACTIVE",
+      user: {
+        status: "APPROVED",
+      },
     },
     select: {
       id: true,

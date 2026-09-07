@@ -44,6 +44,8 @@ type FlippablePortraitIDProps = {
 
 const MAX_TILT = 4;
 const TILT_EASING = 0.18;
+const CR80_WIDTH = 856;
+const CR80_HEIGHT = 539.8;
 const DEFAULT_PHOTO_URL = "/images/default-official.svg";
 const WATERMARK = "CAPSTONE PROJECT \u2013 DEMO ID \u2013 NOT AN OFFICIAL GOVERNMENT ID";
 const DEFAULT_CONTACT_INFO =
@@ -106,6 +108,8 @@ export default function FlippablePortraitID({
   const [isFlipped, setIsFlipped] = useState(false);
   const [failedPhotoUrl, setFailedPhotoUrl] = useState<string | null>(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const [landscapeScale, setLandscapeScale] = useState(1);
+  const landscapeFrameRef = useRef<HTMLDivElement | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
   const rafRef = useRef<number | null>(null);
   const targetRef = useRef({ x: 0, y: 0 });
@@ -149,6 +153,20 @@ export default function FlippablePortraitID({
     return () => {
       if (rafRef.current !== null) window.cancelAnimationFrame(rafRef.current);
     };
+  }, []);
+
+  useEffect(() => {
+    const frame = landscapeFrameRef.current;
+    if (!frame) return;
+
+    const updateScale = () => {
+      setLandscapeScale(Math.min(1, frame.clientWidth / CR80_WIDTH));
+    };
+
+    updateScale();
+    const observer = new ResizeObserver(updateScale);
+    observer.observe(frame);
+    return () => observer.disconnect();
   }, []);
 
   const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -327,231 +345,103 @@ export default function FlippablePortraitID({
     </section>
   );
 
-  const MobileSummary = () => (
-    <article className="w-full rounded-3xl border border-[#d5e0ed] bg-white p-4 text-[#09235d] shadow-[0_20px_50px_-30px_rgba(2,6,23,0.5)]">
-      <header className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-2xl bg-[#09235d] px-3 py-2 text-white">
-        {logo(sktechLogoUrl, "SKTECH logo", "h-9 w-20")}
-        <div className="min-w-0 text-center">
-          <p className="text-[0.62rem] font-black uppercase tracking-wide">Digital ID</p>
-          <p className="mt-0.5 truncate text-[0.55rem] font-semibold text-[#f6ca4a]">{provinceName}</p>
+  const LandscapeCard = ({
+    actions = false,
+    controls = true,
+    preview = false,
+  }: {
+    actions?: boolean;
+    controls?: boolean;
+    preview?: boolean;
+  }) => (
+    <section className="mx-auto w-full max-w-[856px]">
+      {controls ? (
+        <div className="id-screen-controls mb-3 grid w-full max-w-[18rem] grid-cols-2 rounded-lg border border-white/10 bg-surface-elevated/55 p-1 text-xs font-semibold text-muted">
+          <button
+            type="button"
+            onClick={() => setIsFlipped(false)}
+            className={`rounded-md px-3 py-2 transition ${!isFlipped ? "bg-accent text-accent-foreground" : "hover:bg-white/10"}`}
+          >
+            Front
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsFlipped(true)}
+            className={`rounded-md px-3 py-2 transition ${isFlipped ? "bg-accent text-accent-foreground" : "hover:bg-white/10"}`}
+          >
+            Back
+          </button>
         </div>
-        {logo(skfedLogoUrl, "Sangguniang Kabataan logo", "h-10 w-11")}
-      </header>
+      ) : null}
 
-      <div className="mt-4 grid grid-cols-[6.2rem_1fr] gap-3">
-        <div>
-          <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-[#d5e0ed] bg-[#eef3f9]">
-            {photo("120px")}
-          </div>
-          <span className={`mt-2 inline-flex w-full justify-center rounded-full px-2 py-1 text-[0.62rem] font-black uppercase ${verified ? "bg-[#e8f5ef] text-[#167447]" : "bg-[#fff4d6] text-[#946700]"}`}>
-            {statusLabel}
-          </span>
-        </div>
-
-        <div className="min-w-0">
-          <h2 className="break-words text-xl font-black leading-tight">{fullName}</h2>
-          <p className="mt-1 break-words text-sm font-bold uppercase text-[#d79a00]">{displayPosition}</p>
-          <dl className="mt-3 space-y-2 text-sm">
-            <div>
-              <dt className="text-[0.62rem] font-black uppercase tracking-wide text-[#61728b]">Municipality</dt>
-              <dd className="break-words font-bold">{municipality}</dd>
-            </div>
-            <div>
-              <dt className="text-[0.62rem] font-black uppercase tracking-wide text-[#61728b]">Barangay</dt>
-              <dd className="break-words font-bold">{barangay}</dd>
-            </div>
-            <div>
-              <dt className="text-[0.62rem] font-black uppercase tracking-wide text-[#61728b]">SKTECH ID</dt>
-              <dd className="break-all font-mono text-xs font-black">{documentId}</dd>
-            </div>
-          </dl>
-        </div>
-      </div>
-
-      <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-[#d5e0ed] bg-[#f7faff] p-3">
-        <div>
-          <p className="text-xs font-black uppercase tracking-wide">QR Verification</p>
-          <p className="mt-1 text-[0.66rem] font-semibold text-[#61728b]">Scan to verify live registry data.</p>
-        </div>
-        <div className="shrink-0 rounded-lg bg-white p-1">
-          <QRCodeSVG value={qrValue} size={88} level="M" includeMargin />
-        </div>
-      </div>
-    </article>
-  );
-
-  const MobileViewer = () => (
-    <section className="w-full max-w-[430px] rounded-3xl border border-glass-border bg-surface p-3 shadow-[0_24px_70px_-34px_var(--shadow-color)]">
-      <header className="mb-3 flex items-start justify-between gap-3 px-1">
-        <div className="min-w-0">
-          <p className="text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-accent">SKTech Governance Registry</p>
-          <h2 className="mt-1 break-words text-lg font-bold text-foreground">
-            Sangguniang Kabataan Official Credential
-          </h2>
-        </div>
-        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[0.62rem] font-black uppercase tracking-wide ${verified ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300" : "bg-amber-500/15 text-amber-700 dark:text-amber-300"}`}>
-          {verified ? "Active" : "Pending"}
-        </span>
-      </header>
-
-      <div className="grid grid-cols-2 rounded-2xl border border-glass-border bg-surface-elevated/55 p-1 text-xs font-semibold text-muted">
-        <button
-          type="button"
-          onClick={() => setIsFlipped(false)}
-          className={`rounded-xl px-3 py-2 transition ${!isFlipped ? "bg-accent text-accent-foreground" : "hover:bg-white/10"}`}
-        >
-          Front
-        </button>
-        <button
-          type="button"
-          onClick={() => setIsFlipped(true)}
-          className={`rounded-xl px-3 py-2 transition ${isFlipped ? "bg-accent text-accent-foreground" : "hover:bg-white/10"}`}
-        >
-          Back
-        </button>
-      </div>
-
-      <div className="mt-3">
-        {!isFlipped ? (
-          <div className="rounded-3xl bg-white p-4 text-[#09235d]">
-            <header className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-2xl bg-[#09235d] px-3 py-2 text-white">
-              {logo(sktechLogoUrl, "SKTECH logo", "h-9 w-20")}
-              {logo(provincialSealUrl, "Province of Oriental Mindoro official seal", "mx-auto h-10 w-10")}
-              {logo(skfedLogoUrl, "Sangguniang Kabataan logo", "ml-auto h-10 w-11")}
-            </header>
-
-            <div className="mt-4 flex flex-col items-center text-center">
-              <div className="relative h-40 w-32 overflow-hidden rounded-2xl border border-[#d5e0ed] bg-[#eef3f9]">
-                {photo("140px")}
-              </div>
-              <h3 className="mt-3 max-w-full break-words text-2xl font-black leading-tight">{fullName}</h3>
-              <p className="mt-1 break-words text-sm font-bold uppercase text-[#d79a00]">{displayPosition}</p>
-            </div>
-
-            <dl className="mt-4 grid gap-2 text-sm">
-              {infoBlock("Municipality", municipality)}
-              {infoBlock("Barangay", barangay)}
-              {infoBlock("SKTECH ID", documentId)}
-              {infoBlock("Term of Service", serviceTerm)}
-              {infoBlock("Status", `${statusLabel} - ${registryStatus}`)}
-            </dl>
-
-            <div className="mt-4 rounded-2xl border border-[#d5e0ed] bg-[#f7faff] p-3 text-center">
-              <p className="text-xs font-black uppercase tracking-wide">QR Verification</p>
-              <div className="mt-2 inline-block rounded-lg bg-white p-1">
-                <QRCodeSVG value={qrValue} size={156} level="M" includeMargin />
-              </div>
-              <p className="mt-2 text-xs font-black uppercase tracking-wide">Scan to Verify</p>
-            </div>
-            <p className="mt-3 text-center text-[0.6rem] font-black uppercase tracking-wide text-[#61728b]">{WATERMARK}</p>
-          </div>
-        ) : (
-          <div className="rounded-3xl bg-white p-4 text-[#172653]">
-            <h3 className="text-base font-black uppercase tracking-wide">Holder Details</h3>
-            <dl className="mt-3 grid gap-2 text-sm">
-              {infoBlock("Birth Date", formatDisplayDate(birthDate))}
-              {infoBlock("Contact Number", contactNo || "Not recorded")}
-              {infoBlock("Email Address", email || "Not recorded")}
-              {infoBlock("Complete Address", addressLine || "Not recorded")}
-            </dl>
-
-            <h3 className="mt-4 text-base font-black uppercase tracking-wide">Term Details</h3>
-            <dl className="mt-3 grid gap-2 text-sm">
-              {infoBlock("Date Elected", formatDisplayDate(dateElected))}
-              {infoBlock("Term Expiration", formatDisplayDate(termEnd))}
-              {infoBlock("Account Status", accountStatus || registryStatus || "Not recorded")}
-            </dl>
-
-            <div className="mt-4 rounded-2xl border border-[#d5e0ed] bg-[#f7faff] p-3 text-center">
-              <p className="text-xs font-black uppercase tracking-wide">Verification</p>
-              <div className="mt-2 inline-block rounded-lg bg-white p-1">
-                <QRCodeSVG value={qrValue} size={164} level="M" includeMargin />
-              </div>
-              <p className="mt-2 break-words text-sm font-black">{websiteUrl}</p>
-              <p className="mt-1 text-xs text-[#61728b]">Issued: {issued}</p>
-              <p className="mt-2 text-xs leading-snug text-[#61728b]">{contactInfo}</p>
-            </div>
-
-            <div className="mt-4 rounded-2xl border border-[#d5e0ed] bg-white p-3 text-center">
-              <p className="text-xs font-black uppercase tracking-wide">Holder&apos;s Signature</p>
-              <div className="mt-3 h-5 border-b-2 border-[#172653]" />
-            </div>
-            <p className="mt-3 text-center text-[0.6rem] font-black uppercase tracking-wide text-[#61728b]">{WATERMARK}</p>
-          </div>
-        )}
-      </div>
-
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <Link href={closeHref} className="inline-flex h-11 items-center justify-center rounded-xl border border-glass-border bg-surface-elevated px-3 text-sm font-semibold text-foreground">
-          Close / Back
-        </Link>
-        <a href={qrValue} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center justify-center rounded-xl bg-accent px-3 text-sm font-semibold text-accent-foreground">
-          Verify QR
-        </a>
-      </div>
-    </section>
-  );
-
-  const desktopShell = (
-    <div className="mx-auto w-full max-w-[920px]">
-      <div className="id-screen-controls mb-3 grid w-full max-w-[18rem] grid-cols-2 rounded-lg border border-white/10 bg-surface-elevated/55 p-1 text-xs font-semibold text-muted">
-        <button
-          type="button"
-          onClick={() => setIsFlipped(false)}
-          className={`rounded-md px-3 py-2 transition ${!isFlipped ? "bg-accent text-accent-foreground" : "hover:bg-white/10"}`}
-        >
-          Front
-        </button>
-        <button
-          type="button"
-          onClick={() => setIsFlipped(true)}
-          className={`rounded-md px-3 py-2 transition ${isFlipped ? "bg-accent text-accent-foreground" : "hover:bg-white/10"}`}
-        >
-          Back
-        </button>
-      </div>
-
-      <div className="id-screen-card [perspective:1800px]">
+      <div
+        ref={landscapeFrameRef}
+        className="id-screen-card relative w-full max-w-full overflow-visible [perspective:1800px]"
+        style={{ aspectRatio: `${CR80_WIDTH} / ${CR80_HEIGHT}` }}
+      >
         <div
-          ref={cardRef}
-          role="button"
-          tabIndex={0}
+          ref={preview ? undefined : cardRef}
+          role={preview ? "img" : "button"}
+          tabIndex={preview ? undefined : 0}
           aria-label="Digital ID card"
-          onClick={() => setIsFlipped((previous) => !previous)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              event.preventDefault();
-              setIsFlipped((previous) => !previous);
-            }
+          onClick={preview ? undefined : () => setIsFlipped((previous) => !previous)}
+          onKeyDown={
+            preview
+              ? undefined
+              : (event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    setIsFlipped((previous) => !previous);
+                  }
+                }
+          }
+          onMouseMove={preview ? undefined : handleMouseMove}
+          onMouseLeave={
+            preview
+              ? undefined
+              : () => {
+                  targetRef.current = { x: 0, y: 0 };
+                  startTilt();
+                }
+          }
+          className={`id-landscape-card absolute left-1/2 top-0 w-[856px] rounded-[0.72rem] outline-none [transform-style:preserve-3d] transition-transform duration-700 [transition-timing-function:cubic-bezier(0.2,0.8,0.2,1)] focus-visible:ring-2 focus-visible:ring-[#f5b300] ${preview ? "" : "cursor-pointer"}`}
+          style={{
+            height: `${CR80_HEIGHT}px`,
+            transform: `translateX(-50%) scale(${landscapeScale}) ${preview ? "" : transform}`,
+            transformOrigin: "top center",
           }}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={() => {
-            targetRef.current = { x: 0, y: 0 };
-            startTilt();
-          }}
-          className="relative aspect-[856/540] w-full cursor-pointer rounded-[0.72rem] outline-none [transform-style:preserve-3d] transition-transform duration-700 [transition-timing-function:cubic-bezier(0.2,0.8,0.2,1)] focus-visible:ring-2 focus-visible:ring-[#f5b300]"
-          style={{ transform }}
         >
           <DesktopFront />
-          <DesktopBack />
+          {preview ? null : <DesktopBack />}
         </div>
       </div>
 
+      {actions ? (
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <Link href={closeHref} className="inline-flex h-11 items-center justify-center rounded-xl border border-glass-border bg-surface-elevated px-3 text-sm font-semibold text-foreground">
+            Close / Back
+          </Link>
+          <a href={qrValue} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center justify-center rounded-xl bg-accent px-3 text-sm font-semibold text-accent-foreground">
+            Verify QR
+          </a>
+        </div>
+      ) : null}
+
       <div className="id-print-stack hidden">
-        <div className="official-id-print-card relative aspect-[856/540] overflow-hidden">
+        <div className="official-id-print-card relative overflow-hidden">
           <DesktopFront print />
         </div>
-        <div className="official-id-print-card relative aspect-[856/540] overflow-hidden">
+        <div className="official-id-print-card relative overflow-hidden">
           <DesktopBack print />
         </div>
       </div>
-    </div>
+    </section>
   );
 
   if (variant === "dashboardPreview" || variant === "mobilePreview") {
     return (
       <div className={className ?? ""}>
-        <MobileSummary />
+        <LandscapeCard controls={false} preview />
         <IDStyles />
       </div>
     );
@@ -560,7 +450,7 @@ export default function FlippablePortraitID({
   if (variant === "mobileFull" || variant === "mobileViewer") {
     return (
       <div className={className ?? ""}>
-        <MobileViewer />
+        <LandscapeCard actions />
         <IDStyles />
       </div>
     );
@@ -568,10 +458,7 @@ export default function FlippablePortraitID({
 
   return (
     <div className={className ?? ""}>
-      <div className="sm:hidden">
-        <MobileViewer />
-      </div>
-      <div className="hidden sm:block">{desktopShell}</div>
+      <LandscapeCard />
       <IDStyles />
     </div>
   );
@@ -650,7 +537,7 @@ function IDStyles() {
       }
 
       @page {
-        size: 85.6mm 54mm;
+        size: 85.6mm 53.98mm;
         margin: 0;
       }
 
@@ -670,7 +557,7 @@ function IDStyles() {
 
         .official-id-print-card {
           width: 85.6mm !important;
-          height: 54mm !important;
+          height: 53.98mm !important;
           page-break-after: always;
           break-after: page;
         }

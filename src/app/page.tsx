@@ -34,6 +34,7 @@ type ChatMessage = {
 };
 
 const logoPath = "/assets/logos/sktech-logo-new.png";
+const orientalMindoroWordmarkPath = "/assets/branding/oriental-mindoro-wordmark.png";
 
 const navItems = [
   ["Overview", "#about"],
@@ -419,7 +420,14 @@ export default function HomePage() {
                     })}
                 className="max-w-3xl text-[2.35rem] font-black leading-[0.98] text-[#0a3aa2] sm:text-5xl md:text-6xl lg:text-7xl"
               >
-                Oriental Mindoro
+                <Image
+                  src={orientalMindoroWordmarkPath}
+                  alt="Oriental Mindoro"
+                  width={900}
+                  height={327}
+                  priority
+                  className="h-auto w-full max-w-[560px] object-contain"
+                />
                 <span className="relative mt-2 block text-[#06132d]">
                   SK Federation
                   <span className="absolute -bottom-1 left-0 h-2 w-36 rounded-full bg-[#f3c72b] sm:h-3 sm:w-52" />
