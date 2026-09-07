@@ -32,6 +32,7 @@ function serializeMessage(message: Awaited<ReturnType<typeof getMessages>>[numbe
           ? `${message.sender.official.firstName} ${message.sender.official.lastName}`
           : message.sender.name || message.sender.email || "SKTech User",
       role: message.sender.role,
+      photoUrl: message.sender.image?.startsWith("/") ? message.sender.image : null,
     },
     attachments: message.attachments.map((attachment) => ({
       id: attachment.id,
@@ -54,6 +55,7 @@ function getMessages(conversationId: string, limit: number) {
           id: true,
           name: true,
           email: true,
+          image: true,
           role: true,
           official: {
             select: {
@@ -201,6 +203,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
             id: true,
             name: true,
             email: true,
+            image: true,
             role: true,
             official: {
               select: {

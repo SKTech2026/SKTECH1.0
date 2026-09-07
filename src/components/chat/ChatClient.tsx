@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import {
   ChevronLeft,
   FileText,
@@ -21,6 +22,9 @@ type ChatContact = {
   email: string | null;
   role: "OFFICIAL" | "STAFF";
   officialRole: string | null;
+  position: string | null;
+  barangay: string | null;
+  photoUrl: string | null;
   municipality: string | null;
 };
 
@@ -45,6 +49,7 @@ type ChatMessage = {
     id: string;
     name: string;
     role: "OFFICIAL" | "STAFF";
+    photoUrl: string | null;
   };
   attachments: {
     id: string;
@@ -61,7 +66,8 @@ type ChatClientProps = {
 };
 
 const POLLING_INTERVAL_MS = 4000;
-const CALL_SIGNAL_POLLING_INTERVAL_MS = 1500;
+const CALL_SIGNAL_POLLING_INTERVAL_MS = 1000;
+const DEFAULT_PHOTO_URL = "/images/default-official.svg";
 const RTC_CONFIGURATION: RTCConfiguration = {
   iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
 };
@@ -93,9 +99,51 @@ function formatTime(value: string) {
   return date.toLocaleString();
 }
 
-function roleLabel(contact: Pick<ChatContact, "role" | "officialRole">) {
+function roleLabel(contact: Pick<ChatContact, "role" | "officialRole" | "position">) {
   if (contact.role === "STAFF") return "Staff";
-  return contact.officialRole ? contact.officialRole.replaceAll("_", " ") : "SK Official";
+  return (contact.position ?? contact.officialRole)?.replaceAll("_", " ") ?? "SK Official";
+}
+
+function barangayLabel(contact: Pick<ChatContact, "barangay"> | null | undefined) {
+  return contact?.barangay ? `Barangay ${contact.barangay}` : "Municipality staff";
+}
+
+function initials(value: string) {
+  return value
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((item) => item[0]?.toUpperCase())
+    .join("") || "SK";
+}
+
+function Avatar({
+  name,
+  photoUrl,
+  className = "h-10 w-10",
+}: {
+  name: string;
+  photoUrl?: string | null;
+  className?: string;
+}) {
+  const resolvedPhotoUrl = photoUrl?.startsWith("/") ? photoUrl : DEFAULT_PHOTO_URL;
+
+  return (
+    <div className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent/20 ${className}`}>
+      <span className="text-xs font-bold text-accent">{initials(name)}</span>
+      <Image
+        src={resolvedPhotoUrl}
+        alt={`${name} profile`}
+        width={96}
+        height={96}
+        unoptimized={resolvedPhotoUrl.startsWith("/api/official/photo")}
+        className="absolute inset-0 h-full w-full object-cover"
+        onError={(event) => {
+          event.currentTarget.style.display = "none";
+        }}
+      />
+    </div>
+  );
 }
 
 export default function ChatClient({ title, compact = false }: ChatClientProps) {
@@ -107,6 +155,10 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const callSignalCursorRef = useRef(0);
   const pendingIceCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
+  const ringtoneContextRef = useRef<AudioContext | null>(null);
+  const ringtoneOscillatorRef = useRef<OscillatorNode | null>(null);
+  const ringtoneGainRef = useRef<GainNode | null>(null);
+  const notifiedOfferIdRef = useRef<string | null>(null);
   const [contacts, setContacts] = useState<ChatContact[]>([]);
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
@@ -128,8 +180,72 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
   const selectedConversation = conversations.find(
     (conversation) => conversation.id === selectedConversationId,
   );
+  const selectedPeer = selectedConversation?.otherParticipant ?? null;
+
+  const stopRingtone = useCallback(() => {
+    try {
+      ringtoneOscillatorRef.current?.stop();
+    } catch {
+      // The ringtone may already be stopped by a browser cleanup path.
+    }
+    ringtoneOscillatorRef.current?.disconnect();
+    ringtoneGainRef.current?.disconnect();
+    ringtoneContextRef.current?.close().catch(() => null);
+    ringtoneOscillatorRef.current = null;
+    ringtoneGainRef.current = null;
+    ringtoneContextRef.current = null;
+  }, []);
+
+  const startRingtone = useCallback(() => {
+    if (ringtoneOscillatorRef.current || typeof window === "undefined") return;
+
+    const AudioContextConstructor = window.AudioContext;
+    if (!AudioContextConstructor) return;
+
+    try {
+      const audioContext = new AudioContextConstructor();
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+      gain.gain.setValueAtTime(0.001, audioContext.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.08, audioContext.currentTime + 0.05);
+
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+      oscillator.start();
+
+      ringtoneContextRef.current = audioContext;
+      ringtoneOscillatorRef.current = oscillator;
+      ringtoneGainRef.current = gain;
+    } catch {
+      setCallError("Incoming call ringtone could not play in this browser.");
+    }
+  }, []);
+
+  const showIncomingCallNotification = useCallback(
+    (mode: CallMode) => {
+      if (
+        typeof window === "undefined" ||
+        !("Notification" in window) ||
+        Notification.permission !== "granted"
+      ) {
+        return;
+      }
+
+      new Notification(`Incoming ${mode} call`, {
+        body: selectedPeer
+          ? `${selectedPeer.name} - ${roleLabel(selectedPeer)}`
+          : "SKTech chat call",
+        icon: selectedPeer?.photoUrl ?? DEFAULT_PHOTO_URL,
+      });
+    },
+    [selectedPeer],
+  );
 
   const resetCallMedia = useCallback(() => {
+    stopRingtone();
     if (peerConnectionRef.current) {
       peerConnectionRef.current.onicecandidate = null;
       peerConnectionRef.current.ontrack = null;
@@ -148,7 +264,7 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
     setIncomingOffer(null);
     setIsMicMuted(false);
     setIsCameraOff(false);
-  }, []);
+  }, [stopRingtone]);
 
   const resetCallState = useCallback(() => {
     resetCallMedia();
@@ -433,6 +549,16 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
   }, [remoteStream]);
 
   useEffect(() => {
+    if (callStatus === "ringing") {
+      startRingtone();
+      return () => stopRingtone();
+    }
+
+    stopRingtone();
+    return undefined;
+  }, [callStatus, startRingtone, stopRingtone]);
+
+  useEffect(() => {
     resetCallState();
     return () => resetCallState();
   }, [resetCallState, selectedConversationId]);
@@ -455,6 +581,10 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
           setCallMode(payload.mode ?? "voice");
           setCallStatus("ringing");
           setCallError(null);
+          if (notifiedOfferIdRef.current !== signal.id) {
+            notifiedOfferIdRef.current = signal.id;
+            showIncomingCallNotification(payload.mode ?? "voice");
+          }
           return;
         }
 
@@ -543,7 +673,13 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
     }, CALL_SIGNAL_POLLING_INTERVAL_MS);
 
     return () => window.clearInterval(interval);
-  }, [callStatus, postCallSignal, resetCallMedia, selectedConversationId]);
+  }, [
+    callStatus,
+    postCallSignal,
+    resetCallMedia,
+    selectedConversationId,
+    showIncomingCallNotification,
+  ]);
 
   const openConversation = async (recipientUserId: string) => {
     try {
@@ -606,9 +742,48 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
   const canStartCall = hasSelectedPeer && ["idle", "rejected", "ended", "failed"].includes(callStatus);
   const isCallActive = callStatus === "calling" || callStatus === "connected";
   const showCallPanel = callStatus !== "idle";
+  const incomingCaller = selectedPeer;
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {callStatus === "ringing" && incomingCaller ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-glass-border bg-surface p-5 text-center shadow-2xl">
+            <Avatar
+              name={incomingCaller.name}
+              photoUrl={incomingCaller.photoUrl}
+              className="mx-auto h-20 w-20"
+            />
+            <p className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-accent">
+              Incoming {callMode} call
+            </p>
+            <h3 className="mt-2 truncate text-xl font-bold text-foreground">
+              {incomingCaller.name}
+            </h3>
+            <p className="mt-1 text-sm text-muted">{roleLabel(incomingCaller)}</p>
+            <p className="mt-1 text-xs text-muted">{barangayLabel(incomingCaller)}</p>
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => void rejectIncomingCall()}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-rose-400/40 bg-rose-500/10 text-sm font-semibold text-rose-100 transition hover:bg-rose-500/15"
+              >
+                <PhoneOff className="h-4 w-4" />
+                Decline
+              </button>
+              <button
+                type="button"
+                onClick={() => void acceptIncomingCall()}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-accent text-sm font-semibold text-accent-foreground transition hover:opacity-90"
+              >
+                <Phone className="h-4 w-4" />
+                Accept
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <section className="rounded-2xl border border-glass-border bg-surface p-4 shadow-[0_24px_48px_-24px_var(--shadow-color)] backdrop-blur-md sm:rounded-3xl sm:p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
           Municipality Chat
@@ -625,9 +800,9 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
         </div>
       ) : null}
 
-      <section className="grid min-h-[70dvh] gap-4 xl:min-h-[620px] xl:grid-cols-[360px_1fr]">
+      <section className="grid min-h-[70dvh] gap-4 xl:h-[720px] xl:min-h-[620px] xl:grid-cols-[360px_1fr]">
         <aside
-          className={`space-y-4 rounded-2xl border border-glass-border bg-surface p-4 shadow-xl backdrop-blur-md ${
+          className={`space-y-4 overflow-hidden rounded-2xl border border-glass-border bg-surface p-4 shadow-xl backdrop-blur-md ${
             compact && selectedConversationId ? "hidden xl:block" : ""
           }`}
         >
@@ -646,26 +821,39 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
                     key={conversation.id}
                     type="button"
                     onClick={() => setSelectedConversationId(conversation.id)}
-                    className={`w-full rounded-xl border px-3 py-2 text-left transition ${
+                    className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left transition ${
                       selectedConversationId === conversation.id
                         ? "border-accent/50 bg-accent/15"
                         : "border-glass-border bg-surface-elevated/40 hover:bg-surface-elevated"
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="truncate text-sm font-semibold text-foreground">
-                        {conversation.otherParticipant?.name ?? "Conversation"}
+                    <Avatar
+                      name={conversation.otherParticipant?.name ?? "Conversation"}
+                      photoUrl={conversation.otherParticipant?.photoUrl}
+                      className="h-9 w-9"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="truncate text-sm font-semibold text-foreground">
+                          {conversation.otherParticipant?.name ?? "Conversation"}
+                        </p>
+                        {conversation.unread ? (
+                          <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-accent" />
+                        ) : null}
+                      </div>
+                      <p className="mt-1 truncate text-xs text-muted">
+                        {conversation.latestMessage?.content ||
+                          (conversation.latestMessage?.attachmentCount
+                            ? "Attachment"
+                            : roleLabel(
+                                conversation.otherParticipant ?? {
+                                  role: "OFFICIAL",
+                                  officialRole: null,
+                                  position: null,
+                                },
+                              ))}
                       </p>
-                      {conversation.unread ? (
-                        <span className="h-2.5 w-2.5 rounded-full bg-accent" />
-                      ) : null}
                     </div>
-                    <p className="mt-1 truncate text-xs text-muted">
-                      {conversation.latestMessage?.content ||
-                        (conversation.latestMessage?.attachmentCount
-                          ? "Attachment"
-                          : roleLabel(conversation.otherParticipant ?? { role: "OFFICIAL", officialRole: null }))}
-                    </p>
                   </button>
                 ))
               )}
@@ -685,10 +873,13 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
                     key={contact.userId}
                     type="button"
                     onClick={() => void openConversation(contact.userId)}
-                    className="w-full rounded-xl border border-glass-border bg-surface-elevated/40 px-3 py-2 text-left transition hover:bg-surface-elevated"
+                    className="flex w-full items-center gap-3 rounded-xl border border-glass-border bg-surface-elevated/40 px-3 py-2 text-left transition hover:bg-surface-elevated"
                   >
-                    <p className="truncate text-sm font-semibold text-foreground">{contact.name}</p>
-                    <p className="mt-1 truncate text-xs text-muted">{roleLabel(contact)}</p>
+                    <Avatar name={contact.name} photoUrl={contact.photoUrl} className="h-9 w-9" />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-foreground">{contact.name}</p>
+                      <p className="mt-1 truncate text-xs text-muted">{roleLabel(contact)}</p>
+                    </div>
                   </button>
                 ))
               )}
@@ -697,11 +888,11 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
         </aside>
 
         <article
-          className={`min-h-[70dvh] flex-col rounded-2xl border border-glass-border bg-surface shadow-xl backdrop-blur-md xl:flex xl:min-h-[620px] ${
+          className={`min-h-[70dvh] flex-col overflow-hidden rounded-2xl border border-glass-border bg-surface shadow-xl backdrop-blur-md xl:flex xl:h-full xl:min-h-[620px] ${
             compact && !selectedConversationId ? "hidden" : "flex"
           }`}
         >
-          <div className="flex flex-wrap items-center gap-3 border-b border-glass-border px-4 py-3 sm:px-5 sm:py-4">
+          <div className="flex items-center gap-3 border-b border-glass-border px-3 py-3 sm:px-5 sm:py-4">
             {compact ? (
               <button
                 type="button"
@@ -712,36 +903,37 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
                 <ChevronLeft className="h-4 w-4" />
               </button>
             ) : null}
-            <div className="min-w-0">
+            {selectedPeer ? (
+              <Avatar name={selectedPeer.name} photoUrl={selectedPeer.photoUrl} className="h-11 w-11" />
+            ) : null}
+            <div className="min-w-0 flex-1">
               <h3 className="truncate text-base font-semibold text-foreground">
-                {selectedConversation?.otherParticipant?.name ?? "Select a conversation"}
+                {selectedPeer?.name ?? "Select a conversation"}
               </h3>
               <p className="mt-1 truncate text-xs text-muted">
-                {selectedConversation?.otherParticipant
-                  ? roleLabel(selectedConversation.otherParticipant)
+                {selectedPeer
+                  ? `${roleLabel(selectedPeer)} - ${barangayLabel(selectedPeer)}`
                   : "Choose a contact or existing conversation to begin."}
               </p>
             </div>
-            <div className="ml-auto flex shrink-0 items-center gap-2">
+            <div className="ml-auto flex shrink-0 items-center gap-1.5">
               <button
                 type="button"
                 disabled={!canStartCall}
                 onClick={() => void startOutgoingCall("voice")}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-glass-border bg-surface-elevated px-3 text-xs font-semibold text-foreground transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-glass-border bg-surface-elevated text-foreground transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label="Start voice call"
               >
                 <Phone className="h-4 w-4" />
-                <span className="hidden sm:inline">Voice</span>
               </button>
               <button
                 type="button"
                 disabled={!canStartCall}
                 onClick={() => void startOutgoingCall("video")}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-glass-border bg-surface-elevated px-3 text-xs font-semibold text-foreground transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-glass-border bg-surface-elevated text-foreground transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label="Start video call"
               >
                 <Video className="h-4 w-4" />
-                <span className="hidden sm:inline">Video</span>
               </button>
             </div>
           </div>
@@ -770,27 +962,6 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
                         : callError ?? "WebRTC peer-to-peer prototype"}
                     </p>
                   </div>
-
-                  {callStatus === "ringing" ? (
-                    <div className="flex shrink-0 items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => void acceptIncomingCall()}
-                        className="inline-flex h-10 items-center gap-2 rounded-lg bg-accent px-3 text-xs font-semibold text-accent-foreground transition hover:opacity-90"
-                      >
-                        <Phone className="h-4 w-4" />
-                        Accept
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void rejectIncomingCall()}
-                        className="inline-flex h-10 items-center gap-2 rounded-lg border border-rose-400/40 bg-rose-500/10 px-3 text-xs font-semibold text-rose-100 transition hover:bg-rose-500/15"
-                      >
-                        <PhoneOff className="h-4 w-4" />
-                        Reject
-                      </button>
-                    </div>
-                  ) : null}
 
                   {isCallActive ? (
                     <div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -866,7 +1037,7 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
             </div>
           ) : null}
 
-          <div className="flex-1 space-y-3 overflow-y-auto p-3 sm:p-5">
+          <div className="flex-1 space-y-3 overflow-y-auto bg-surface-elevated/20 p-3 sm:p-5">
             {!selectedConversationId ? (
               <div className="flex h-full items-center justify-center text-sm text-muted">
                 No conversation selected.
@@ -876,35 +1047,67 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
                 No messages yet.
               </div>
             ) : (
-              messages.map((message) => (
-                <div key={message.id} className="overflow-hidden rounded-xl border border-glass-border bg-surface-elevated/45 p-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-foreground">{message.sender.name}</p>
-                    <p className="text-xs text-muted">{formatTime(message.createdAt)}</p>
-                  </div>
-                  {message.content ? (
-                    <p className="mt-2 whitespace-pre-wrap break-words text-sm text-foreground">{message.content}</p>
-                  ) : null}
-                  {message.attachments.length > 0 ? (
-                    <div className="mt-3 space-y-2">
-                      {message.attachments.map((item) => (
-                        <a
-                          key={item.id}
-                          href={item.downloadUrl}
-                          className="inline-flex max-w-full items-center gap-2 rounded-lg border border-glass-border bg-surface px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-elevated"
-                        >
-                          <FileText className="h-4 w-4 shrink-0 text-accent" />
-                          <span className="truncate">{item.fileName}</span>
-                        </a>
-                      ))}
+              messages.map((message) => {
+                const isCurrentUser = message.senderId !== selectedPeer?.userId;
+
+                return (
+                  <div
+                    key={message.id}
+                    className={`flex items-end gap-2 ${isCurrentUser ? "justify-end" : "justify-start"}`}
+                  >
+                    {!isCurrentUser ? (
+                      <Avatar
+                        name={message.sender.name}
+                        photoUrl={message.sender.photoUrl}
+                        className="h-8 w-8"
+                      />
+                    ) : null}
+                    <div
+                      className={`max-w-[78%] rounded-2xl px-3 py-2 shadow-sm ${
+                        isCurrentUser
+                          ? "rounded-br-md bg-accent text-accent-foreground"
+                          : "rounded-bl-md border border-glass-border bg-surface text-foreground"
+                      }`}
+                    >
+                      {!isCurrentUser ? (
+                        <p className="mb-1 text-xs font-semibold text-muted">{message.sender.name}</p>
+                      ) : null}
+                      {message.content ? (
+                        <p className="whitespace-pre-wrap break-words text-sm">{message.content}</p>
+                      ) : null}
+                      {message.attachments.length > 0 ? (
+                        <div className="mt-2 space-y-2">
+                          {message.attachments.map((item) => (
+                            <a
+                              key={item.id}
+                              href={item.downloadUrl}
+                              className={`inline-flex max-w-full items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+                                isCurrentUser
+                                  ? "border-white/25 bg-white/10 text-accent-foreground hover:bg-white/15"
+                                  : "border-glass-border bg-surface-elevated/70 text-foreground hover:bg-surface-elevated"
+                              }`}
+                            >
+                              <FileText className="h-4 w-4 shrink-0" />
+                              <span className="truncate">{item.fileName}</span>
+                            </a>
+                          ))}
+                        </div>
+                      ) : null}
+                      <p
+                        className={`mt-1 text-[10px] ${
+                          isCurrentUser ? "text-accent-foreground/70" : "text-muted"
+                        }`}
+                      >
+                        {formatTime(message.createdAt)}
+                      </p>
                     </div>
-                  ) : null}
-                </div>
-              ))
+                  </div>
+                );
+              })
             )}
           </div>
 
-          <form onSubmit={sendMessage} className="border-t border-glass-border p-3 sm:p-4">
+          <form onSubmit={sendMessage} className="sticky bottom-0 border-t border-glass-border bg-surface p-3 sm:p-4">
             {attachment ? (
               <div className="mb-2 flex items-center justify-between gap-3 rounded-lg border border-glass-border bg-surface-elevated/50 px-3 py-2 text-xs text-foreground">
                 <span className="truncate">{attachment.name}</span>
@@ -933,7 +1136,7 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
                 type="button"
                 disabled={!selectedConversationId || isSending}
                 onClick={() => fileInputRef.current?.click()}
-                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-glass-border bg-surface-elevated text-foreground transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-glass-border bg-surface-elevated text-foreground transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label="Attach file"
               >
                 <Paperclip className="h-4 w-4" />
@@ -942,17 +1145,17 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
                 value={messageText}
                 onChange={(event) => setMessageText(event.target.value)}
                 disabled={!selectedConversationId || isSending}
-                rows={2}
-                placeholder="Write a message..."
-                className="min-h-11 min-w-0 flex-1 resize-none rounded-lg border border-glass-border bg-surface-elevated/60 px-3 py-2 text-sm text-foreground outline-none transition focus:border-accent/40 disabled:cursor-not-allowed disabled:opacity-60"
+                rows={1}
+                placeholder="Message..."
+                className="max-h-28 min-h-11 min-w-0 flex-1 resize-none rounded-3xl border border-glass-border bg-surface-elevated/60 px-4 py-3 text-sm text-foreground outline-none transition focus:border-accent/40 disabled:cursor-not-allowed disabled:opacity-60"
               />
               <button
                 type="submit"
                 disabled={!selectedConversationId || isSending}
-                className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-accent-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label="Send message"
               >
                 {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <SendHorizonal className="h-4 w-4" />}
-                Send
               </button>
             </div>
           </form>

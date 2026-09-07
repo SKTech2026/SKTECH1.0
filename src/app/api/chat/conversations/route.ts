@@ -16,11 +16,14 @@ function displayUserName(participant: {
     id: string;
     name: string | null;
     email: string | null;
+    image: string | null;
     role: Role;
     official: {
       firstName: string;
       lastName: string;
       role: string;
+      position: string | null;
+      barangay: string | null;
       municipality: string | null;
     } | null;
   };
@@ -61,6 +64,11 @@ function serializeConversation(
           email: otherParticipant.user.email,
           role: otherParticipant.user.role,
           officialRole: otherParticipant.user.official?.role ?? null,
+          position: otherParticipant.user.official?.position ?? null,
+          barangay: otherParticipant.user.official?.barangay ?? null,
+          photoUrl: otherParticipant.user.image?.startsWith("/")
+            ? otherParticipant.user.image
+            : null,
           municipality: otherParticipant.user.official?.municipality ?? null,
         }
       : null,
@@ -95,12 +103,15 @@ function getUserConversations(userId: string, municipalityId: string) {
               id: true,
               name: true,
               email: true,
+              image: true,
               role: true,
               official: {
                 select: {
                   firstName: true,
                   lastName: true,
                   role: true,
+                  position: true,
+                  barangay: true,
                   municipality: true,
                 },
               },

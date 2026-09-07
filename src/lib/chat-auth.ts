@@ -106,12 +106,15 @@ export async function getEligibleChatContacts(current: ChatUserContext) {
       id: true,
       name: true,
       email: true,
+      image: true,
       role: true,
       official: {
         select: {
           firstName: true,
           lastName: true,
           role: true,
+          position: true,
+          barangay: true,
           municipality: true,
         },
       },
@@ -132,6 +135,7 @@ export async function getEligibleChatContacts(current: ChatUserContext) {
             id: true,
             name: true,
             email: true,
+            image: true,
             role: true,
           },
         })
@@ -147,6 +151,9 @@ export async function getEligibleChatContacts(current: ChatUserContext) {
       email: user.email,
       role: user.role,
       officialRole: user.official?.role ?? null,
+      position: user.official?.position ?? null,
+      barangay: user.official?.barangay ?? null,
+      photoUrl: user.image?.startsWith("/") ? user.image : null,
       municipality: user.official?.municipality ?? null,
     })),
     ...staffContacts.map((user) => ({
@@ -155,6 +162,9 @@ export async function getEligibleChatContacts(current: ChatUserContext) {
       email: user.email,
       role: user.role,
       officialRole: null,
+      position: null,
+      barangay: null,
+      photoUrl: user.image?.startsWith("/") ? user.image : null,
       municipality: null,
     })),
   ];
