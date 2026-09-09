@@ -13,7 +13,6 @@ import {
   Menu,
   MessageCircle,
   MessageSquare,
-  PhoneCall,
   QrCode,
   ScanFace,
   Send,
@@ -163,7 +162,6 @@ export default function HomePage() {
   const [chatOpen, setChatOpen] = useState(false);
   const [floatingMenuOpen, setFloatingMenuOpen] = useState(false);
   const [showFloatingMenu, setShowFloatingMenu] = useState(false);
-  const [ringBoosted, setRingBoosted] = useState(false);
   const [activeSection, setActiveSection] = useState("about");
   const [chatInput, setChatInput] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
@@ -270,18 +268,18 @@ export default function HomePage() {
       >
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 sm:gap-3">
           <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
-            <span className="grid shrink-0 grid-cols-[2rem_2rem_2.65rem] items-center gap-2 sm:grid-cols-[2.25rem_2.25rem_3.5rem] sm:gap-2.5">
-              <Image src={skLogoPath} alt="Sangguniang Kabataan" width={36} height={36} className="h-8 w-8 object-contain sm:h-9 sm:w-9" priority />
-              <Image src={provincialSealPath} alt="Oriental Mindoro provincial seal" width={36} height={36} className="h-8 w-8 object-contain sm:h-9 sm:w-9" priority />
-              <Image src={logoPath} alt="SKTECH" width={56} height={36} className="h-8 w-[2.65rem] object-contain sm:h-9 sm:w-14" priority />
+            <span className="landing-brand-logos grid shrink-0 grid-cols-[2.5rem_2.5rem_3rem] items-center gap-1 sm:grid-cols-[3.5rem_3.5rem_4.5rem] sm:gap-2">
+              <span className="landing-brand-sk relative block h-10 w-10 sm:h-14 sm:w-14"><Image src={skLogoPath} alt="Sangguniang Kabataan" width={160} height={208} priority /></span>
+              <span className="landing-brand-seal relative block h-10 w-10 sm:h-14 sm:w-14"><Image src={provincialSealPath} alt="Oriental Mindoro provincial seal" width={160} height={208} priority /></span>
+              <span className="landing-brand-sktech relative block h-10 w-12 sm:h-14 sm:w-[4.5rem]"><Image src={logoPath} alt="SKTECH" width={240} height={310} priority /></span>
             </span>
             <span className="hidden h-8 w-px bg-[#dbe7ff] sm:block" />
-            <span className="max-w-[6.25rem] text-[11px] font-black uppercase leading-tight tracking-[0.04em] text-[#0b4a24] sm:max-w-none sm:text-sm sm:tracking-[0.08em]">
+            <span className="max-w-[5.5rem] text-[10px] font-black uppercase leading-tight tracking-[0.04em] text-[#0b4a24] sm:max-w-[10rem] sm:text-sm sm:tracking-[0.08em]">
               SKTECH Oriental Mindoro
             </span>
           </Link>
 
-          <nav className="hidden items-center gap-7 text-sm font-semibold text-[#24385f]/70 md:flex">
+          <nav className="hidden items-center gap-4 text-sm font-semibold text-[#24385f]/70 md:flex lg:gap-7">
             {navItems.map(([label, href]) => (
               <a key={href} href={href} className="transition hover:text-[#1452d9]">
                 {label}
@@ -378,7 +376,7 @@ export default function HomePage() {
           <div className="landing-hero-backdrop absolute inset-0 -z-20 bg-[radial-gradient(circle_at_20%_10%,#fff2b8_0,#fff8dd_18%,transparent_34%),radial-gradient(circle_at_75%_25%,#dce8ff_0,#eaf2ff_24%,transparent_44%),linear-gradient(145deg,#ffffff_0%,#eef5ff_44%,#dce8ff_100%)]" />
           <div className="absolute left-0 top-0 -z-10 h-1.5 w-full bg-[linear-gradient(90deg,#cf2638,#f3c72b,#1452d9)]" />
 
-          <div className="mx-auto grid max-w-7xl items-center gap-6 sm:gap-10 md:grid-cols-[0.88fr_1.12fr]">
+          <div className="mx-auto grid max-w-7xl items-center gap-6 sm:gap-10 lg:grid-cols-[0.88fr_1.12fr]">
             <div className="pt-2 md:pt-10">
               <motion.h1
                 {...(reducedMotion
@@ -434,47 +432,16 @@ export default function HomePage() {
                     animate: { opacity: 1, scale: 1, y: 0 },
                     transition: { delay: 0.08, duration: 0.7 },
                   })}
-              className="relative mx-auto min-h-[295px] w-full max-w-[560px] sm:min-h-[430px] md:min-h-[610px]"
+              className="landing-hero-art relative mx-auto w-full max-w-[560px]"
             >
-              <div className="landing-hero-orbit absolute left-1/2 top-4 h-[225px] w-[225px] -translate-x-1/2 rounded-full bg-[conic-gradient(from_140deg,#1d4ed8_0deg,#dc2626_125deg,#facc15_235deg,#1d4ed8_360deg)] p-[11px] shadow-[0_35px_90px_-42px_rgba(29,78,216,0.55)] sm:h-[365px] sm:w-[365px] sm:p-[15px] md:top-12 md:h-[510px] md:w-[510px] md:p-[20px]">
-                <div className="landing-hero-circle relative h-full w-full overflow-visible rounded-full border border-white/70 bg-[linear-gradient(135deg,#ffffff_0%,#edf4ff_48%,#fff7cf_74%,#dce8ff_100%)] shadow-[inset_0_0_70px_rgba(20,82,217,0.22)]" />
-                <motion.button
-                  type="button"
-                  aria-label="Activate Oriental Mindoro seal"
-                  aria-pressed={ringBoosted}
-                  onClick={() => {
-                    setRingBoosted(true);
-                    window.setTimeout(() => setRingBoosted(false), 3000);
-                  }}
-                  animate={reducedMotion ? undefined : ringBoosted ? { scale: [1, 1.08, 1, 1.08, 1], opacity: [1, 0.2, 1, 0.2, 1] } : { scale: 1, opacity: 1 }}
-                  transition={{ duration: ringBoosted ? 0.8 : 0.2, repeat: ringBoosted ? 2 : 0, ease: "easeInOut" }}
-                  className="absolute left-1/2 top-1/2 z-10 grid h-[142px] w-[142px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white/90 p-2 shadow-[0_24px_60px_-32px_rgba(6,19,45,0.85)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-300/70 sm:h-[230px] sm:w-[230px] sm:p-4 md:h-[318px] md:w-[318px] md:p-5"
-                >
-                  <Image
-                    src={provincialSealPath}
-                    alt="Oriental Mindoro provincial seal"
-                    width={520}
-                    height={520}
-                    className="h-full w-full object-contain drop-shadow-2xl"
-                    priority
-                  />
-                </motion.button>
-                <div className="absolute right-4 top-6 z-20 grid h-[66px] w-[66px] place-items-center rounded-full border border-white/80 bg-white p-2 shadow-[0_18px_45px_-24px_rgba(6,19,45,0.85)] sm:right-9 sm:top-12 sm:h-[104px] sm:w-[104px] sm:p-3 md:right-14 md:top-16 md:h-[138px] md:w-[138px] md:p-4">
-                  <Image
-                    src={skLogoPath}
-                    alt="Sangguniang Kabataan badge"
-                    width={180}
-                    height={180}
-                    className="h-full w-full object-contain"
-                    priority
-                  />
-                </div>
-                <div className="absolute bottom-4 left-5 z-20 grid h-[78px] w-[78px] place-items-center rounded-full border border-white/80 bg-white p-2 shadow-[0_18px_45px_-24px_rgba(6,19,45,0.85)] sm:bottom-9 sm:left-10 sm:h-[126px] sm:w-[126px] sm:p-3 md:bottom-14 md:left-14 md:h-[168px] md:w-[168px] md:p-4">
+              <div className="landing-hero-orbit absolute left-1/2 -translate-x-1/2 rounded-full">
+                <div aria-hidden="true" className="landing-hero-circle absolute rounded-full" />
+                <div className="landing-sktech-logo absolute left-1/2 top-1/2 z-20 grid -translate-x-1/2 -translate-y-1/2 place-items-center">
                   <Image
                     src={logoPath}
                     alt="SKTECH badge"
                     width={220}
-                    height={220}
+                    height={285}
                     className="h-full w-full object-contain"
                     priority
                   />
@@ -483,45 +450,63 @@ export default function HomePage() {
               <motion.div
                 animate={reducedMotion ? undefined : { y: [-8, 10, -8] }}
                 transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
-                className="landing-status absolute right-1 top-5 rounded-full border border-[#f3c72b]/50 bg-white/90 px-2 py-1 text-[10px] font-black uppercase text-[#0a3aa2] shadow-[0_18px_36px_-26px_rgba(6,19,45,0.85)] backdrop-blur sm:right-0 sm:top-20 sm:px-3 sm:py-1.5 sm:text-[11px]"
+                className="landing-status landing-chat-badge absolute rounded-full border border-[#f3c72b]/50 bg-white/95 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.08em] text-[#0a3aa2] shadow-[0_18px_36px_-26px_rgba(6,19,45,0.85)] backdrop-blur sm:px-3.5 sm:py-2 sm:text-[10px]"
               >
-                <span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#cf2638]" />
                 Chat Feature
               </motion.div>
               <motion.div
                 animate={reducedMotion ? undefined : { y: [5, -7, 5] }}
                 transition={{ repeat: Infinity, duration: 5.2, ease: "easeInOut", delay: 0.2 }}
-                className="landing-status absolute left-0 top-10 max-w-[108px] rounded-2xl border border-[#bfd1f8] bg-white/90 p-2 text-[#0a3aa2] shadow-[0_18px_42px_-28px_rgba(6,19,45,0.8)] backdrop-blur sm:left-[-8px] sm:top-24 sm:max-w-[128px] sm:p-3"
+                className="landing-status landing-voice-badge absolute left-[7%] top-[8%] rounded-full border border-[#bfd1f8] bg-white/95 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.08em] text-[#0a3aa2] shadow-[0_18px_42px_-28px_rgba(6,19,45,0.8)] backdrop-blur sm:px-3.5 sm:py-2 sm:text-[10px]"
               >
-                <div className="flex items-center gap-1.5"><PhoneCall className="h-3.5 w-3.5" /><p className="text-[9px] font-black uppercase tracking-[0.06em]">Voice call</p></div>
-                <p className="mt-1.5 text-xs font-black leading-tight text-[#06132d]">Feature ready</p>
-              </motion.div>
-              <motion.div
-                animate={reducedMotion ? undefined : { y: [-6, 9, -6] }}
-                transition={{ repeat: Infinity, duration: 5.1, ease: "easeInOut", delay: 0.35 }}
-                className="landing-status absolute left-[40%] top-1 max-w-[104px] rounded-2xl border border-[#bfd1f8] bg-white/90 p-2 shadow-[0_18px_42px_-28px_rgba(6,19,45,0.8)] backdrop-blur sm:left-[45%] sm:top-12 sm:max-w-[128px] sm:p-3"
-              >
-                <div className="flex items-center gap-1.5 text-[#1452d9]"><IdCard className="h-3.5 w-3.5" /><p className="text-[9px] font-black uppercase tracking-[0.06em]">Digital ID</p></div>
-                <p className="mt-1.5 text-xs font-black leading-tight text-[#06132d]">Credential ready</p>
+                Voice Call
               </motion.div>
               <motion.div
                 animate={reducedMotion ? undefined : { y: [12, -10, 12] }}
                 transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
-                className="landing-status absolute bottom-5 left-1 max-w-[112px] rounded-2xl border border-white/40 bg-white/85 p-2 shadow-[0_18px_42px_-28px_rgba(6,19,45,0.8)] backdrop-blur sm:bottom-12 sm:left-0 sm:max-w-[132px] sm:p-3"
+                className="landing-status landing-attendance-badge absolute bottom-[8%] left-[8%] rounded-full border border-[#cf2638]/30 bg-white/95 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.08em] text-[#cf2638] shadow-[0_18px_42px_-28px_rgba(6,19,45,0.8)] backdrop-blur sm:px-3.5 sm:py-2 sm:text-[10px]"
               >
-                <p className="text-[10px] font-bold uppercase text-[#cf2638]">QR + Face</p>
-                <p className="mt-1.5 text-xs font-black leading-tight text-[#06132d]">Attendance ready</p>
-              </motion.div>
-              <motion.div
-                animate={reducedMotion ? undefined : { y: [-5, 8, -5] }}
-                transition={{ repeat: Infinity, duration: 5.5, ease: "easeInOut", delay: 0.4 }}
-                className="landing-status absolute bottom-2 right-0 max-w-[116px] rounded-2xl border border-[#bfd1f8] bg-white/90 p-2 shadow-[0_18px_42px_-28px_rgba(6,19,45,0.8)] backdrop-blur sm:bottom-7 sm:right-[-8px] sm:max-w-[138px] sm:p-3"
-              >
-                <div className="flex items-center gap-1.5 text-[#1452d9]"><BarChart3 className="h-3.5 w-3.5" /><p className="text-[9px] font-black uppercase tracking-[0.06em]">Analytics preview</p></div>
-                <p className="mt-1.5 text-xs font-black leading-tight text-[#06132d]">Activity overview</p>
+                QR + Face
               </motion.div>
             </motion.div>
           </div>
+
+          <motion.div
+            {...(reducedMotion
+              ? {}
+              : {
+                  initial: { opacity: 0, y: 18 },
+                  whileInView: { opacity: 1, y: 0 },
+                  viewport: { once: true, amount: 0.35 },
+                  transition: { duration: 0.55, ease: "easeOut" },
+                })}
+            className="mx-auto mt-8 grid max-w-7xl overflow-hidden rounded-[1.75rem] border border-[#bfd1f8] bg-white/80 shadow-[0_24px_60px_-40px_rgba(10,58,162,0.55)] backdrop-blur sm:mt-12 lg:grid-cols-3"
+          >
+            <div className="relative flex gap-4 border-b border-[#dce7fb] px-5 py-5 sm:px-7 sm:py-6 lg:border-b-0 lg:border-r">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[#eaf2ff] text-[#1452d9]"><UserCircle className="h-5 w-5" /></span>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#1452d9]">01 / Register</p>
+                <p className="mt-1 text-sm font-black text-[#06132d] sm:text-base">Build one trusted official record.</p>
+                <p className="mt-1 text-xs leading-relaxed text-[#24385f]/70">Profiles, municipality context, and documents stay connected from the start.</p>
+              </div>
+            </div>
+            <div className="relative flex gap-4 border-b border-[#dce7fb] px-5 py-5 sm:px-7 sm:py-6 lg:border-b-0 lg:border-r">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[#fff4c7] text-[#a56b00]"><ShieldCheck className="h-5 w-5" /></span>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#a56b00]">02 / Verify</p>
+                <p className="mt-1 text-sm font-black text-[#06132d] sm:text-base">Turn records into confidence.</p>
+                <p className="mt-1 text-xs leading-relaxed text-[#24385f]/70">Digital IDs, QR checks, and face liveness support everyday federation work.</p>
+              </div>
+            </div>
+            <div className="flex gap-4 px-5 py-5 sm:px-7 sm:py-6">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[#ffe5e8] text-[#cf2638]"><BarChart3 className="h-5 w-5" /></span>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#cf2638]">03 / Govern</p>
+                <p className="mt-1 text-sm font-black text-[#06132d] sm:text-base">See the work move forward.</p>
+                <p className="mt-1 text-xs leading-relaxed text-[#24385f]/70">Attendance, announcements, and analytics turn activity into action.</p>
+              </div>
+            </div>
+          </motion.div>
         </section>
 
         <PublicNewsFeed />
@@ -917,6 +902,9 @@ export default function HomePage() {
           <motion.div
             initial={reducedMotion ? false : { opacity: 0, y: 16, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
+            id="landing-chat-panel"
+            role="region"
+            aria-label="Ask SKTECH chat"
             className="landing-chat-panel w-[calc(100vw-2rem)] max-w-[380px] overflow-hidden rounded-3xl border border-[#dbe7ff] bg-white shadow-[0_24px_70px_-34px_rgba(6,19,45,0.9)]"
           >
             <div className="flex items-center justify-between bg-[#06132d] px-4 py-4 text-white">
@@ -1000,103 +988,88 @@ export default function HomePage() {
             initial={reducedMotion ? false : { opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             onClick={() => setChatOpen(true)}
-            aria-label="Chat Bot"
-            className="landing-launcher inline-flex min-h-12 items-center gap-2 rounded-full border border-[#f3c72b]/50 bg-[#0a3aa2] px-3 py-2 text-sm font-black text-white shadow-[0_20px_45px_-24px_rgba(6,19,45,0.95)] transition hover:bg-[#06132d] sm:px-4"
+            aria-label="Open Ask SKTECH chatbot"
+            aria-expanded={false}
+            aria-controls="landing-chat-panel"
+            className="landing-launcher group relative inline-flex min-h-12 items-center gap-2.5 overflow-hidden rounded-2xl border border-white/70 bg-[linear-gradient(135deg,#2362dc_0%,#0a3aa2_65%,#082d78_100%)] py-2 pl-2 pr-4 text-sm font-bold text-white shadow-[0_8px_28px_-8px_rgba(10,58,162,0.5),inset_0_1px_0_rgba(255,255,255,0.35)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-8px_rgba(10,58,162,0.6)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-300 motion-reduce:transform-none sm:gap-3 sm:pr-5"
           >
-            <Image src={logoPath} alt="SKTECH chat bot" width={30} height={30} className="h-8 w-8 rounded-full object-contain" />
-            <span>Chat Bot</span>
+            <span aria-hidden="true" className="relative grid h-9 w-9 place-items-center rounded-xl border border-white/30 bg-white/15 shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] sm:h-10 sm:w-10">
+              <MessageCircle className="h-5 w-5" />
+              <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full border border-[#0a3aa2] bg-[#f3c72b]" />
+            </span>
+            <span className="text-left leading-tight"><span className="block">Ask SKTECH</span><span className="mt-0.5 hidden text-[10px] font-medium tracking-wide text-blue-100 sm:block">Your platform guide</span></span>
+            <span aria-hidden="true" className="absolute inset-x-4 bottom-0 h-px bg-[linear-gradient(90deg,#1452d9,#cf2638,#f3c72b)]" />
           </motion.button>
         )}
       </div>
 
       <style>{`
-        .landing-page-dark .landing-hero-backdrop {
-          background: radial-gradient(circle at 20% 10%, rgba(243, 199, 43, 0.12), transparent 30%), radial-gradient(circle at 75% 25%, rgba(20, 82, 217, 0.2), transparent 42%), linear-gradient(145deg, #071632 0%, #0b2855 54%, #102f62 100%);
+        .landing-page { color-scheme: light; }
+        .landing-hero-art { height: calc(85vw + 116px); }
+        .landing-hero-orbit {
+          top: 64px;
+          width: 85%;
+          aspect-ratio: 1;
+          isolation: isolate;
+          background: conic-gradient(from 140deg, #1452d9, #5688ee 55deg, #cf2638 125deg, #ef6970 165deg, #f3c72b 235deg, #ffe788 275deg, #1452d9 360deg);
+          box-shadow: 0 22px 42px -22px #1452d955, inset 0 2px 3px #ffffffb3, inset 0 -3px 5px #1452d944;
         }
-
-        .landing-page-dark .landing-hero-orbit {
-          background: #020b1d;
-          box-shadow: 0 35px 90px -42px rgba(0, 0, 0, 0.9);
+        .landing-hero-orbit::before {
+          content: "";
+          position: absolute;
+          inset: -12px;
+          border-radius: inherit;
+          background: conic-gradient(from 140deg, #1452d9, #cf2638, #f3c72b, #1452d9);
+          filter: blur(22px);
+          opacity: 0.16;
+          z-index: -1;
         }
-
-        .landing-page-dark .landing-hero-circle {
-          border-color: rgba(191, 219, 254, 0.35);
-          background: linear-gradient(135deg, #102448 0%, #123d79 42%, #8d731e 70%, #1452d9 100%);
-          box-shadow: inset 0 0 70px rgba(56, 189, 248, 0.2);
+        .landing-hero-orbit::after {
+          content: "";
+          position: absolute;
+          inset: -7px;
+          border: 1px solid #ffffffb3;
+          border-radius: inherit;
+          pointer-events: none;
         }
-
-        .landing-page-dark .landing-status {
-          border-color: rgba(243, 199, 43, 0.55);
-          background: rgba(15, 32, 65, 0.94);
-          color: #dbeafe;
+        .landing-hero-circle {
+          inset: 4%;
+          border: 1px solid #ffffffcc;
+          background: radial-gradient(ellipse at 27% 18%, #ffffffed, transparent 58%), linear-gradient(135deg, #e1ecff, #f4f7ff 46%, #fff4c7 78%, #e8f0ff);
+          box-shadow: inset 0 3px 14px #1452d91a, inset 0 -2px 5px #ffffff, 0 1px 3px #1452d926;
         }
-
-        .landing-page-dark .landing-light-surface {
-          border-color: var(--glass-border);
-          background-color: var(--surface);
-          color: var(--foreground);
+        .landing-sktech-logo { width: 58%; height: 58%; }
+        .landing-brand-logos > span, .landing-sktech-logo { overflow: hidden; }
+        /* Display the artwork bounds of the existing transparent PNG canvases. */
+        .landing-brand-logos img, .landing-sktech-logo img {
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          max-width: none;
+          height: auto;
         }
-
-        .landing-page-dark header [class*="text-[#06132d]"],
-        .landing-page-dark header [class*="text-[#24385f]"],
-        .landing-page-dark footer,
-        .landing-page-dark .landing-chat-panel [class*="text-[#06132d]"],
-        .landing-page-dark .landing-chat-panel [class*="text-[#24385f]"] {
-          color: var(--foreground);
+        .landing-brand-seal img { width: 129.6%; transform: translate(-50.03%, -49.73%); }
+        .landing-brand-sk img { width: 129.6%; transform: translate(-50.16%, -49.45%); }
+        .landing-brand-sktech img { width: 164.5%; transform: translate(-49.48%, -47.75%); }
+        .landing-sktech-logo img { width: 164.5%; transform: translate(-49.48%, -47.75%); filter: drop-shadow(0 5px 7px #1452d92b); }
+        .landing-chat-badge { right: 7%; left: auto; top: 49%; z-index: 30; font-size: 9px; }
+        .landing-voice-badge { top: 7%; left: 45%; }
+        .landing-attendance-badge { bottom: 14%; left: 8%; }
+        @media (min-width: 640px) {
+          .landing-hero-art { height: 650px; }
+          .landing-hero-orbit { top: 68px; }
+          .landing-voice-badge { top: 7%; left: 45%; }
+          .landing-attendance-badge { bottom: 14%; left: 8%; }
+          .landing-chat-badge { top: 49%; font-size: 11px; }
         }
-
-        .landing-page-dark header nav,
-        .landing-page-dark header nav a,
-        .landing-page-dark footer nav a {
-          color: #cbd5e1;
+        @media (min-width: 1024px) {
+          .landing-hero-art { height: auto; aspect-ratio: 560 / 670; }
         }
-
-        .landing-page-dark header nav a:hover,
-        .landing-page-dark footer nav a:hover {
-          color: #ffffff;
-        }
-
-        .landing-page-dark .landing-secondary {
-          color: #cbd5e1;
-        }
-
-        .landing-page-dark main > section {
-          color: var(--foreground);
-        }
-
-        .landing-page-dark main > section [class*="text-[#24385f]"] {
-          color: #cbd5e1;
-        }
-
-        .landing-page-dark main > section [class*="border-[#e4ecff]"],
-        .landing-page-dark main > section [class*="border-[#dbe7ff]"] {
-          border-color: var(--glass-border);
-        }
-
-        .landing-page-dark main > section [class*="bg-[#f6f9ff]"],
-        .landing-page-dark main > section [class*="bg-[#eef4ff]"] {
-          background-color: var(--surface-elevated);
-        }
-
-        .landing-page-dark .landing-chat-panel {
-          border-color: var(--glass-border);
-          background: var(--surface-elevated);
-          color: var(--foreground);
-        }
-
-        .landing-page-dark .landing-chat-panel [class*="bg-[#eef4ff]"],
-        .landing-page-dark .landing-chat-panel [class*="bg-[#f6f9ff]"] {
-          background-color: rgba(15, 23, 42, 0.82);
-        }
-
-        .landing-page-dark .landing-chat-panel input {
-          color: var(--foreground);
-        }
-
-        @media (max-width: 430px) {
-          .landing-launcher {
-            max-width: calc(100vw - 2rem);
-          }
+        @media (max-width: 359px) {
+          .landing-brand-logos { grid-template-columns: 2.25rem 2.25rem 2.5rem; gap: 0; }
+          .landing-brand-logos > span { max-width: 100%; }
+          .landing-hero-art { height: calc(85vw + 116px); }
+          .landing-chat-badge { font-size: 9px; padding-inline: 6px; }
         }
       `}</style>
     </div>
