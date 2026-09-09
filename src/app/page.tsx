@@ -13,6 +13,7 @@ import {
   Menu,
   MessageCircle,
   MessageSquare,
+  PhoneCall,
   QrCode,
   ScanFace,
   Send,
@@ -162,6 +163,7 @@ export default function HomePage() {
   const [chatOpen, setChatOpen] = useState(false);
   const [floatingMenuOpen, setFloatingMenuOpen] = useState(false);
   const [showFloatingMenu, setShowFloatingMenu] = useState(false);
+  const [ringBoosted, setRingBoosted] = useState(false);
   const [activeSection, setActiveSection] = useState("about");
   const [chatInput, setChatInput] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
@@ -266,15 +268,15 @@ export default function HomePage() {
             : "max-h-24 py-2.5 opacity-100 md:py-4"
         }`}
       >
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
-          <Link href="/" className="flex min-w-0 items-center gap-3">
-            <span className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-              <Image src={skLogoPath} alt="Sangguniang Kabataan" width={34} height={34} className="h-8 w-8 object-contain sm:h-9 sm:w-9" priority />
-              <Image src={provincialSealPath} alt="Oriental Mindoro provincial seal" width={34} height={34} className="h-8 w-8 object-contain sm:h-9 sm:w-9" priority />
-              <Image src={logoPath} alt="SKTECH" width={50} height={34} className="h-8 w-11 object-contain sm:h-9 sm:w-14" priority />
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 sm:gap-3">
+          <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <span className="grid shrink-0 grid-cols-[2rem_2rem_2.65rem] items-center gap-2 sm:grid-cols-[2.25rem_2.25rem_3.5rem] sm:gap-2.5">
+              <Image src={skLogoPath} alt="Sangguniang Kabataan" width={36} height={36} className="h-8 w-8 object-contain sm:h-9 sm:w-9" priority />
+              <Image src={provincialSealPath} alt="Oriental Mindoro provincial seal" width={36} height={36} className="h-8 w-8 object-contain sm:h-9 sm:w-9" priority />
+              <Image src={logoPath} alt="SKTECH" width={56} height={36} className="h-8 w-[2.65rem] object-contain sm:h-9 sm:w-14" priority />
             </span>
             <span className="hidden h-8 w-px bg-[#dbe7ff] sm:block" />
-            <span className="max-w-[10rem] text-[11px] font-black uppercase leading-tight tracking-[0.08em] text-[#0b4a24] sm:max-w-none sm:text-sm">
+            <span className="max-w-[6.25rem] text-[11px] font-black uppercase leading-tight tracking-[0.04em] text-[#0b4a24] sm:max-w-none sm:text-sm sm:tracking-[0.08em]">
               SKTECH Oriental Mindoro
             </span>
           </Link>
@@ -434,31 +436,89 @@ export default function HomePage() {
                   })}
               className="relative mx-auto min-h-[295px] w-full max-w-[560px] sm:min-h-[430px] md:min-h-[610px]"
             >
-              <div className="landing-hero-orbit absolute left-1/2 top-4 h-[238px] w-[238px] -translate-x-1/2 rounded-full bg-[#06132d] shadow-[0_35px_90px_-42px_rgba(6,19,45,0.9)] sm:h-[380px] sm:w-[380px] md:top-12 md:h-[530px] md:w-[530px]" />
-              <div className="landing-hero-circle absolute left-1/2 top-9 h-[200px] w-[200px] -translate-x-1/2 rounded-full border border-white/50 bg-[linear-gradient(135deg,#ffffff_0%,#edf4ff_42%,#f6d654_70%,#1452d9_100%)] shadow-[inset_0_0_70px_rgba(20,82,217,0.22)] sm:h-[320px] sm:w-[320px] md:top-24 md:h-[450px] md:w-[450px]" />
-              <Image
-                src={logoPath}
-                alt="SKTECH platform logo"
-                width={520}
-                height={520}
-                className="absolute left-1/2 top-16 h-[168px] w-[168px] -translate-x-1/2 object-contain drop-shadow-2xl sm:top-24 sm:h-[300px] sm:w-[300px] md:top-40 md:h-[390px] md:w-[390px]"
-                priority
-              />
+              <div className="landing-hero-orbit absolute left-1/2 top-4 h-[225px] w-[225px] -translate-x-1/2 rounded-full bg-[conic-gradient(from_140deg,#1d4ed8_0deg,#dc2626_125deg,#facc15_235deg,#1d4ed8_360deg)] p-[11px] shadow-[0_35px_90px_-42px_rgba(29,78,216,0.55)] sm:h-[365px] sm:w-[365px] sm:p-[15px] md:top-12 md:h-[510px] md:w-[510px] md:p-[20px]">
+                <div className="landing-hero-circle relative h-full w-full overflow-visible rounded-full border border-white/70 bg-[linear-gradient(135deg,#ffffff_0%,#edf4ff_48%,#fff7cf_74%,#dce8ff_100%)] shadow-[inset_0_0_70px_rgba(20,82,217,0.22)]" />
+                <motion.button
+                  type="button"
+                  aria-label="Activate Oriental Mindoro seal"
+                  aria-pressed={ringBoosted}
+                  onClick={() => {
+                    setRingBoosted(true);
+                    window.setTimeout(() => setRingBoosted(false), 3000);
+                  }}
+                  animate={reducedMotion ? undefined : ringBoosted ? { scale: [1, 1.08, 1, 1.08, 1], opacity: [1, 0.2, 1, 0.2, 1] } : { scale: 1, opacity: 1 }}
+                  transition={{ duration: ringBoosted ? 0.8 : 0.2, repeat: ringBoosted ? 2 : 0, ease: "easeInOut" }}
+                  className="absolute left-1/2 top-1/2 z-10 grid h-[142px] w-[142px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white/90 p-2 shadow-[0_24px_60px_-32px_rgba(6,19,45,0.85)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-300/70 sm:h-[230px] sm:w-[230px] sm:p-4 md:h-[318px] md:w-[318px] md:p-5"
+                >
+                  <Image
+                    src={provincialSealPath}
+                    alt="Oriental Mindoro provincial seal"
+                    width={520}
+                    height={520}
+                    className="h-full w-full object-contain drop-shadow-2xl"
+                    priority
+                  />
+                </motion.button>
+                <div className="absolute right-4 top-6 z-20 grid h-[66px] w-[66px] place-items-center rounded-full border border-white/80 bg-white p-2 shadow-[0_18px_45px_-24px_rgba(6,19,45,0.85)] sm:right-9 sm:top-12 sm:h-[104px] sm:w-[104px] sm:p-3 md:right-14 md:top-16 md:h-[138px] md:w-[138px] md:p-4">
+                  <Image
+                    src={skLogoPath}
+                    alt="Sangguniang Kabataan badge"
+                    width={180}
+                    height={180}
+                    className="h-full w-full object-contain"
+                    priority
+                  />
+                </div>
+                <div className="absolute bottom-4 left-5 z-20 grid h-[78px] w-[78px] place-items-center rounded-full border border-white/80 bg-white p-2 shadow-[0_18px_45px_-24px_rgba(6,19,45,0.85)] sm:bottom-9 sm:left-10 sm:h-[126px] sm:w-[126px] sm:p-3 md:bottom-14 md:left-14 md:h-[168px] md:w-[168px] md:p-4">
+                  <Image
+                    src={logoPath}
+                    alt="SKTECH badge"
+                    width={220}
+                    height={220}
+                    className="h-full w-full object-contain"
+                    priority
+                  />
+                </div>
+              </div>
               <motion.div
                 animate={reducedMotion ? undefined : { y: [-8, 10, -8] }}
                 transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
-                className="landing-status absolute right-1 top-5 rounded-full border border-[#f3c72b]/50 bg-white/90 px-2.5 py-1.5 text-[11px] font-black uppercase text-[#0a3aa2] shadow-[0_18px_36px_-26px_rgba(6,19,45,0.85)] backdrop-blur sm:right-0 sm:top-20 sm:px-4 sm:py-2 sm:text-xs"
+                className="landing-status absolute right-1 top-5 rounded-full border border-[#f3c72b]/50 bg-white/90 px-2 py-1 text-[10px] font-black uppercase text-[#0a3aa2] shadow-[0_18px_36px_-26px_rgba(6,19,45,0.85)] backdrop-blur sm:right-0 sm:top-20 sm:px-3 sm:py-1.5 sm:text-[11px]"
               >
                 <span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#cf2638]" />
                 Chat Feature
               </motion.div>
               <motion.div
+                animate={reducedMotion ? undefined : { y: [5, -7, 5] }}
+                transition={{ repeat: Infinity, duration: 5.2, ease: "easeInOut", delay: 0.2 }}
+                className="landing-status absolute left-0 top-10 max-w-[108px] rounded-2xl border border-[#bfd1f8] bg-white/90 p-2 text-[#0a3aa2] shadow-[0_18px_42px_-28px_rgba(6,19,45,0.8)] backdrop-blur sm:left-[-8px] sm:top-24 sm:max-w-[128px] sm:p-3"
+              >
+                <div className="flex items-center gap-1.5"><PhoneCall className="h-3.5 w-3.5" /><p className="text-[9px] font-black uppercase tracking-[0.06em]">Voice call</p></div>
+                <p className="mt-1.5 text-xs font-black leading-tight text-[#06132d]">Feature ready</p>
+              </motion.div>
+              <motion.div
+                animate={reducedMotion ? undefined : { y: [-6, 9, -6] }}
+                transition={{ repeat: Infinity, duration: 5.1, ease: "easeInOut", delay: 0.35 }}
+                className="landing-status absolute left-[40%] top-1 max-w-[104px] rounded-2xl border border-[#bfd1f8] bg-white/90 p-2 shadow-[0_18px_42px_-28px_rgba(6,19,45,0.8)] backdrop-blur sm:left-[45%] sm:top-12 sm:max-w-[128px] sm:p-3"
+              >
+                <div className="flex items-center gap-1.5 text-[#1452d9]"><IdCard className="h-3.5 w-3.5" /><p className="text-[9px] font-black uppercase tracking-[0.06em]">Digital ID</p></div>
+                <p className="mt-1.5 text-xs font-black leading-tight text-[#06132d]">Credential ready</p>
+              </motion.div>
+              <motion.div
                 animate={reducedMotion ? undefined : { y: [12, -10, 12] }}
                 transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
-                className="landing-status absolute bottom-5 left-1 max-w-[130px] rounded-2xl border border-white/40 bg-white/85 p-3 shadow-[0_18px_42px_-28px_rgba(6,19,45,0.8)] backdrop-blur sm:bottom-12 sm:left-0 sm:max-w-[150px] sm:p-4"
+                className="landing-status absolute bottom-5 left-1 max-w-[112px] rounded-2xl border border-white/40 bg-white/85 p-2 shadow-[0_18px_42px_-28px_rgba(6,19,45,0.8)] backdrop-blur sm:bottom-12 sm:left-0 sm:max-w-[132px] sm:p-3"
               >
-                <p className="text-xs font-bold uppercase text-[#cf2638]">QR + Face</p>
-                <p className="mt-2 text-sm font-black leading-tight text-[#06132d]">Attendance ready</p>
+                <p className="text-[10px] font-bold uppercase text-[#cf2638]">QR + Face</p>
+                <p className="mt-1.5 text-xs font-black leading-tight text-[#06132d]">Attendance ready</p>
+              </motion.div>
+              <motion.div
+                animate={reducedMotion ? undefined : { y: [-5, 8, -5] }}
+                transition={{ repeat: Infinity, duration: 5.5, ease: "easeInOut", delay: 0.4 }}
+                className="landing-status absolute bottom-2 right-0 max-w-[116px] rounded-2xl border border-[#bfd1f8] bg-white/90 p-2 shadow-[0_18px_42px_-28px_rgba(6,19,45,0.8)] backdrop-blur sm:bottom-7 sm:right-[-8px] sm:max-w-[138px] sm:p-3"
+              >
+                <div className="flex items-center gap-1.5 text-[#1452d9]"><BarChart3 className="h-3.5 w-3.5" /><p className="text-[9px] font-black uppercase tracking-[0.06em]">Analytics preview</p></div>
+                <p className="mt-1.5 text-xs font-black leading-tight text-[#06132d]">Activity overview</p>
               </motion.div>
             </motion.div>
           </div>
