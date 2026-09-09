@@ -447,27 +447,6 @@ export default function HomePage() {
                   />
                 </div>
               </div>
-              <motion.div
-                animate={reducedMotion ? undefined : { y: [-8, 10, -8] }}
-                transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
-                className="landing-status landing-chat-badge absolute rounded-full border border-[#f3c72b]/50 bg-white/95 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.08em] text-[#0a3aa2] shadow-[0_18px_36px_-26px_rgba(6,19,45,0.85)] backdrop-blur sm:px-3.5 sm:py-2 sm:text-[10px]"
-              >
-                Chat Feature
-              </motion.div>
-              <motion.div
-                animate={reducedMotion ? undefined : { y: [5, -7, 5] }}
-                transition={{ repeat: Infinity, duration: 5.2, ease: "easeInOut", delay: 0.2 }}
-                className="landing-status landing-voice-badge absolute left-[7%] top-[8%] rounded-full border border-[#bfd1f8] bg-white/95 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.08em] text-[#0a3aa2] shadow-[0_18px_42px_-28px_rgba(6,19,45,0.8)] backdrop-blur sm:px-3.5 sm:py-2 sm:text-[10px]"
-              >
-                Voice Call
-              </motion.div>
-              <motion.div
-                animate={reducedMotion ? undefined : { y: [12, -10, 12] }}
-                transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
-                className="landing-status landing-attendance-badge absolute bottom-[8%] left-[8%] rounded-full border border-[#cf2638]/30 bg-white/95 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.08em] text-[#cf2638] shadow-[0_18px_42px_-28px_rgba(6,19,45,0.8)] backdrop-blur sm:px-3.5 sm:py-2 sm:text-[10px]"
-              >
-                QR + Face
-              </motion.div>
             </motion.div>
           </div>
 
@@ -1052,15 +1031,9 @@ export default function HomePage() {
         .landing-brand-sk img { width: 129.6%; transform: translate(-50.16%, -49.45%); }
         .landing-brand-sktech img { width: 164.5%; transform: translate(-49.48%, -47.75%); }
         .landing-sktech-logo img { width: 164.5%; transform: translate(-49.48%, -47.75%); filter: drop-shadow(0 5px 7px #1452d92b); }
-        .landing-chat-badge { right: 7%; left: auto; top: 49%; z-index: 30; font-size: 9px; }
-        .landing-voice-badge { top: 7%; left: 45%; }
-        .landing-attendance-badge { bottom: 14%; left: 8%; }
         @media (min-width: 640px) {
           .landing-hero-art { height: 650px; }
           .landing-hero-orbit { top: 68px; }
-          .landing-voice-badge { top: 7%; left: 45%; }
-          .landing-attendance-badge { bottom: 14%; left: 8%; }
-          .landing-chat-badge { top: 49%; font-size: 11px; }
         }
         @media (min-width: 1024px) {
           .landing-hero-art { height: auto; aspect-ratio: 560 / 670; }
@@ -1069,7 +1042,6 @@ export default function HomePage() {
           .landing-brand-logos { grid-template-columns: 2.25rem 2.25rem 2.5rem; gap: 0; }
           .landing-brand-logos > span { max-width: 100%; }
           .landing-hero-art { height: calc(85vw + 116px); }
-          .landing-chat-badge { font-size: 9px; padding-inline: 6px; }
         }
       `}</style>
     </div>
