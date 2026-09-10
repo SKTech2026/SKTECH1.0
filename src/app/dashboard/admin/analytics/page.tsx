@@ -20,7 +20,7 @@ const ORIENTAL_MINDORO_MUNICIPALITIES = [
   "Puerto Galera",
   "San Teodoro",
   "Baco",
-  "Calapan City",
+  "City of Calapan",
   "Naujan",
   "Victoria",
   "Socorro",
@@ -97,9 +97,6 @@ function getAllPositions(feature: GeoJsonFeature): Position[] {
   return getFeatureRings(feature).flatMap((ring) => ring);
 }
 
-const canonicalBoundaryName = (name: string) =>
-  name === "City of Calapan" ? "Calapan City" : name;
-
 const boundaryCoordinates = orientalMindoroMunicipalitiesGeoJson.features.flatMap(getAllPositions);
 
 const boundaryBounds = boundaryCoordinates.reduce(
@@ -151,6 +148,26 @@ const formatNumber = (value: number) => new Intl.NumberFormat("en-US").format(va
 const normalizeMunicipalityName = (value: string | null | undefined) =>
   value?.trim().toLowerCase().replace(/\s+/g, " ") ?? "";
 
+const MUNICIPALITY_ALIASES: Record<string, MunicipalityName> = {
+  "calapan city": "City of Calapan",
+  "city of calapan": "City of Calapan",
+};
+
+const canonicalizeMunicipalityName = (value: string | null | undefined) => {
+  const normalized = normalizeMunicipalityName(value);
+  if (!normalized) return undefined;
+
+  return (
+    MUNICIPALITY_ALIASES[normalized] ??
+    ORIENTAL_MINDORO_MUNICIPALITIES.find(
+      (name) => normalizeMunicipalityName(name) === normalized,
+    )
+  );
+};
+
+const canonicalBoundaryName = (name: string) =>
+  canonicalizeMunicipalityName(name) ?? name;
+
 const toPercent = (value: number | null) => (value === null ? "N/A" : `${value}%`);
 
 const getIntensityClass = (count: number, max: number) => {
@@ -165,9 +182,13 @@ const getIntensityClass = (count: number, max: number) => {
 
 async function getMunicipalityAnalytics() {
   const canonicalNames = ORIENTAL_MINDORO_MUNICIPALITIES;
+  const municipalityQueryNames = [
+    ...canonicalNames,
+    ...Object.keys(MUNICIPALITY_ALIASES),
+  ];
   const municipalityRecords = await prisma.municipality.findMany({
     where: {
-      OR: canonicalNames.map((name) => ({
+      OR: municipalityQueryNames.map((name) => ({
         name: {
           equals: name,
           mode: "insensitive" as const,
@@ -182,7 +203,8 @@ async function getMunicipalityAnalytics() {
 
   const municipalityByName = new Map(
     municipalityRecords.map((municipality) => [
-      normalizeMunicipalityName(municipality.name),
+      canonicalizeMunicipalityName(municipality.name) ??
+        normalizeMunicipalityName(municipality.name),
       municipality,
     ]),
   );
@@ -205,7 +227,7 @@ async function getMunicipalityAnalytics() {
           { municipalityId: { in: ids.length > 0 ? ids : ["__none__"] } },
           {
             municipality: {
-              in: [...canonicalNames],
+              in: municipalityQueryNames,
               mode: "insensitive",
             },
           },
@@ -234,7 +256,7 @@ async function getMunicipalityAnalytics() {
             { municipalityId: { in: ids.length > 0 ? ids : ["__none__"] } },
             {
               municipality: {
-                in: [...canonicalNames],
+                in: municipalityQueryNames,
                 mode: "insensitive",
               },
             },
@@ -289,12 +311,17 @@ async function getMunicipalityAnalytics() {
     });
   }
 
+  for (const [alias, canonicalName] of Object.entries(MUNICIPALITY_ALIASES)) {
+    normalizedToCanonicalName.set(alias, canonicalName);
+  }
+
   const resolveName = (
     municipalityId: string | null | undefined,
     municipalityName?: string | null,
   ) =>
     (municipalityId ? idToCanonicalName.get(municipalityId) : undefined) ??
-    normalizedToCanonicalName.get(normalizeMunicipalityName(municipalityName));
+    normalizedToCanonicalName.get(normalizeMunicipalityName(municipalityName)) ??
+    canonicalizeMunicipalityName(municipalityName);
 
   for (const official of officialRecords) {
     const name = resolveName(official.municipalityId, official.municipality);
