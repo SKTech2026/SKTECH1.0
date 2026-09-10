@@ -1,8 +1,8 @@
 "use client";
 
-import { signOut } from "next-auth/react";
 import { LogOut, UserCircle2 } from "lucide-react";
 
+import LogoutConfirmButton from "@/components/auth/LogoutConfirmButton";
 import ThemeSelector from "@/components/dashboard/theme-selector";
 
 type SettingsPanelProps = {
@@ -117,14 +117,13 @@ export default function SettingsPanel({
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => void signOut({ callbackUrl: logoutCallbackUrl })}
+          <LogoutConfirmButton
+            callbackUrl={logoutCallbackUrl}
             className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-400/35 bg-red-500/15 px-4 py-2.5 text-sm font-semibold text-red-100 transition hover:bg-red-500/25"
           >
             <LogOut className="h-4 w-4" />
             Logout
-          </button>
+          </LogoutConfirmButton>
         </article>
       </section>
     </div>

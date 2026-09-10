@@ -3,11 +3,11 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
 import { Bell, Home, Info, LogOut, Settings, X } from "lucide-react";
 import { useState } from "react";
 
 import ThemeToggle from "@/components/ThemeToggle";
+import LogoutConfirmButton from "@/components/auth/LogoutConfirmButton";
 
 type MobileTopBarProps = {
   title?: string;
@@ -85,23 +85,22 @@ export default function MobileTopBar({
                   <Info className="h-4 w-4" />
                   About SKTECH
                 </button>
-                <button type="button" onClick={() => signOut({ callbackUrl: "/official/auth" })} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-rose-300 hover:bg-rose-500/10">
+                <LogoutConfirmButton callbackUrl="/official/auth" className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-rose-300 hover:bg-rose-500/10">
                   <LogOut className="h-4 w-4" />
                   Logout
-                </button>
+                </LogoutConfirmButton>
               </div>
             ) : null}
           </div>
           </>
         ) : (
-          <button
-            type="button"
-            onClick={() => signOut({ callbackUrl: logoutCallbackUrl })}
+          <LogoutConfirmButton
+            callbackUrl={logoutCallbackUrl}
             className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-glass-border bg-surface-elevated/70 text-foreground transition hover:border-rose-300/60 hover:bg-surface-elevated"
             aria-label="Sign out"
           >
             <LogOut className="h-4 w-4" />
-          </button>
+          </LogoutConfirmButton>
         )}
       </div>
 
