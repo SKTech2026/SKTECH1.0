@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 
+import TerminationConfirmModal from "@/components/admin/TerminationConfirmModal";
+
 type StaffAccessItem = {
   id: string;
   name: string | null;
   email: string | null;
   employeeId: string | null;
-  status: "PENDING" | "APPROVED" | "REJECTED" | "INACTIVE";
+  status: "PENDING" | "APPROVED" | "REJECTED" | "INACTIVE" | "TERMINATED";
   createdAt: string;
 };
 
@@ -20,6 +22,8 @@ export default function AdminStaffAccessPage() {
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [terminationRecord, setTerminationRecord] = useState<StaffAccessItem | null>(null);
 
   const loadRecords = async () => {
     setLoading(true);
@@ -35,6 +39,37 @@ export default function AdminStaffAccessPage() {
       setError(loadError instanceof Error ? loadError.message : "Failed to load data.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const terminateStaff = async (reason: string) => {
+    if (!terminationRecord) return;
+    setSavingId(terminationRecord.id);
+    setError(null);
+    setSuccess(null);
+    try {
+      const response = await fetch("/api/staff-access", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "terminate",
+          userId: terminationRecord.id,
+          terminationReason: reason,
+        }),
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "Failed to terminate staff account.");
+      setTerminationRecord(null);
+      setSuccess("Staff account terminated and preserved for audit history.");
+      await loadRecords();
+    } catch (terminationError) {
+      setError(
+        terminationError instanceof Error
+          ? terminationError.message
+          : "Failed to terminate staff account.",
+      );
+    } finally {
+      setSavingId(null);
     }
   };
 
@@ -83,6 +118,12 @@ export default function AdminStaffAccessPage() {
         </p>
       ) : null}
 
+      {success ? (
+        <p className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+          {success}
+        </p>
+      ) : null}
+
       <section className="overflow-hidden rounded-2xl border border-glass-border bg-surface shadow-xl backdrop-blur-md">
         <table className="w-full min-w-[720px] text-sm">
           <thead className="bg-surface-elevated text-left text-xs uppercase tracking-[0.14em] text-muted">
@@ -110,6 +151,7 @@ export default function AdminStaffAccessPage() {
             ) : (
               records.map((record) => {
                 const isApproved = record.status === "APPROVED";
+                const isTerminated = record.status === "TERMINATED";
                 const nextStatus = isApproved ? "INACTIVE" : "APPROVED";
                 return (
                   <tr key={record.id} className="text-foreground">
@@ -121,7 +163,9 @@ export default function AdminStaffAccessPage() {
                     <td className="px-5 py-4">
                       <span
                         className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                          isApproved
+                          isTerminated
+                            ? "bg-rose-500/20 text-rose-200"
+                            : isApproved
                             ? "bg-emerald-500/20 text-emerald-200"
                             : "bg-amber-500/20 text-amber-200"
                         }`}
@@ -133,18 +177,27 @@ export default function AdminStaffAccessPage() {
                       {new Date(record.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-5 py-4">
-                      <button
-                        type="button"
-                        disabled={savingId === record.id}
-                        onClick={() => void toggleStatus(record.id, nextStatus)}
-                        className="rounded-lg border border-glass-border bg-surface/45 px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-elevated/70 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {savingId === record.id
-                          ? "Updating..."
-                          : isApproved
-                            ? "Set Inactive"
-                            : "Approve Staff"}
-                      </button>
+                      {!isTerminated ? <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          disabled={savingId === record.id}
+                          onClick={() => void toggleStatus(record.id, nextStatus)}
+                          className="rounded-lg border border-glass-border bg-surface/45 px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-elevated/70 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {savingId === record.id
+                            ? "Updating..."
+                            : isApproved
+                              ? "Set Inactive"
+                              : "Approve Staff"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTerminationRecord(record)}
+                          className="rounded-lg border border-rose-300/40 px-3 py-2 text-xs font-semibold text-rose-300 transition hover:bg-rose-500/10"
+                        >
+                          Terminate
+                        </button>
+                      </div> : null}
                     </td>
                   </tr>
                 );
@@ -153,6 +206,17 @@ export default function AdminStaffAccessPage() {
           </tbody>
         </table>
       </section>
+      <TerminationConfirmModal
+        open={Boolean(terminationRecord)}
+        title="Terminate Staff Account"
+        subjectName={terminationRecord?.name ?? "Unnamed Staff"}
+        subjectType="staff"
+        onClose={() => {
+          if (!savingId) setTerminationRecord(null);
+        }}
+        onConfirm={terminateStaff}
+        loading={Boolean(terminationRecord && savingId === terminationRecord.id)}
+      />
     </div>
   );
 }

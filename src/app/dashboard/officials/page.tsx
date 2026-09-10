@@ -9,6 +9,7 @@ import {
 } from "@prisma/client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import TerminationConfirmModal from "@/components/admin/TerminationConfirmModal";
 import SKOfficialAdmissionWizard from "@/components/admission/SKOfficialAdmissionWizard";
 import {
   MunicipalityOption,
@@ -82,6 +83,7 @@ export default function OfficialsPage() {
   const [submissionMode, setSubmissionMode] = useState<"ACCOUNT" | "WALK_IN">("ACCOUNT");
   const [editingOfficial, setEditingOfficial] = useState<SKOfficialRecord | null>(null);
   const [savingOfficialId, setSavingOfficialId] = useState<string | null>(null);
+  const [terminationOfficial, setTerminationOfficial] = useState<SKOfficialRecord | null>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [municipalityFilter, setMunicipalityFilter] = useState("");
@@ -251,6 +253,34 @@ export default function OfficialsPage() {
     } catch (statusError) {
       setError(
         statusError instanceof Error ? statusError.message : "Failed to update official status.",
+      );
+    } finally {
+      setSavingOfficialId(null);
+    }
+  };
+
+  const terminateOfficial = async (reason: string) => {
+    if (!terminationOfficial) return;
+    setSavingOfficialId(terminationOfficial.id);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch(`/api/officials/${terminationOfficial.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "terminate", terminationReason: reason }),
+      });
+      const body = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(body.error ?? "Failed to terminate official.");
+      setTerminationOfficial(null);
+      setSuccess("Official account terminated and preserved for audit history.");
+      await Promise.all([fetchOfficials(currentPage), fetchGroupedOfficials()]);
+    } catch (terminationError) {
+      setError(
+        terminationError instanceof Error
+          ? terminationError.message
+          : "Failed to terminate official.",
       );
     } finally {
       setSavingOfficialId(null);
@@ -531,7 +561,7 @@ export default function OfficialsPage() {
                                         <div className="min-w-0"><p className="truncate text-sm font-semibold text-foreground">{formatOfficialFullName(official)}</p><p className="mt-1 text-xs text-muted">{formatEnumLabel(official.position)} · {formatDate(official.dateElected)}</p></div>
                                         <span className="shrink-0 rounded-full bg-surface-elevated px-2 py-1 text-[10px] font-semibold text-muted">{official.status}</span>
                                       </div>
-                                      <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-muted"><span className="rounded-full bg-accent/10 px-2 py-1">Admission: {official.admissionStatus}</span>{isAdmin ? <><button type="button" onClick={() => setEditingOfficial(official)} className="rounded-lg border border-glass-border px-2 py-1 font-semibold text-foreground hover:bg-surface-elevated">Edit</button><button type="button" disabled={savingOfficialId === official.id} onClick={() => void setOfficialStatus(official, official.status === "ACTIVE" ? "INACTIVE" : "ACTIVE")} className="rounded-lg border border-glass-border px-2 py-1 font-semibold text-foreground hover:bg-surface-elevated disabled:opacity-60">{official.status === "ACTIVE" ? "Deactivate" : "Reactivate"}</button></> : null}</div>
+                                      <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-muted"><span className="rounded-full bg-accent/10 px-2 py-1">Admission: {official.admissionStatus}</span>{isAdmin ? <><button type="button" onClick={() => setEditingOfficial(official)} className="rounded-lg border border-glass-border px-2 py-1 font-semibold text-foreground hover:bg-surface-elevated">Edit</button>{official.status !== "TERMINATED" ? <><button type="button" disabled={savingOfficialId === official.id} onClick={() => void setOfficialStatus(official, official.status === "ACTIVE" ? "INACTIVE" : "ACTIVE")} className="rounded-lg border border-glass-border px-2 py-1 font-semibold text-foreground hover:bg-surface-elevated disabled:opacity-60">{official.status === "ACTIVE" ? "Deactivate" : "Reactivate"}</button><button type="button" onClick={() => setTerminationOfficial(official)} className="rounded-lg border border-rose-300/40 px-2 py-1 font-semibold text-rose-300 transition hover:bg-rose-500/10">Terminate</button></> : null}</> : null}</div>
                                     </div>
                                   ))}
                                   {barangay.officials.length === 0 ? <p className="text-xs text-muted">No officials in this barangay.</p> : null}
@@ -608,7 +638,9 @@ export default function OfficialsPage() {
                         className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
                           official.status === "ACTIVE"
                             ? "bg-accent/20 text-accent"
-                            : "bg-surface-elevated/80 text-muted"
+                            : official.status === "TERMINATED"
+                              ? "bg-rose-500/20 text-rose-200"
+                              : "bg-surface-elevated/80 text-muted"
                         }`}
                       >
                         {official.status}
@@ -624,19 +656,28 @@ export default function OfficialsPage() {
                           >
                             Edit
                           </button>
-                          <button
-                            type="button"
-                            disabled={savingOfficialId === official.id}
-                            onClick={() =>
-                              void setOfficialStatus(
-                                official,
-                                official.status === "ACTIVE" ? "INACTIVE" : "ACTIVE",
-                              )
-                            }
-                            className="rounded-lg border border-glass-border px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-surface-elevated/70 disabled:opacity-60"
-                          >
-                            {official.status === "ACTIVE" ? "Deactivate" : "Reactivate"}
-                          </button>
+                          {official.status !== "TERMINATED" ? <>
+                            <button
+                              type="button"
+                              disabled={savingOfficialId === official.id}
+                              onClick={() =>
+                                void setOfficialStatus(
+                                  official,
+                                  official.status === "ACTIVE" ? "INACTIVE" : "ACTIVE",
+                                )
+                              }
+                              className="rounded-lg border border-glass-border px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-surface-elevated/70 disabled:opacity-60"
+                            >
+                              {official.status === "ACTIVE" ? "Deactivate" : "Reactivate"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setTerminationOfficial(official)}
+                              className="rounded-lg border border-rose-300/40 px-3 py-1.5 text-xs font-semibold text-rose-300 transition hover:bg-rose-500/10"
+                            >
+                              Terminate
+                            </button>
+                          </> : null}
                         </div>
                       </td>
                     ) : null}
@@ -677,6 +718,17 @@ export default function OfficialsPage() {
           </div>
         </div>
       ) : null}
+      <TerminationConfirmModal
+        open={isAdmin && Boolean(terminationOfficial)}
+        title="Terminate Official Account"
+        subjectName={terminationOfficial ? formatOfficialFullName(terminationOfficial) : ""}
+        subjectType="official"
+        onClose={() => {
+          if (!savingOfficialId) setTerminationOfficial(null);
+        }}
+        onConfirm={terminateOfficial}
+        loading={Boolean(terminationOfficial && savingOfficialId === terminationOfficial.id)}
+      />
     </div>
   );
 }
