@@ -17,6 +17,7 @@ enum UserStatus {
   APPROVED
   REJECTED
   INACTIVE
+  TERMINATED
 }
 
 enum OfficialRole {
@@ -30,6 +31,7 @@ enum OfficialRole {
 enum OfficialStatus {
   ACTIVE
   INACTIVE
+  TERMINATED
 }
 
 enum AdmissionStatus {
@@ -104,6 +106,9 @@ model User {
   faceRegistered          Boolean    @default(false)
   municipalityPresidentId String?    @unique
   municipalityOfficerId   String?
+  terminatedAt            DateTime?
+  terminatedById          String?
+  terminationReason       String?
   createdAt               DateTime   @default(now())
   updatedAt               DateTime   @updatedAt
 
@@ -114,30 +119,32 @@ model User {
   requestedProfileChanges OfficialProfileChangeRequest[] @relation("ProfileChangeRequestedBy")
   reviewedProfileChanges  OfficialProfileChangeRequest[] @relation("ProfileChangeReviewedBy")
   chatParticipants        ChatParticipant[]
-  chatMessages            ChatMessage[]       @relation("ChatMessageSender")
-  feedPosts               FeedPost[]          @relation("FeedPostAuthor")
+  chatMessages            ChatMessage[]                  @relation("ChatMessageSender")
+  feedPosts               FeedPost[]                     @relation("FeedPostAuthor")
   feedReactions           FeedReaction[]
   feedComments            FeedComment[]
-  publicNewsPosts         PublicNewsPost[]    @relation("PublicNewsPostAuthor")
-  createdEvents           Event[]              @relation("EventCreatedBy")
-  municipalityAsPresident Municipality?       @relation("MunicipalPresident", fields: [municipalityPresidentId], references: [id], onDelete: SetNull)
-  municipalityAsOfficer   Municipality?       @relation("MunicipalOfficers", fields: [municipalityOfficerId], references: [id], onDelete: SetNull)
+  publicNewsPosts         PublicNewsPost[]               @relation("PublicNewsPostAuthor")
+  createdEvents           Event[]                        @relation("EventCreatedBy")
+  municipalityAsPresident Municipality?                  @relation("MunicipalPresident", fields: [municipalityPresidentId], references: [id], onDelete: SetNull)
+  municipalityAsOfficer   Municipality?                  @relation("MunicipalOfficers", fields: [municipalityOfficerId], references: [id], onDelete: SetNull)
 
-  accounts Account[]
-  sessions Session[]
+  accounts            Account[]
+  sessions            Session[]
   passwordResetTokens PasswordResetToken[]
 
   @@index([municipalityOfficerId])
   @@index([faceRegistered])
+  @@index([status])
+  @@index([terminatedAt])
 }
 
 model PasswordResetToken {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
-  tokenHash String   @unique
+  tokenHash String    @unique
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -203,10 +210,10 @@ model SKOfficial {
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
 
-  attendances     OfficialAttendance[]
-  user            User?                @relation(fields: [userId], references: [id])
-  municipalityRef Municipality?        @relation("MunicipalityOfficialsRecords", fields: [municipalityId], references: [id], onDelete: SetNull)
-  barangayRef     Barangay?            @relation("BarangayOfficialsRecords", fields: [barangayId], references: [id], onDelete: SetNull)
+  attendances           OfficialAttendance[]
+  user                  User?                          @relation(fields: [userId], references: [id])
+  municipalityRef       Municipality?                  @relation("MunicipalityOfficialsRecords", fields: [municipalityId], references: [id], onDelete: SetNull)
+  barangayRef           Barangay?                      @relation("BarangayOfficialsRecords", fields: [barangayId], references: [id], onDelete: SetNull)
   profileChangeRequests OfficialProfileChangeRequest[]
 
   @@index([admissionStatus])
@@ -216,7 +223,7 @@ model SKOfficial {
 }
 
 model OfficialProfileChangeRequest {
-  id                String                    @id @default(cuid())
+  id                String                     @id @default(cuid())
   officialId        String
   requestedByUserId String
   municipalityId    String
@@ -225,17 +232,17 @@ model OfficialProfileChangeRequest {
   currentSnapshot   Json
   requestedPhotoUrl String?
   faceMatchScore    Float?
-  faceCheckStatus   FaceCheckStatus           @default(NOT_CHECKED)
+  faceCheckStatus   FaceCheckStatus            @default(NOT_CHECKED)
   staffReviewerId   String?
   reviewedAt        DateTime?
   rejectionReason   String?
-  createdAt         DateTime                  @default(now())
-  updatedAt         DateTime                  @updatedAt
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
 
-  official        SKOfficial  @relation(fields: [officialId], references: [id], onDelete: Cascade)
-  requestedBy     User        @relation("ProfileChangeRequestedBy", fields: [requestedByUserId], references: [id], onDelete: Cascade)
-  municipality    Municipality @relation(fields: [municipalityId], references: [id], onDelete: Cascade)
-  staffReviewer   User?       @relation("ProfileChangeReviewedBy", fields: [staffReviewerId], references: [id], onDelete: SetNull)
+  official      SKOfficial   @relation(fields: [officialId], references: [id], onDelete: Cascade)
+  requestedBy   User         @relation("ProfileChangeRequestedBy", fields: [requestedByUserId], references: [id], onDelete: Cascade)
+  municipality  Municipality @relation(fields: [municipalityId], references: [id], onDelete: Cascade)
+  staffReviewer User?        @relation("ProfileChangeReviewedBy", fields: [staffReviewerId], references: [id], onDelete: SetNull)
 
   @@index([officialId, status])
   @@index([municipalityId, status, createdAt])
@@ -276,20 +283,20 @@ model OfficialAdmission {
 }
 
 model Municipality {
-  id                 String              @id @default(cuid())
-  name               String              @unique
-  province           String              @default("Oriental Mindoro")
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  barangays          Barangay[]
-  admissions         OfficialAdmission[]
-  officialRecords    SKOfficial[]        @relation("MunicipalityOfficialsRecords")
-  municipalPresident User?               @relation("MunicipalPresident")
-  officers           User[]              @relation("MunicipalOfficers")
-  chatConversations  ChatConversation[]
-  feedPosts          FeedPost[]
+  id                    String                         @id @default(cuid())
+  name                  String                         @unique
+  province              String                         @default("Oriental Mindoro")
+  createdAt             DateTime                       @default(now())
+  updatedAt             DateTime                       @updatedAt
+  barangays             Barangay[]
+  admissions            OfficialAdmission[]
+  officialRecords       SKOfficial[]                   @relation("MunicipalityOfficialsRecords")
+  municipalPresident    User?                          @relation("MunicipalPresident")
+  officers              User[]                         @relation("MunicipalOfficers")
+  chatConversations     ChatConversation[]
+  feedPosts             FeedPost[]
   profileChangeRequests OfficialProfileChangeRequest[]
-  events             Event[]              @relation("MunicipalityEvents")
+  events                Event[]                        @relation("MunicipalityEvents")
 }
 
 model Barangay {
@@ -335,36 +342,36 @@ model YouthProfile {
 }
 
 model Event {
-  id          String   @id @default(uuid())
-  title       String
-  description String?
-  eventDate   DateTime
+  id             String   @id @default(uuid())
+  title          String
+  description    String?
+  eventDate      DateTime
   municipalityId String?
-  createdById String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   attendances         Attendance[]
   officialAttendances OfficialAttendance[]
-  municipality        Municipality? @relation("MunicipalityEvents", fields: [municipalityId], references: [id], onDelete: SetNull)
-  createdBy           User? @relation("EventCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  municipality        Municipality?        @relation("MunicipalityEvents", fields: [municipalityId], references: [id], onDelete: SetNull)
+  createdBy           User?                @relation("EventCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([municipalityId, createdAt])
   @@index([createdById, createdAt])
 }
 
 model FeedPost {
-  id             String       @id @default(cuid())
+  id             String   @id @default(cuid())
   content        String?
   imagePath      String?
   imageMimeType  String?
   authorId       String
   municipalityId String?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  author       User          @relation("FeedPostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
-  municipality Municipality? @relation(fields: [municipalityId], references: [id], onDelete: Cascade)
+  author       User           @relation("FeedPostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  municipality Municipality?  @relation(fields: [municipalityId], references: [id], onDelete: Cascade)
   reactions    FeedReaction[]
   comments     FeedComment[]
 
@@ -556,11 +563,11 @@ model ChatParticipant {
 }
 
 model ChatMessage {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   conversationId String
   senderId       String
   content        String?
-  createdAt      DateTime @default(now())
+  createdAt      DateTime  @default(now())
   editedAt       DateTime?
   unsentAt       DateTime?
 
