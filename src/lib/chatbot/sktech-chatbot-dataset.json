@@ -1,0 +1,173 @@
+[
+  {
+    "id": "greeting",
+    "category": "conversation",
+    "examples": ["hi", "hello", "hey", "good morning", "good afternoon", "good evening", "kumusta", "kamusta", "hello there", "magandang umaga"],
+    "responses": [
+      "Hello! I'm the SKTECH Knowledge Assistant. I can help with registration, Digital ID, attendance, announcements, chat, or system access.",
+      "Kumusta! Nandito ako para tumulong sa SKTECH. Maaari kang magtanong tungkol sa registration, Digital ID, attendance, announcements, o dashboard access."
+    ],
+    "relatedTopics": ["Registration", "Digital ID", "Attendance", "Dashboard access"]
+  },
+  {
+    "id": "identity",
+    "category": "conversation",
+    "examples": ["who are you", "what are you", "are you ai", "are you an ai", "bot ka ba", "ikaw ba ay ai", "what kind of bot are you"],
+    "responses": ["I am the SKTECH Knowledge Assistant, a trained local chatbot designed to guide users about SKTECH features and system use."],
+    "relatedTopics": ["What is SKTECH?", "What can you do?"]
+  },
+  {
+    "id": "capability",
+    "category": "conversation",
+    "examples": ["what can you do", "how can you help", "help", "ano kaya mo", "paano gamitin", "what help is available", "anong matutulong mo"],
+    "responses": ["I can guide you through SKTECH registration, account access, admission approval, Digital ID, QR and face verification, attendance, announcements, events, chat, privacy, and role-based dashboards."],
+    "relatedTopics": ["Registration", "Digital ID", "Attendance", "Dashboard access"]
+  },
+  {
+    "id": "what_is_sktech",
+    "category": "SKTECH basics",
+    "examples": ["what is sktech", "ano ang sktech", "tell me about sktech", "what does sktech do", "what is this platform", "sktech platform", "para saan ang sktech"],
+    "responses": ["SKTECH is a capstone and prototype e-governance platform for SK official profiles, Digital ID, attendance, announcements, events, analytics, and secure communication."],
+    "relatedTopics": ["Official registration", "Digital ID", "Role-based access"]
+  },
+  {
+    "id": "official_registration",
+    "category": "access",
+    "examples": ["how do i register", "how to register as an official", "official registration", "paano mag register", "paano gumawa ng official account", "where can sk officials register", "register sa sktech"],
+    "responses": ["SK Officials can register through the Official Portal, verify their email with OTP, complete the admission profile and supporting requirements, then wait for the required approval flow."],
+    "relatedTopics": ["Admission approval", "User account login", "Official dashboard"]
+  },
+  {
+    "id": "user_account_password_login",
+    "category": "access",
+    "examples": ["how do i log in", "i forgot my password", "account password login", "paano mag login", "nakalimutan ko ang password", "how to access my account", "login problem"],
+    "responses": ["Use the correct SKTECH portal for your role and sign in with your registered account. If you forgot your password or cannot access the account, use the available recovery or OTP flow and contact your authorized SKTECH support contact when needed."],
+    "relatedTopics": ["Official registration", "Admission approval", "Support"]
+  },
+  {
+    "id": "admission_approval",
+    "category": "access",
+    "examples": ["how does admission approval work", "why is my account pending", "official approval", "paano ma approve", "pending admission", "who approves my official account", "admission status"],
+    "responses": ["After an Official submits the admission details and requirements, the authorized Staff review the submission. Dashboard features unlock after the required approval; pending or rejected accounts should follow the admission instructions shown in the portal."],
+    "relatedTopics": ["Official registration", "Official dashboard", "Support"]
+  },
+  {
+    "id": "sk_official_dashboard",
+    "category": "dashboards",
+    "examples": ["what is in the official dashboard", "sk official dashboard", "official dashboard features", "ano ang official dashboard", "what can an official access", "official portal dashboard"],
+    "responses": ["The SK Official dashboard provides approved officials with access to their Digital ID, profile, announcements, municipal feed, attendance history, chat, and account settings."],
+    "relatedTopics": ["Digital ID", "Attendance", "Announcements"]
+  },
+  {
+    "id": "staff_dashboard",
+    "category": "dashboards",
+    "examples": ["what can staff access", "staff dashboard", "what is the staff dashboard", "ano ang access ng staff", "municipal staff features", "staff tools"],
+    "responses": ["Staff access is limited to authorized municipality workflows such as official admission review, profiling support, events, attendance monitoring, announcements, ID scanning, and staff communication."],
+    "relatedTopics": ["Role-based access", "Attendance", "Support"]
+  },
+  {
+    "id": "admin_dashboard",
+    "category": "dashboards",
+    "examples": ["what can admin access", "admin dashboard", "what is the admin dashboard", "ano ang access ng admin", "administrator features", "province wide admin tools"],
+    "responses": ["Admin access supports province-wide oversight such as municipalities, staff access, official records, ID production, analytics, events, public updates, and system settings."],
+    "relatedTopics": ["Role-based access", "Data privacy", "Support"]
+  },
+  {
+    "id": "digital_id",
+    "category": "identity",
+    "examples": ["what is digital id", "how does digital id work", "paano gamitin ang digital id", "official digital id", "where is my digital id", "digital identity card", "id card sa sktech"],
+    "responses": ["SKTECH Digital ID uses an approved official profile to present a verifiable credential. Open the Digital ID area from the approved dashboard and use its verification flow when a credential needs to be checked."],
+    "relatedTopics": ["QR verification", "Official dashboard", "Data privacy"]
+  },
+  {
+    "id": "qr_verification",
+    "category": "verification",
+    "examples": ["what is qr verification", "how do i verify a qr id", "scan the digital id qr", "paano mag verify ng qr", "qr code verification", "verify official qr"],
+    "responses": ["QR verification checks the information associated with an SKTECH Digital ID through the existing verification flow. Use an authorized scanner and do not share private account credentials."],
+    "relatedTopics": ["Digital ID", "QR attendance", "Data privacy"]
+  },
+  {
+    "id": "qr_attendance",
+    "category": "attendance",
+    "examples": ["what is qr attendance", "how does attendance work", "paano ang attendance", "how to check in with qr", "qr attendance sa event", "attendance qr scan"],
+    "responses": ["QR Attendance lets an authorized staff user record event participation by scanning an official QR credential. Attendance history is available to the appropriate approved account and role."],
+    "relatedTopics": ["Face verification", "Offline attendance", "Digital ID"]
+  },
+  {
+    "id": "face_verification",
+    "category": "verification",
+    "examples": ["what is face verification", "how does face liveness work", "paano ang face verification", "face scan", "selfie verification", "face liveness", "verify using face"],
+    "responses": ["Face verification uses a guided liveness check to help confirm that the person presenting the credential is present. Follow the on-screen instructions and use it only through an authorized SKTECH flow."],
+    "relatedTopics": ["QR attendance", "Data privacy", "Digital ID"]
+  },
+  {
+    "id": "offline_attendance",
+    "category": "attendance",
+    "examples": ["what is offline attendance", "does attendance work offline", "offline mode sa attendance", "paano kung walang internet sa attendance", "can i record attendance without internet", "offline qr attendance"],
+    "responses": ["Offline attendance refers to an attendance workflow that can temporarily capture approved event check-ins when connectivity is unavailable, then synchronize through the supported system flow. Availability depends on the enabled deployment and device setup."],
+    "relatedTopics": ["QR attendance", "Face verification", "Support"]
+  },
+  {
+    "id": "announcements",
+    "category": "communication",
+    "examples": ["where are announcements", "how do announcements work", "sktech announcements", "saan makikita ang announcements", "official advisories", "read announcements"],
+    "responses": ["Announcements are published through the SKTECH communication areas. Approved users can open the announcement section from their dashboard to read current advisories and available archived posts."],
+    "relatedTopics": ["Public updates", "Events", "Official dashboard"]
+  },
+  {
+    "id": "events",
+    "category": "operations",
+    "examples": ["how do events work", "sktech events", "event management", "mga event sa sktech", "where are official events", "create an event"],
+    "responses": ["Events support SK operations and can connect with announcements and attendance workflows. The available event actions depend on whether the account is an Official, Staff, or Admin."],
+    "relatedTopics": ["QR attendance", "Announcements", "Role-based access"]
+  },
+  {
+    "id": "chat_and_calls",
+    "category": "communication",
+    "examples": ["does sktech have chat", "can i call in sktech", "how does chat work", "sktech messages and calls", "paano ang chat", "can officials message staff", "video call"],
+    "responses": ["SKTECH provides role- and municipality-scoped chat, with messaging and supported voice or video call features where enabled. Only eligible users in the permitted workflow can communicate."],
+    "relatedTopics": ["Role-based access", "Support", "Data privacy"]
+  },
+  {
+    "id": "public_updates",
+    "category": "communication",
+    "examples": ["what are public updates", "public news", "where can i see updates", "mga public announcement", "public feed sa sktech", "updates for everyone"],
+    "responses": ["Public updates are information intended for broader viewing through the SKTECH public areas. Private dashboard records and municipality-scoped communication remain protected by access rules."],
+    "relatedTopics": ["Announcements", "Data privacy", "Role-based access"]
+  },
+  {
+    "id": "role_based_access",
+    "category": "security",
+    "examples": ["what is role based access", "who can access what", "different user roles", "paano gumagana ang role access", "official staff admin permissions", "role permissions"],
+    "responses": ["Role-based access gives Officials, Staff, and Admin users different tools. Official accounts focus on their own services, Staff work within authorized municipality operations, and Admin users handle broader system oversight."],
+    "relatedTopics": ["Staff dashboard", "Admin dashboard", "Data privacy"]
+  },
+  {
+    "id": "data_privacy",
+    "category": "security",
+    "examples": ["is my data private", "how is data protected", "data privacy in sktech", "privacy and security", "ligtas ba ang data", "who can see my information", "secure ba ang sktech"],
+    "responses": ["SKTECH uses role-based access and scoped workflows to limit data visibility. Use only authorized accounts, protect your password and OTP, and follow the project deployment's privacy and security policies."],
+    "relatedTopics": ["Role-based access", "Digital ID", "Support"]
+  },
+  {
+    "id": "capstone_disclaimer",
+    "category": "trust",
+    "examples": ["is sktech an official government system", "is sktech government approved", "who owns sktech", "capstone project", "prototype ba ang sktech", "is this officially adopted"],
+    "responses": ["SKTECH is a capstone and prototype e-governance platform. It should not be treated as an official government system unless formally adopted and authorized by the appropriate government authority."],
+    "relatedTopics": ["What is SKTECH?", "Data privacy", "Support"]
+  },
+  {
+    "id": "support",
+    "category": "help",
+    "examples": ["how do i get support", "who do i contact", "i need help with sktech", "support contact", "may problema ako", "where can i report an issue", "contact administrator"],
+    "responses": ["For account, admission, or access issues, contact the authorized SKTECH administrator, Staff, or project contact for your municipality or federation. Do not send passwords or OTP codes in chat."],
+    "relatedTopics": ["User account login", "Admission approval", "Data privacy"]
+  },
+  {
+    "id": "out_of_scope",
+    "category": "boundary",
+    "examples": ["give me love advice", "tell me a joke", "what is the weather", "help with unrelated homework", "who should i date", "tell me about politics", "what do you think about my personal life", "write a poem"],
+    "responses": ["I'm focused on SKTECH. I can help with registration, Digital ID, attendance, announcements, chat, or dashboard access."],
+    "relatedTopics": ["Registration", "Digital ID", "Attendance", "Dashboard access"]
+  }
+]

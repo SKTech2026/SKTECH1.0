@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "node prisma/seed.js",
+    "train:chatbot": "node scripts/train-sktech-chatbot.mjs",
     "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:migrate:deploy": "prisma migrate deploy"

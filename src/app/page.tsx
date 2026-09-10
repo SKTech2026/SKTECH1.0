@@ -28,6 +28,7 @@ import { useEffect, useRef, useState } from "react";
 
 import GovernanceCommandHub from "@/components/landing/GovernanceCommandHub";
 import PublicNewsFeed from "@/components/landing/PublicNewsFeed";
+import { answerSktTechChat } from "@/lib/chatbot/sktech-chatbot-engine";
 
 type ChatMessage = {
   role: "bot" | "user";
@@ -100,59 +101,6 @@ const suggestedQuestions = [
   "What can Staff access?",
   "Is SKTECH official?",
 ] as const;
-
-const fallbackAnswer =
-  "I can help with questions about SKTECH features, access, registration, Digital ID, attendance, security, and system use.";
-
-function answerQuestion(question: string) {
-  const text = question.toLowerCase();
-
-  if (text.includes("register") || text.includes("registration")) {
-    return "SK Officials can register through the Official portal, verify their email with OTP, complete their profile, and wait for the required approval flow.";
-  }
-
-  if (text.includes("profiling") || text.includes("profile")) {
-    return "SK Official Profiling keeps verified official records in one place so IDs, attendance, analytics, and role-based services use consistent information.";
-  }
-
-  if (text.includes("digital id") || text.includes(" id")) {
-    return "Digital ID uses the approved official profile and QR verification so credentials can be checked through the existing SKTECH ID flow.";
-  }
-
-  if (text.includes("qr") || text.includes("attendance")) {
-    return "QR Attendance helps staff validate event attendance with QR scanning and supported face verification where enabled.";
-  }
-
-  if (text.includes("liveness") || text.includes("face")) {
-    return "Face Liveness guides officials through a selfie check before SKTECH updates the encrypted face template used by verification tools.";
-  }
-
-  if (text.includes("staff")) {
-    return "Staff can access assigned-municipality workflows such as admissions, profiling support, events, attendance monitoring, announcements, and staff chat.";
-  }
-
-  if (text.includes("admin")) {
-    return "Admin users manage province-wide oversight such as staff access, municipalities, ID production, analytics, events, and system governance.";
-  }
-
-  if (text.includes("municipality") || text.includes("scoping") || text.includes("scope")) {
-    return "Municipality scoping limits staff views and actions to their assigned municipality while Admin users retain province-wide oversight.";
-  }
-
-  if (text.includes("government") || text.includes("official system")) {
-    return "SKTECH is a capstone and prototype e-governance platform unless it is formally adopted and authorized by the appropriate government authority.";
-  }
-
-  if (text.includes("help") || text.includes("support")) {
-    return "For support, use the proper SKTECH administrator or project contact for your municipality or federation access issue.";
-  }
-
-  if (text.includes("what is") || text.includes("sktech")) {
-    return "SKTECH is an e-governance platform for SK operations, including official profiling, Digital ID, attendance, announcements, analytics, and secure communication.";
-  }
-
-  return fallbackAnswer;
-}
 
 export default function HomePage() {
   const router = useRouter();
@@ -245,7 +193,7 @@ export default function HomePage() {
     setChatMessages((messages) => [
       ...messages,
       { role: "user", text: question },
-      { role: "bot", text: answerQuestion(question) },
+      { role: "bot", text: answerSktTechChat(question).text },
     ]);
     setChatInput("");
     setChatOpen(true);
