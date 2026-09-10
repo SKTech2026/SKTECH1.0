@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   Activity,
@@ -92,6 +92,22 @@ type RoleShellProps = {
 const isActivePath = (pathname: string, href: string) =>
   pathname === href || pathname.startsWith(`${href}/`);
 
+const OFFICIAL_COLLAPSE_STORAGE_KEY = "sktech.roleShell.official.collapsed";
+
+const subscribeOfficialCollapse = (onStoreChange: () => void) => {
+  window.addEventListener(OFFICIAL_COLLAPSE_STORAGE_KEY, onStoreChange);
+  window.addEventListener("storage", onStoreChange);
+  return () => {
+    window.removeEventListener(OFFICIAL_COLLAPSE_STORAGE_KEY, onStoreChange);
+    window.removeEventListener("storage", onStoreChange);
+  };
+};
+
+const getOfficialCollapseSnapshot = () =>
+  window.localStorage.getItem(OFFICIAL_COLLAPSE_STORAGE_KEY) === "true";
+
+const getOfficialCollapseServerSnapshot = () => false;
+
 const ADMIN_GROUPS = [
   {
     label: "OVERVIEW",
@@ -135,23 +151,14 @@ const STAFF_GROUPS = [
 ];
 
 const OFFICIAL_GROUPS = [
+  { label: "Home", icon: "layoutDashboard", items: ["Official Briefing"] },
+  { label: "Announcements", icon: "megaphone", items: ["Announcements", "Municipal SK Federation Feed"] },
   {
-    label: "OVERVIEW",
-    items: ["Official Briefing", "Admission Details", "Profile"],
+    label: "Service",
+    icon: "settings",
+    items: ["Digital ID", "Attendance Logs", "Profile", "Facial Registration", "Chat", "Accomplishments", "Settings"],
   },
-  {
-    label: "SERVICES",
-    items: ["Digital ID", "Attendance Logs", "Accomplishments"],
-  },
-  {
-    label: "COMMUNITY",
-    items: ["Announcements", "Municipal SK Federation Feed", "Chat"],
-  },
-  {
-    label: "SYSTEM",
-    items: ["Settings"],
-  },
-];
+] as const;
 
 const getInitials = (name?: string | null, email?: string | null) => {
   const source = name?.trim() || email?.split("@")[0] || "Admin";
@@ -181,6 +188,13 @@ export default function RoleShell({
   const isConsoleCn = isAdminCn || isStaffCn || isOfficialCn;
   const [adminCollapsed, setAdminCollapsed] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [openOfficialGroups, setOpenOfficialGroups] = useState<Record<string, boolean>>({});
+  const officialCollapsed = useSyncExternalStore(
+    subscribeOfficialCollapse,
+    getOfficialCollapseSnapshot,
+    getOfficialCollapseServerSnapshot,
+  );
+  const collapsed = isOfficialCn ? officialCollapsed : adminCollapsed;
 
   const activeItem = useMemo(
     () =>
@@ -199,6 +213,17 @@ export default function RoleShell({
           .filter((item): item is RoleShellItem => Boolean(item)),
       })).filter((group) => group.items.length > 0),
     [isOfficialCn, isStaffCn, items],
+  );
+
+  const officialNavGroups = useMemo(
+    () =>
+      OFFICIAL_GROUPS.map((group) => ({
+        ...group,
+        items: group.items
+          .map((label) => items.find((item) => item.label === label))
+          .filter((item): item is RoleShellItem => Boolean(item)),
+      })),
+    [items],
   );
 
   if (isConsoleCn) {
@@ -261,12 +286,71 @@ export default function RoleShell({
       );
     };
 
+    const renderOfficialNavGroup = (group: (typeof officialNavGroups)[number]) => {
+      const GroupIcon = ICONS[group.icon];
+      const active = group.items.some((item) => isActivePath(pathname, item.href));
+      const open = openOfficialGroups[group.label] ?? active;
+
+      if (group.items.length === 1) {
+        return renderAdminNavItem(group.items[0], { compact: collapsed });
+      }
+
+      return (
+        <div key={group.label} className="space-y-1">
+          <button
+            type="button"
+            title={collapsed ? group.label : undefined}
+            aria-label={`${open ? "Collapse" : "Expand"} ${group.label}`}
+            aria-expanded={open}
+            onClick={() =>
+              setOpenOfficialGroups((current) => ({
+                ...current,
+                [group.label]: !open,
+              }))
+            }
+            className={`group flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+              collapsed ? "justify-center" : ""
+            } ${
+              active
+                ? "border-accent/30 bg-accent/15 text-accent shadow-[0_14px_32px_-20px_var(--color-ring)]"
+                : "border-transparent text-muted hover:border-glass-border hover:bg-surface-elevated/70 hover:text-foreground"
+            }`}
+          >
+            <span
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition ${
+                active
+                  ? "border-accent/30 bg-accent/20 text-accent"
+                  : "border-glass-border bg-surface-elevated/55 text-muted group-hover:text-foreground"
+              }`}
+            >
+              <GroupIcon className="h-4 w-4" />
+            </span>
+            {!collapsed ? (
+              <span className="min-w-0 flex-1 truncate text-left text-[13px] font-semibold">
+                {group.label}
+              </span>
+            ) : null}
+            {!collapsed ? (
+              <span className={`text-xs transition-transform ${open ? "rotate-180" : ""}`}>
+                &gt;
+              </span>
+            ) : null}
+          </button>
+          {!collapsed && open ? (
+            <div className="ml-4 space-y-1 border-l border-glass-border pl-3">
+              {group.items.map((item) => renderAdminNavItem(item))}
+            </div>
+          ) : null}
+        </div>
+      );
+    };
+
     const sidebar = (mobile = false) => (
       <aside
         className={`flex h-full flex-col border-r border-glass-border bg-surface/95 shadow-[0_24px_50px_-28px_var(--shadow-color)] backdrop-blur-xl ${
           mobile
             ? "w-[min(290px,calc(100vw-2rem))]"
-            : adminCollapsed
+            : collapsed
               ? "w-[88px]"
               : "w-[282px]"
         } transition-[width] duration-300`}
@@ -276,12 +360,12 @@ export default function RoleShell({
             href={homeHref}
             onClick={mobile ? () => setMobileDrawerOpen(false) : undefined}
             className={`flex min-w-0 items-center gap-3 ${
-              adminCollapsed && !mobile ? "justify-center" : ""
+              collapsed && !mobile ? "justify-center" : ""
             }`}
             title={brandTitle}
           >
             <Logo size="sm" theme="dark" />
-            {!adminCollapsed || mobile ? (
+            {!collapsed || mobile ? (
               <span className="min-w-0">
                 <span className="block truncate text-sm font-bold uppercase tracking-wide text-foreground">
                   SKTECH
@@ -307,18 +391,18 @@ export default function RoleShell({
         <div className="border-b border-glass-border px-4 py-4">
           <div
             className={`rounded-xl border border-glass-border bg-surface-elevated/50 p-3 ${
-              adminCollapsed && !mobile ? "px-2" : ""
+              collapsed && !mobile ? "px-2" : ""
             }`}
           >
             <div
               className={`flex items-center gap-3 ${
-                adminCollapsed && !mobile ? "justify-center" : ""
+                collapsed && !mobile ? "justify-center" : ""
               }`}
             >
               <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-xs font-bold text-accent">
                 {initials}
               </span>
-              {!adminCollapsed || mobile ? (
+              {!collapsed || mobile ? (
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-foreground">
                     {accountName}
@@ -327,7 +411,7 @@ export default function RoleShell({
                 </div>
               ) : null}
             </div>
-            {!adminCollapsed || mobile ? (
+            {!collapsed || mobile ? (
               <p className="mt-3 rounded-lg border border-accent/25 bg-accent/10 px-2.5 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-accent">
                 {roleLabel}
               </p>
@@ -337,9 +421,9 @@ export default function RoleShell({
 
         <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-4 [scrollbar-color:color-mix(in_oklab,var(--color-accent)_30%,transparent)_transparent] [scrollbar-width:thin]">
           <div className="space-y-5">
-            {navGroups.map((group) => (
+            {isOfficialCn && !mobile ? officialNavGroups.map(renderOfficialNavGroup) : navGroups.map((group) => (
               <div key={group.label}>
-                {!adminCollapsed || mobile ? (
+                {!collapsed || mobile ? (
                   <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
                     {group.label}
                   </p>
@@ -347,7 +431,7 @@ export default function RoleShell({
                 <div className="space-y-1">
                   {group.items.map((item) =>
                     renderAdminNavItem(item, {
-                      compact: adminCollapsed && !mobile,
+                      compact: collapsed && !mobile,
                       onNavigate: mobile ? () => setMobileDrawerOpen(false) : undefined,
                     }),
                   )}
@@ -362,12 +446,12 @@ export default function RoleShell({
             type="button"
             onClick={() => void signOut({ callbackUrl: logoutCallbackUrl })}
             className={`inline-flex w-full items-center gap-3 rounded-xl border border-glass-border bg-surface-elevated/55 px-3 py-2.5 text-sm font-semibold text-foreground transition hover:border-accent/35 hover:bg-accent/10 ${
-              adminCollapsed && !mobile ? "justify-center" : "justify-start"
+              collapsed && !mobile ? "justify-center" : "justify-start"
             }`}
             title="Sign out"
           >
             <LogOut className="h-4 w-4" />
-            {!adminCollapsed || mobile ? "Sign out" : null}
+            {!collapsed || mobile ? "Sign out" : null}
           </button>
         </div>
       </aside>
@@ -408,13 +492,20 @@ export default function RoleShell({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setAdminCollapsed((current) => !current)}
+                    onClick={() => {
+                      const next = !collapsed;
+                      setAdminCollapsed(next);
+                      if (isOfficialCn) {
+                        window.localStorage.setItem(OFFICIAL_COLLAPSE_STORAGE_KEY, String(next));
+                        window.dispatchEvent(new Event(OFFICIAL_COLLAPSE_STORAGE_KEY));
+                      }
+                    }}
                     className="hidden h-10 w-10 items-center justify-center rounded-lg border border-glass-border bg-surface-elevated/60 text-muted transition hover:text-foreground lg:inline-flex"
                     aria-label={
-                      adminCollapsed ? expandSidebarLabel : collapseSidebarLabel
+                      collapsed ? expandSidebarLabel : collapseSidebarLabel
                     }
                   >
-                    {adminCollapsed ? (
+                    {collapsed ? (
                       <PanelLeftOpen className="h-4 w-4" />
                     ) : (
                       <PanelLeftClose className="h-4 w-4" />
