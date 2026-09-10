@@ -57,3 +57,11 @@ ai-service/logs/
 
 # local npm config
 .npmrc
+
+# local face training data and biometric-derived artifacts
+/ai-training/data/raw/
+/ai-training/data/processed/
+/ai-training/models/*.pkl
+/ai-training/models/*.joblib
+/ai-training/reports/*.csv
+/ai-training/reports/*.png
