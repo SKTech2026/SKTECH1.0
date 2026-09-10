@@ -84,6 +84,8 @@ const VERIFICATION_FRAME_DELAY_MS = 180;
 const MAX_CAPTURE_WIDTH = 640;
 const RATE_LIMIT_COOLDOWN_MS = 60_000;
 const ERROR_RETRY_COOLDOWN_MS = 2_500;
+const SUCCESS_COOLDOWN_MS = 1_800;
+const VERIFY_REQUEST_TIMEOUT_MS = 25_000;
 
 function uniqueEntryId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -101,7 +103,34 @@ function isBenignPlayInterruption(error: unknown): boolean {
   );
 }
 
-function captureFrame(video: HTMLVideoElement): CapturedFrame | null {
+function blobToDataUrl(blob: Blob) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+      } else {
+        reject(new Error("Unable to read captured frame."));
+      }
+    };
+    reader.onerror = () => reject(new Error("Unable to read captured frame."));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function canvasToJpegDataUrl(canvas: HTMLCanvasElement) {
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, "image/jpeg", 0.82);
+  });
+
+  if (blob) {
+    return blobToDataUrl(blob);
+  }
+
+  return canvas.toDataURL("image/jpeg", 0.82);
+}
+
+async function captureFrame(video: HTMLVideoElement): Promise<CapturedFrame | null> {
   if (!video.videoWidth || !video.videoHeight) {
     return null;
   }
@@ -122,7 +151,7 @@ function captureFrame(video: HTMLVideoElement): CapturedFrame | null {
 
   context.drawImage(video, 0, 0, targetWidth, targetHeight);
   return {
-    data: canvas.toDataURL("image/jpeg", 0.82),
+    data: await canvasToJpegDataUrl(canvas),
     width: targetWidth,
     height: targetHeight,
   };
@@ -160,6 +189,7 @@ export default function EventKioskClient() {
   const animationFrameRef = useRef<number | null>(null);
   const trackedFacesRef = useRef<TrackedFace[]>([]);
   const nextScanAllowedAtRef = useRef(0);
+  const verifyingRef = useRef(false);
   const startSequenceRef = useRef(0);
 
   const [cameraEnabled, setCameraEnabled] = useState(false);
@@ -374,7 +404,7 @@ export default function EventKioskClient() {
   }, []);
 
   const runVerification = useCallback(async () => {
-    if (!videoRef.current || scanBusy) {
+    if (!videoRef.current || verifyingRef.current) {
       return;
     }
 
@@ -382,11 +412,12 @@ export default function EventKioskClient() {
       return;
     }
 
+    verifyingRef.current = true;
     setScanBusy(true);
     try {
       const frames: CapturedFrame[] = [];
       for (let index = 0; index < VERIFICATION_FRAME_COUNT; index += 1) {
-        const frame = captureFrame(videoRef.current);
+        const frame = await captureFrame(videoRef.current);
         if (frame) {
           frames.push(frame);
         }
@@ -402,16 +433,24 @@ export default function EventKioskClient() {
       const primary = frames[frames.length - 1];
       setFrameSize({ width: primary.width, height: primary.height });
 
-      const response = await fetch("/api/face/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          imageBase64: primary.data,
-          livenessFrames: frames.map((frame) => frame.data),
-          eventId: eventId.trim() || undefined,
-          autoRecord: true,
-        }),
-      });
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), VERIFY_REQUEST_TIMEOUT_MS);
+      let response: Response;
+      try {
+        response = await fetch("/api/face/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+          body: JSON.stringify({
+            imageBase64: primary.data,
+            livenessFrames: frames.map((frame) => frame.data),
+            eventId: eventId.trim() || undefined,
+            autoRecord: true,
+          }),
+        });
+      } finally {
+        window.clearTimeout(timeout);
+      }
 
       const payload = (await response.json()) as VerifyResponse;
       if (!response.ok) {
@@ -471,14 +510,23 @@ export default function EventKioskClient() {
       if (queueItems.length > 0) {
         setQueue((previous) => [...queueItems, ...previous].slice(0, 18));
       }
+      nextScanAllowedAtRef.current = Date.now() + SUCCESS_COOLDOWN_MS;
     } catch (verifyError) {
-      setError(verifyError instanceof Error ? verifyError.message : "Verification failed.");
-      trackedFacesRef.current = [];
+      const message =
+        verifyError instanceof DOMException && verifyError.name === "AbortError"
+          ? "Face verification timed out. Please try again."
+          : verifyError instanceof Error
+            ? verifyError.message
+            : "Verification failed.";
+      setError(message);
       setMessage(null);
+      nextScanAllowedAtRef.current = Date.now() + ERROR_RETRY_COOLDOWN_MS;
+      trackedFacesRef.current = [];
     } finally {
+      verifyingRef.current = false;
       setScanBusy(false);
     }
-  }, [eventId, scanBusy]);
+  }, [eventId]);
 
   useEffect(() => {
     if (!scanActive || !cameraEnabled) {
@@ -508,7 +556,7 @@ export default function EventKioskClient() {
   const kioskStatus = useMemo(() => {
     if (!cameraEnabled) return "Camera offline";
     if (scanActive && Date.now() < nextScanAllowedAtRef.current) return "Waiting to retry...";
-    if (scanBusy) return "Verifying...";
+    if (scanBusy) return "Verifying face...";
     if (scanActive) return "Auto verification active (~3 FPS)";
     return "Camera ready";
   }, [cameraEnabled, scanActive, scanBusy]);
