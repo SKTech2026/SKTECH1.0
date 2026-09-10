@@ -322,6 +322,9 @@ export default function OfficialProfileForm({ initial, municipalities }: Profile
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
             Municipality
+            <span className="mt-1 block text-[11px] font-normal normal-case tracking-normal text-muted">
+              {municipalities.length} LGUs available
+            </span>
             <select
               className={inputClass}
               value={municipalityId}
@@ -341,6 +344,11 @@ export default function OfficialProfileForm({ initial, municipalities }: Profile
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
             Barangay
+            <span className="mt-1 block text-[11px] font-normal normal-case tracking-normal text-muted">
+              {selectedMunicipality
+                ? `${selectedMunicipality.barangays.length} barangays available`
+                : "Select a municipality to load barangays"}
+            </span>
             <select
               className={inputClass}
               value={barangayId}

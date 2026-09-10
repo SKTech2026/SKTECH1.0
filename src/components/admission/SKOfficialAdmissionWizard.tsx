@@ -130,13 +130,8 @@ export default function SKOfficialAdmissionWizard({
   );
 
   const filteredMunicipalities = useMemo(() => {
-    return municipalities
-      .filter((entry) =>
-        entry.province.toLowerCase().includes(province.trim().toLowerCase()),
-      )
-      .slice()
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [municipalities, province]);
+    return municipalities.slice().sort((a, b) => a.name.localeCompare(b.name));
+  }, [municipalities]);
 
   const filteredBarangays = useMemo(() => {
     if (!selectedMunicipality) return [];
@@ -577,6 +572,7 @@ export default function SKOfficialAdmissionWizard({
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="text-xs uppercase tracking-[0.14em] text-muted">Municipality</label>
+              <p className="mt-1 text-xs text-muted">{filteredMunicipalities.length} LGUs available</p>
               <select
                 className={inputClass}
                 value={municipalityId}
@@ -595,6 +591,11 @@ export default function SKOfficialAdmissionWizard({
             </div>
             <div>
               <label className="text-xs uppercase tracking-[0.14em] text-muted">Barangay</label>
+              <p className="mt-1 text-xs text-muted">
+                {selectedMunicipality
+                  ? `${selectedMunicipality.barangays.length} barangays available`
+                  : "Select a municipality to load barangays"}
+              </p>
               <select
                 className={inputClass}
                 value={barangayId}
