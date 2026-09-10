@@ -12,6 +12,7 @@ import {
   Paperclip,
   Phone,
   PhoneOff,
+  Search,
   SendHorizonal,
   Video,
   VideoOff,
@@ -174,6 +175,7 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [contactsOpen, setContactsOpen] = useState(false);
   const [openMessageMenuId, setOpenMessageMenuId] = useState<string | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
@@ -192,6 +194,30 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
     (conversation) => conversation.id === selectedConversationId,
   );
   const selectedPeer = selectedConversation?.otherParticipant ?? null;
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const filteredConversations = conversations.filter((conversation) => {
+    if (!normalizedSearchQuery) return true;
+    const participant = conversation.otherParticipant;
+    const preview = conversation.latestMessage?.content ?? "";
+    return [
+      participant?.name,
+      participant?.email,
+      participant?.barangay,
+      participant?.municipality,
+      participant ? roleLabel(participant) : "",
+      preview,
+    ].some((value) => value?.toLowerCase().includes(normalizedSearchQuery));
+  });
+  const filteredContacts = contacts.filter((contact) => {
+    if (!normalizedSearchQuery) return true;
+    return [
+      contact.name,
+      contact.email,
+      contact.barangay,
+      contact.municipality,
+      roleLabel(contact),
+    ].some((value) => value?.toLowerCase().includes(normalizedSearchQuery));
+  });
 
   const stopRingtone = useCallback(() => {
     try {
@@ -840,14 +866,12 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
         </div>
       ) : null}
 
-      <section className="rounded-2xl border border-glass-border bg-surface p-4 shadow-[0_24px_48px_-24px_var(--shadow-color)] backdrop-blur-md sm:rounded-3xl sm:p-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
-          Municipality Chat
-        </p>
-        <h2 className="mt-2 text-2xl font-bold text-foreground sm:mt-3 sm:text-3xl">{title}</h2>
-        <p className="mt-2 max-w-3xl text-sm text-muted">
-          Direct messages are limited to eligible SKTech users in your assigned municipality.
-        </p>
+      <section className="flex flex-col gap-2 rounded-2xl border border-glass-border bg-surface px-4 py-4 shadow-[0_24px_48px_-24px_var(--shadow-color)] backdrop-blur-md sm:flex-row sm:items-center sm:justify-between sm:rounded-3xl sm:px-6 sm:py-5">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">Messages</p>
+          <h2 className="mt-1 text-2xl font-bold text-foreground sm:text-3xl">{title}</h2>
+        </div>
+        <p className="text-sm text-muted">Secure chats for eligible SKTech users.</p>
       </section>
 
       {error ? (
@@ -856,31 +880,58 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
         </div>
       ) : null}
 
-      <section className="grid min-h-[70dvh] gap-4 xl:h-[720px] xl:min-h-[620px] xl:grid-cols-[360px_1fr]">
+      <section className="grid min-h-[70dvh] gap-3 xl:h-[720px] xl:min-h-[620px] xl:grid-cols-[360px_1fr]">
         <aside
           className={`space-y-4 overflow-hidden rounded-2xl border border-glass-border bg-surface p-4 shadow-xl backdrop-blur-md ${
             compact && selectedConversationId ? "hidden xl:block" : ""
           }`}
         >
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-xl font-bold text-foreground">Chats</h3>
+              <p className="mt-1 text-xs text-muted">Your recent conversations</p>
+            </div>
+            <span className="rounded-full bg-accent/10 px-2.5 py-1 text-xs font-semibold text-accent">
+              {conversations.length}
+            </span>
+          </div>
+
+          <label className="flex items-center gap-2 rounded-xl border border-glass-border bg-surface-elevated/55 px-3 py-2.5 text-sm text-muted focus-within:border-accent/50 focus-within:ring-2 focus-within:ring-accent/15">
+            <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span className="sr-only">Search conversations and contacts</span>
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search chats or contacts"
+              className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted"
+            />
+          </label>
+
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Conversations</h3>
-            <div className="mt-3 space-y-2">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Recent</h4>
+              {normalizedSearchQuery ? (
+                <span className="text-xs text-muted">{filteredConversations.length} found</span>
+              ) : null}
+            </div>
+            <div className="space-y-1.5">
               {isLoading ? (
                 <p className="text-sm text-muted">Loading chat...</p>
-              ) : conversations.length === 0 ? (
+              ) : filteredConversations.length === 0 ? (
                 <p className="rounded-xl border border-dashed border-glass-border p-3 text-sm text-muted">
-                  No conversations yet.
+                  {normalizedSearchQuery ? "No matching conversations." : "No conversations yet."}
                 </p>
               ) : (
-                conversations.map((conversation) => (
+                filteredConversations.map((conversation) => (
                   <button
                     key={conversation.id}
                     type="button"
                     onClick={() => setSelectedConversationId(conversation.id)}
-                    className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left transition ${
+                    className={`flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
                       selectedConversationId === conversation.id
-                        ? "border-accent/50 bg-accent/15"
-                        : "border-glass-border bg-surface-elevated/40 hover:bg-surface-elevated"
+                        ? "border-accent/50 bg-accent/10 shadow-sm"
+                        : "border-transparent hover:border-glass-border hover:bg-surface-elevated/70"
                     }`}
                   >
                     <Avatar
@@ -893,24 +944,28 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
                         <p className="truncate text-sm font-semibold text-foreground">
                           {conversation.otherParticipant?.name ?? "Conversation"}
                         </p>
-                        {conversation.unread ? (
-                          <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-accent" />
-                        ) : null}
+                        <span className="shrink-0 text-[10px] text-muted">
+                          {formatTime(conversation.updatedAt)}
+                        </span>
                       </div>
-                      <p className="mt-1 truncate text-xs text-muted">
-                        {conversation.latestMessage?.unsentAt
-                          ? "Message unsent"
-                          : conversation.latestMessage?.content ||
-                          (conversation.latestMessage?.attachmentCount
-                            ? "Attachment"
-                            : roleLabel(
-                                conversation.otherParticipant ?? {
-                                  role: "OFFICIAL",
-                                  officialRole: null,
-                                  position: null,
-                                },
-                              ))}
+                      <p className="mt-0.5 truncate text-[11px] text-muted">
+                        {conversation.otherParticipant
+                          ? `${roleLabel(conversation.otherParticipant)} - ${barangayLabel(conversation.otherParticipant)}`
+                          : "SKTech user"}
                       </p>
+                      <div className="flex items-center gap-2">
+                        {conversation.unread ? (
+                          <span className="h-2 w-2 shrink-0 rounded-full bg-accent" aria-label="Unread" />
+                        ) : null}
+                        <p className="truncate text-xs text-muted">
+                          {conversation.latestMessage?.unsentAt
+                            ? "Message unsent"
+                            : conversation.latestMessage?.content ||
+                              (conversation.latestMessage?.attachmentCount
+                                ? "Attachment"
+                                : "No messages yet")}
+                        </p>
+                      </div>
                     </div>
                   </button>
                 ))
@@ -925,16 +980,16 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
               className="flex w-full items-center justify-between rounded-xl border border-glass-border bg-surface-elevated/45 px-3 py-2 text-left text-sm font-semibold text-foreground"
               aria-expanded={contactsOpen}
             >
-              <span>CONTACTS</span>
+              <span>New message</span>
               <span className="text-xs text-muted">{contactsOpen ? "Hide" : "Show"}</span>
             </button>
             {contactsOpen ? <div className="mt-3 max-h-[230px] space-y-2 overflow-y-auto pr-1">
-              {contacts.length === 0 ? (
+              {filteredContacts.length === 0 ? (
                 <p className="rounded-xl border border-dashed border-glass-border p-3 text-sm text-muted">
-                  No eligible contacts found.
+                  {normalizedSearchQuery ? "No matching contacts." : "No eligible contacts found."}
                 </p>
               ) : (
-                contacts.map((contact) => (
+                filteredContacts.map((contact) => (
                   <button
                     key={contact.userId}
                     type="button"
@@ -960,7 +1015,7 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
             compact && !selectedConversationId ? "hidden" : "flex"
           }`}
         >
-          <div className="flex items-center gap-3 border-b border-glass-border px-3 py-3 sm:px-5 sm:py-4">
+          <div className="flex items-center gap-3 border-b border-glass-border bg-surface px-3 py-3 sm:px-5 sm:py-4">
             {compact ? (
               <button
                 type="button"
@@ -1105,7 +1160,7 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
             </div>
           ) : null}
 
-          <div className="flex-1 space-y-3 overflow-y-auto bg-surface-elevated/20 p-3 sm:p-5">
+          <div className="flex-1 space-y-3 overflow-y-auto bg-surface-elevated/20 p-3 sm:p-6">
             {!selectedConversationId ? (
               <div className="flex h-full items-center justify-center text-sm text-muted">
                 No conversation selected.
@@ -1132,7 +1187,7 @@ export default function ChatClient({ title, compact = false }: ChatClientProps) 
                       />
                     ) : null}
                     <div
-                      className={`max-w-[78%] rounded-2xl px-3 py-2 shadow-sm ${
+                      className={`max-w-[78%] rounded-2xl px-3.5 py-2.5 shadow-sm ${
                         isCurrentUser
                           ? "rounded-br-md bg-accent text-accent-foreground"
                           : "rounded-bl-md border border-glass-border bg-surface text-foreground"
