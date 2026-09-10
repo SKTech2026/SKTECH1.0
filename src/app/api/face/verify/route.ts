@@ -58,6 +58,14 @@ const requireAdminOrStaff = async () => {
     return { error: NextResponse.json({ error: "Account is not approved." }, { status: 403 }) };
   }
 
+  const currentUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { status: true },
+  });
+  if (!currentUser || currentUser.status !== UserStatus.APPROVED) {
+    return { error: NextResponse.json({ error: "Account is not approved." }, { status: 403 }) };
+  }
+
   if (session.user.role !== Role.ADMIN && session.user.role !== Role.STAFF) {
     return { error: NextResponse.json({ error: "Forbidden." }, { status: 403 }) };
   }

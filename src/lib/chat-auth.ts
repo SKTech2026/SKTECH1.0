@@ -48,6 +48,14 @@ export async function requireChatUser(): Promise<ChatUserContext> {
     throw new ChatAuthError("Account is not approved.", 403);
   }
 
+  const currentUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { status: true },
+  });
+  if (!currentUser || currentUser.status !== UserStatus.APPROVED) {
+    throw new ChatAuthError("Account is not approved.", 403);
+  }
+
   if (session.user.role === Role.STAFF) {
     const municipalityId = session.user.municipalityPresidentId;
     if (!municipalityId) {

@@ -29,6 +29,14 @@ export async function requireFeedViewer(): Promise<FeedViewer> {
     throw new FeedAuthError("Account is not approved.");
   }
 
+  const currentUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { status: true },
+  });
+  if (!currentUser || currentUser.status !== UserStatus.APPROVED) {
+    throw new FeedAuthError("Account is not approved.");
+  }
+
   if (session.user.role === Role.ADMIN) {
     return {
       userId: session.user.id,

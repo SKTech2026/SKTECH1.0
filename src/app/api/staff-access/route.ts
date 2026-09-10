@@ -10,8 +10,10 @@ export const dynamic = "force-dynamic";
 
 
 type UpdateStaffAccessBody = {
+  action?: string;
   userId?: string;
   status?: UserStatus;
+  terminationReason?: string;
 };
 
 const ALLOWED_STAFF_STATUSES = new Set<UserStatus>([
@@ -37,6 +39,14 @@ const requireAdminSession = async () => {
         { status: 403 },
       ),
     };
+  }
+
+  const currentUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { status: true },
+  });
+  if (!currentUser || currentUser.status !== UserStatus.APPROVED) {
+    return { error: NextResponse.json({ error: "Account is not approved." }, { status: 403 }) };
   }
 
   return { session };
@@ -91,6 +101,72 @@ export async function PATCH(request: Request) {
     }
 
     const userId = body.userId?.trim();
+    const action = body.action;
+    const terminationReason = body.terminationReason?.trim() ?? "";
+
+    if (action === "terminate") {
+      if (!userId || !terminationReason) {
+        return NextResponse.json(
+          { error: "userId and terminationReason are required for termination." },
+          { status: 400 },
+        );
+      }
+      if (userId === guard.session.user.id) {
+        return NextResponse.json({ error: "Admins cannot terminate their own account." }, { status: 400 });
+      }
+
+      const existing = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, role: true, status: true },
+      });
+
+      if (!existing) {
+        return NextResponse.json({ error: "Staff account not found." }, { status: 404 });
+      }
+      if (existing.role !== Role.STAFF) {
+        return NextResponse.json(
+          { error: "This endpoint can only terminate STAFF accounts." },
+          { status: 400 },
+        );
+      }
+      if (existing.status === UserStatus.TERMINATED) {
+        return NextResponse.json({ error: "Staff account is already terminated." }, { status: 409 });
+      }
+
+      const updated = await prisma.$transaction(async (tx) => {
+        const result = await tx.user.update({
+          where: { id: userId },
+          data: {
+            status: UserStatus.TERMINATED,
+            terminatedAt: new Date(),
+            terminatedById: guard.session.user.id,
+            terminationReason,
+          },
+          select: { id: true, status: true },
+        });
+
+        await tx.auditLog.create({
+          data: {
+            action: "TERMINATE_STAFF",
+            model: "User",
+            recordId: result.id,
+            userId: guard.session.user.id,
+          },
+        });
+
+        return result;
+      });
+
+      return NextResponse.json(
+        { message: "Staff account terminated successfully.", data: updated },
+        { status: 200 },
+      );
+    }
+
+    if (action !== undefined && action !== null) {
+      return NextResponse.json({ error: "Unsupported staff access action." }, { status: 400 });
+    }
+
     const status = parseStaffStatus(body.status);
 
     if (!userId || !status || !ALLOWED_STAFF_STATUSES.has(status)) {
@@ -105,6 +181,7 @@ export async function PATCH(request: Request) {
       select: {
         id: true,
         role: true,
+        status: true,
       },
     });
 
@@ -116,6 +193,13 @@ export async function PATCH(request: Request) {
       return NextResponse.json(
         { error: "This endpoint can only update STAFF accounts." },
         { status: 400 },
+      );
+    }
+
+    if (existing.status === UserStatus.TERMINATED) {
+      return NextResponse.json(
+        { error: "Terminated staff accounts cannot be reactivated or deactivated." },
+        { status: 409 },
       );
     }
 

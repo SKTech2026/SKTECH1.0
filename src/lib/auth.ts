@@ -261,7 +261,12 @@ export const authOptions: NextAuthOptions = {
 
               const user = await getUserByEmailSafe(officialEmail);
 
-              if (!user || user.role !== Role.OFFICIAL || !user.email) {
+              if (
+                !user ||
+                user.role !== Role.OFFICIAL ||
+                user.status !== UserStatus.APPROVED ||
+                !user.email
+              ) {
                 return null;
               }
 
@@ -310,7 +315,13 @@ export const authOptions: NextAuthOptions = {
             if (officialEmail && officialPassword && !officialOtp) {
               const user = await getUserByEmailSafe(officialEmail);
 
-              if (!user || user.role !== Role.OFFICIAL || !user.password || !user.email) {
+              if (
+                !user ||
+                user.role !== Role.OFFICIAL ||
+                user.status !== UserStatus.APPROVED ||
+                !user.password ||
+                !user.email
+              ) {
                 return null;
               }
 
@@ -428,7 +439,7 @@ export const authOptions: NextAuthOptions = {
           credentialUser?.authMethod === "OFFICIAL_OTP" ||
           credentialUser?.authMethod === "OFFICIAL_PASSWORD"
         ) {
-          if (credentialUser.role !== Role.OFFICIAL) {
+          if (credentialUser.role !== Role.OFFICIAL || credentialUser.status !== UserStatus.APPROVED) {
             return false;
           }
           return true;

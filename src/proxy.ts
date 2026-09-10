@@ -7,7 +7,7 @@ import type { NextRequest } from "next/server";
 import { createClient as createSupabaseMiddlewareClient } from "@/utils/supabase/middleware";
 
 type AppRole = "ADMIN" | "STAFF" | "OFFICIAL";
-type AppStatus = "PENDING" | "APPROVED" | "REJECTED" | "INACTIVE";
+type AppStatus = "PENDING" | "APPROVED" | "REJECTED" | "INACTIVE" | "TERMINATED";
 type RoleRule = {
   prefix:
     | "/dashboard/admin"
@@ -100,6 +100,10 @@ export async function proxy(request: NextRequest) {
 
   if (!role || !roleRule.allowed.includes(role)) {
     return NextResponse.redirect(new URL("/unauthorized", request.url));
+  }
+
+  if (status === "TERMINATED") {
+    return NextResponse.redirect(new URL("/login?error=account_terminated", request.url));
   }
 
   if (roleRule.prefix === "/dashboard/staff" && role === "STAFF" && !municipalityPresidentId) {

@@ -34,6 +34,14 @@ const requireAdminOrStaff = async () => {
     return { error: NextResponse.json({ error: "Account is not approved." }, { status: 403 }) };
   }
 
+  const currentUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { status: true },
+  });
+  if (!currentUser || currentUser.status !== UserStatus.APPROVED) {
+    return { error: NextResponse.json({ error: "Account is not approved." }, { status: 403 }) };
+  }
+
   if (session.user.role !== Role.ADMIN && session.user.role !== Role.STAFF) {
     return { error: NextResponse.json({ error: "Forbidden." }, { status: 403 }) };
   }
@@ -136,6 +144,68 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     const body = await request.json();
+    const action = body?.action;
+    const terminationReason =
+      typeof body?.terminationReason === "string" ? body.terminationReason.trim() : "";
+
+    if (action === "terminate") {
+      if (!terminationReason) {
+        return NextResponse.json(
+          { error: "terminationReason is required for termination." },
+          { status: 400 },
+        );
+      }
+      if (existing.status === OfficialStatus.TERMINATED) {
+        return NextResponse.json(
+          { error: "Official is already terminated." },
+          { status: 409 },
+        );
+      }
+
+      const terminated = await prisma.$transaction(async (tx) => {
+        const updated = await tx.sKOfficial.update({
+          where: { id },
+          data: { status: OfficialStatus.TERMINATED },
+        });
+
+        if (updated.userId) {
+          await tx.user.update({
+            where: { id: updated.userId },
+            data: {
+              status: UserStatus.TERMINATED,
+              terminatedAt: new Date(),
+              terminatedById: guard.session.user.id,
+              terminationReason,
+            },
+          });
+        }
+
+        await tx.auditLog.create({
+          data: {
+            action: "TERMINATE_OFFICIAL",
+            model: "SKOfficial",
+            recordId: updated.id,
+            userId: guard.session.user.id,
+          },
+        });
+
+        return updated;
+      });
+
+      return NextResponse.json(terminated, { status: 200 });
+    }
+
+    if (action !== undefined && action !== null) {
+      return NextResponse.json({ error: "Unsupported official action." }, { status: 400 });
+    }
+
+    if (existing.status === OfficialStatus.TERMINATED && body.status !== undefined) {
+      return NextResponse.json(
+        { error: "Terminated officials cannot be reactivated or deactivated." },
+        { status: 409 },
+      );
+    }
+
     const {
       firstName,
       lastName,
