@@ -6,6 +6,7 @@ import { useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   Activity,
+  Archive,
   BadgeCheck,
   BarChart3,
   CalendarDays,
@@ -35,6 +36,7 @@ import Logo from "@/components/ui/Logo";
 
 export type IconName =
   | "activity"
+  | "archive"
   | "badgeCheck"
   | "barChart3"
   | "calendarDays"
@@ -52,6 +54,7 @@ export type IconName =
 
 const ICONS: Record<IconName, LucideIcon> = {
   activity: Activity,
+  archive: Archive,
   badgeCheck: BadgeCheck,
   barChart3: BarChart3,
   calendarDays: CalendarDays,
@@ -120,7 +123,7 @@ const ADMIN_GROUPS = [
   },
   {
     label: "GOVERNANCE",
-    items: ["SK Profiling", "Municipalities", "Staff Admission", "Staff Access"],
+    items: ["SK Profiling", "Municipalities", "Staff Admission", "Staff Access", "Archive Bin"],
   },
   {
     label: "OPERATIONS",
@@ -160,7 +163,7 @@ const ADMIN_DROPDOWN_GROUPS = [
   {
     label: "Management",
     icon: "userCog",
-    items: ["Overall Analytics", "Municipalities", "Staff Admission", "Staff Access", "SK Profiling"],
+    items: ["Overall Analytics", "Municipalities", "Staff Admission", "Staff Access", "Archive Bin", "SK Profiling"],
   },
   {
     label: "Services",

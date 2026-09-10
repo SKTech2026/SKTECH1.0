@@ -38,6 +38,12 @@ const adminItems: RoleShellItem[] = [
     icon: "userCog",
   },
   {
+    href: "/dashboard/admin/archive",
+    label: "Archive Bin",
+    description: "Review terminated records",
+    icon: "archive",
+  },
+  {
     href: "/dashboard/admin/analytics",
     label: "Overall Analytics",
     description: "Charts and performance",
