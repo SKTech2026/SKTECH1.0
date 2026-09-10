@@ -4,7 +4,6 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import {
   ArrowUpRight,
-  BadgeCheck,
   ClipboardList,
   IdCard,
   Megaphone,
@@ -149,35 +148,23 @@ export default async function OfficialDashboardHomePage({
       : "/images/default-official.svg";
 
   const quickAccess = [
-    ["Digital ID", "Open your landscape credential", "/dashboard/official/digital-id", IdCard, "bg-[#1452d9]/15 text-[#6ea0ff]"],
-    ["Admission / Profile", "Manage approved details", "/dashboard/official/profile", UserCog, "bg-[#cf2638]/15 text-[#ff8a95]"],
-    ["Announcements", "Read federation advisories", "/dashboard/official/announcements", Megaphone, "bg-[#f3c72b]/15 text-[#e7b720]"],
-    ["Municipal SK Federation Feed", "Read Staff posts for your municipality", "/dashboard/official/feed", Megaphone, "bg-[#1452d9]/15 text-[#6ea0ff]"],
-    ["Attendance", "Review your participation", "/dashboard/official/attendance", ClipboardList, "bg-[#1452d9]/15 text-[#6ea0ff]"],
-    ["Chat", "Message your municipality", "/dashboard/official/chat", MessageSquare, "bg-[#cf2638]/15 text-[#ff8a95]"],
-    ["Settings", "Theme and account preferences", "/dashboard/official/settings", Settings2, "bg-[#f3c72b]/15 text-[#e7b720]"],
+    ["Digital ID", "/dashboard/official/digital-id", IdCard, "bg-[#1452d9]/15 text-[#6ea0ff]"],
+    ["Admission / Profile", "/dashboard/official/profile", UserCog, "bg-[#cf2638]/15 text-[#ff8a95]"],
+    ["Announcements", "/dashboard/official/announcements", Megaphone, "bg-[#f3c72b]/15 text-[#e7b720]"],
+    ["Municipal SK Federation Feed", "/dashboard/official/feed", Megaphone, "bg-[#1452d9]/15 text-[#6ea0ff]"],
+    ["Attendance", "/dashboard/official/attendance", ClipboardList, "bg-[#1452d9]/15 text-[#6ea0ff]"],
+    ["Chat", "/dashboard/official/chat", MessageSquare, "bg-[#cf2638]/15 text-[#ff8a95]"],
+    ["Settings", "/dashboard/official/settings", Settings2, "bg-[#f3c72b]/15 text-[#e7b720]"],
   ] as const;
 
   return (
     <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-[2rem] border border-[#1452d9]/25 bg-surface p-6 shadow-[0_28px_70px_-32px_var(--shadow-color)] backdrop-blur-xl sm:p-9">
-        <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[#1452d9]/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-32 left-1/3 h-64 w-64 rounded-full bg-[#cf2638]/10 blur-3xl" />
-        <div className="relative flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">
-              <BadgeCheck className="h-4 w-4" /> Official Access
-            </div>
-            <h2 className="mt-4 max-w-3xl text-3xl font-black tracking-tight text-foreground sm:text-5xl">
-              Welcome, {currentUser.name ?? currentUser.email}
-            </h2>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-muted">
-              Your SKTECH workspace for verified identity, local coordination, attendance, and federation updates.
-            </p>
-          </div>
-          <div className="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-2 text-xs font-semibold text-emerald-200">
+      <section className="flex flex-col justify-between gap-4 rounded-2xl border border-glass-border bg-surface p-6 shadow-[0_20px_45px_-28px_var(--shadow-color)] backdrop-blur-xl sm:flex-row sm:items-center sm:p-7">
+        <h2 className="text-3xl font-black tracking-tight text-foreground sm:text-4xl">
+          SK Official Dashboard
+        </h2>
+        <div className="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-2 text-xs font-semibold text-emerald-200">
             <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_12px_rgba(110,231,183,0.9)]" /> Account approved
-          </div>
         </div>
       </section>
 
@@ -236,10 +223,7 @@ export default async function OfficialDashboardHomePage({
         <div className="grid gap-4">
           <article className="rounded-[1.5rem] border border-[#cf2638]/20 bg-surface p-5 shadow-[0_24px_55px_-28px_var(--shadow-color)] backdrop-blur-xl">
             <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-[0.14em] text-muted">Workspace</p>
-                <h3 className="mt-1 text-lg font-semibold text-foreground">Quick Access</h3>
-              </div>
+              <h3 className="text-lg font-semibold text-foreground">Quick Access</h3>
               <Link
                 href="/dashboard/official/settings"
                 className="text-xs font-semibold text-accent hover:underline"
@@ -248,10 +232,10 @@ export default async function OfficialDashboardHomePage({
               </Link>
             </div>
             <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
-              {quickAccess.map(([label, description, href, Icon, colorClass]) => (
+              {quickAccess.map(([label, href, Icon, colorClass]) => (
                 <Link key={href} href={href} className="group flex items-center gap-3 rounded-xl border border-glass-border bg-surface-elevated/35 p-3 transition hover:-translate-y-0.5 hover:border-accent/35 hover:bg-surface-elevated/70">
                   <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${colorClass}`}><Icon className="h-5 w-5" /></span>
-                  <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-foreground">{label}</span><span className="mt-0.5 block text-xs text-muted">{description}</span></span>
+                  <span className="min-w-0 flex-1 text-sm font-semibold text-foreground">{label}</span>
                   <ArrowUpRight className="h-4 w-4 shrink-0 text-muted transition group-hover:text-accent" />
                 </Link>
               ))}
