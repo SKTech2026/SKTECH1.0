@@ -64,9 +64,12 @@ type EventOption = { id: string; title: string; eventDate: string };
 type AttendanceType = "TIME_IN" | "TIME_OUT";
 
 const SCAN_INTERVAL_MS = 500;
+const SCAN_COOLDOWN_MS = 1000;
+const VERIFY_REQUEST_TIMEOUT_MS = 25_000;
 const VERIFICATION_FRAME_COUNT = 4;
 const VERIFICATION_FRAME_DELAY_MS = 180;
 const MAX_CAPTURE_WIDTH = 640;
+const CAPTURE_JPEG_QUALITY = 0.78;
 const INACTIVITY_TIMEOUT_MS = 5 * 60_000;
 const QUEUE_DUPLICATE_WINDOW_MS = 30_000;
 
@@ -80,7 +83,34 @@ function statusColor(status: FaceStatus) {
   return "#ef4444";
 }
 
-function captureFrame(video: HTMLVideoElement) {
+function blobToDataUrl(blob: Blob) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+      } else {
+        reject(new Error("Unable to read captured frame."));
+      }
+    };
+    reader.onerror = () => reject(new Error("Unable to read captured frame."));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function canvasToJpegDataUrl(canvas: HTMLCanvasElement) {
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, "image/jpeg", CAPTURE_JPEG_QUALITY);
+  });
+
+  if (blob) {
+    return blobToDataUrl(blob);
+  }
+
+  return canvas.toDataURL("image/jpeg", CAPTURE_JPEG_QUALITY);
+}
+
+async function captureFrame(video: HTMLVideoElement) {
   if (!video.videoWidth || !video.videoHeight) return null;
 
   const sourceWidth = video.videoWidth;
@@ -97,7 +127,7 @@ function captureFrame(video: HTMLVideoElement) {
 
   ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
   return {
-    data: canvas.toDataURL("image/jpeg", 0.82),
+    data: await canvasToJpegDataUrl(canvas),
     width: targetWidth,
     height: targetHeight,
   };
@@ -116,6 +146,7 @@ export default function MobileStaffScannerClient() {
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number | null>(null);
   const lastScanAtRef = useRef(0);
+  const nextScanAllowedAtRef = useRef(0);
   const busyRef = useRef(false);
   const inactivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const recentVerifiedRef = useRef<Record<string, number>>({});
@@ -319,6 +350,7 @@ export default function MobileStaffScannerClient() {
   const runVerification = useCallback(async () => {
     const video = videoRef.current;
     if (!video || busyRef.current || !cameraEnabled) return;
+    if (Date.now() < nextScanAllowedAtRef.current) return;
     if (!eventId || !attendanceType) {
       setError("Select an event and attendance type before scanning.");
       setScanActive(false);
@@ -329,9 +361,9 @@ export default function MobileStaffScannerClient() {
     setScanBusy(true);
 
     try {
-      const frames: NonNullable<ReturnType<typeof captureFrame>>[] = [];
+      const frames: Array<NonNullable<Awaited<ReturnType<typeof captureFrame>>>> = [];
       for (let index = 0; index < VERIFICATION_FRAME_COUNT; index += 1) {
-        const frame = captureFrame(video);
+        const frame = await captureFrame(video);
         if (frame) {
           frames.push(frame);
         }
@@ -347,17 +379,25 @@ export default function MobileStaffScannerClient() {
       const primary = frames[frames.length - 1];
       setFrameSize({ width: primary.width, height: primary.height });
 
-      const response = await fetch("/api/face/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          imageBase64: primary.data,
-          livenessFrames: frames.map((frame) => frame.data),
-          eventId: eventId.trim(),
-          attendanceType,
-          autoRecord: true,
-        }),
-      });
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), VERIFY_REQUEST_TIMEOUT_MS);
+      let response: Response;
+      try {
+        response = await fetch("/api/face/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+          body: JSON.stringify({
+            imageBase64: primary.data,
+            livenessFrames: frames.map((frame) => frame.data),
+            eventId: eventId.trim(),
+            attendanceType,
+            autoRecord: true,
+          }),
+        });
+      } finally {
+        window.clearTimeout(timeout);
+      }
 
       const payload = (await response.json()) as VerifyResponse;
       if (!response.ok) {
@@ -407,8 +447,15 @@ export default function MobileStaffScannerClient() {
         }
       }
     } catch (verifyError) {
-      setError(verifyError instanceof Error ? verifyError.message : "Verification request failed.");
+      const message =
+        verifyError instanceof DOMException && verifyError.name === "AbortError"
+          ? "Face verification timed out. Please try again."
+          : verifyError instanceof Error
+            ? verifyError.message
+            : "Verification request failed.";
+      setError(message);
     } finally {
+      nextScanAllowedAtRef.current = Date.now() + SCAN_COOLDOWN_MS;
       busyRef.current = false;
       setScanBusy(false);
     }
@@ -520,7 +567,7 @@ export default function MobileStaffScannerClient() {
 
   const scannerStatus = useMemo(() => {
     if (!cameraEnabled) return "Camera offline";
-    if (scanBusy) return "Analyzing frame...";
+    if (scanBusy) return "Verifying face...";
     if (scanActive) return "Auto scan active (2 FPS)";
     return "Scan paused";
   }, [cameraEnabled, scanActive, scanBusy]);
