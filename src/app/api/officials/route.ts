@@ -111,6 +111,7 @@ export async function GET(request: NextRequest) {
     const q = params.get("q")?.trim() ?? "";
     const admissionStatus = params.get("admissionStatus");
     const municipalityIdParam = params.get("municipalityId")?.trim();
+    const grouped = params.get("grouped") === "true";
     const take = Math.min(Math.max(parseInt(params.get("take") || "20", 10), 1), 100);
     const skip = Math.max(parseInt(params.get("skip") || "0", 10), 0);
 
@@ -168,8 +169,7 @@ export async function GET(request: NextRequest) {
     const [officials, total, municipalities] = await Promise.all([
       prisma.sKOfficial.findMany({
         where,
-        take,
-        skip,
+        ...(grouped ? {} : { take, skip }),
         orderBy: { createdAt: "desc" },
         include: {
           user: {
@@ -198,6 +198,35 @@ export async function GET(request: NextRequest) {
         },
       }),
     ]);
+
+    if (grouped) {
+      const groupedMunicipalities = municipalities.map((municipality) => {
+        const municipalityOfficials = officials.filter(
+          (official) => official.municipalityId === municipality.id,
+        );
+        return {
+          ...municipality,
+          officials: municipalityOfficials,
+          barangays: municipality.barangays.map((barangay) => ({
+            ...barangay,
+            officials: municipalityOfficials.filter(
+              (official) => official.barangayId === barangay.id,
+            ),
+          })),
+        };
+      });
+
+      return NextResponse.json(
+        {
+          data: officials,
+          viewerRole: currentSession.user.role,
+          municipalities: groupedMunicipalities,
+          pagination: { total, take: total, skip: 0, pages: total ? 1 : 0 },
+          grouped: true,
+        },
+        { status: 200 },
+      );
+    }
 
     return NextResponse.json(
       {

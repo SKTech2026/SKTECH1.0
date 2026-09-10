@@ -52,6 +52,16 @@ type ApiResponse = {
     skip: number;
     pages: number;
   };
+  grouped?: boolean;
+};
+
+type GroupedMunicipality = Omit<MunicipalityOption, "barangays"> & {
+  officials: SKOfficialRecord[];
+  barangays: Array<{
+    id: string;
+    name: string;
+    officials: SKOfficialRecord[];
+  }>;
 };
 
 const formatDate = (value: string | null) => {
@@ -79,6 +89,10 @@ export default function OfficialsPage() {
   const [currentPage, setCurrentPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [viewerRole, setViewerRole] = useState<"ADMIN" | "STAFF" | null>(null);
+  const [groupedMunicipalities, setGroupedMunicipalities] = useState<GroupedMunicipality[]>([]);
+  const [expandedMunicipality, setExpandedMunicipality] = useState<string | null>(null);
+  const [expandedBarangay, setExpandedBarangay] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"nested" | "table">("nested");
 
   const pageSize = 12;
   const isAdmin = viewerRole === "ADMIN";
@@ -108,6 +122,7 @@ export default function OfficialsPage() {
         setOfficials(payload.data);
         setViewerRole(payload.viewerRole);
         setMunicipalities(payload.municipalities);
+        if (payload.grouped) setGroupedMunicipalities(payload.municipalities as GroupedMunicipality[]);
         setTotalCount(payload.pagination.total);
         setCurrentPage(page);
       } catch (fetchError) {
@@ -122,6 +137,27 @@ export default function OfficialsPage() {
   useEffect(() => {
     void fetchOfficials(0);
   }, [fetchOfficials]);
+
+  const fetchGroupedOfficials = useCallback(async () => {
+    try {
+      const params = new URLSearchParams({ grouped: "true" });
+      if (searchQuery.trim()) params.set("q", searchQuery.trim());
+      if (municipalityFilter) params.set("municipalityId", municipalityFilter);
+      if (admissionFilter) params.set("admissionStatus", admissionFilter);
+      const response = await fetch(`/api/officials?${params.toString()}`, { cache: "no-store" });
+      const payload = (await response.json()) as ApiResponse | { error?: string };
+      if (!response.ok || !("data" in payload) || !payload.grouped) {
+        throw new Error(("error" in payload && payload.error) || "Failed to fetch grouped officials.");
+      }
+      setGroupedMunicipalities(payload.municipalities as GroupedMunicipality[]);
+    } catch (fetchError) {
+      setError(fetchError instanceof Error ? fetchError.message : "Failed to load grouped officials.");
+    }
+  }, [admissionFilter, municipalityFilter, searchQuery]);
+
+  useEffect(() => {
+    if (viewMode === "nested") void fetchGroupedOfficials();
+  }, [fetchGroupedOfficials, viewMode]);
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCount / pageSize)), [totalCount]);
 
@@ -424,7 +460,97 @@ export default function OfficialsPage() {
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-glass-border bg-surface shadow-xl backdrop-blur-md">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted">Organize profiles by municipality and barangay.</p>
+        <div className="flex rounded-xl border border-glass-border bg-surface p-1">
+          <button
+            type="button"
+            onClick={() => setViewMode("nested")}
+            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${viewMode === "nested" ? "bg-accent text-accent-foreground" : "text-muted hover:bg-surface-elevated"}`}
+          >
+            Nested View
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("table")}
+            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${viewMode === "table" ? "bg-accent text-accent-foreground" : "text-muted hover:bg-surface-elevated"}`}
+          >
+            Table View
+          </button>
+        </div>
+      </div>
+
+      {viewMode === "nested" ? (
+        <section className="space-y-3">
+          {groupedMunicipalities.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-glass-border p-6 text-center text-sm text-muted">
+              No municipalities or officials match the current filters.
+            </p>
+          ) : groupedMunicipalities.map((municipality) => {
+            const municipalityOpen = expandedMunicipality === municipality.id;
+            const activeCount = municipality.officials.filter((official) => official.status === "ACTIVE").length;
+            return (
+              <article key={municipality.id} className="overflow-hidden rounded-2xl border border-glass-border bg-surface shadow-xl backdrop-blur-md">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setExpandedMunicipality(municipalityOpen ? null : municipality.id);
+                    setExpandedBarangay(null);
+                  }}
+                  aria-expanded={municipalityOpen}
+                  className="flex w-full items-center justify-between gap-4 p-4 text-left transition hover:bg-surface-elevated/60 sm:p-5"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-base font-bold text-foreground">{municipality.name}</span>
+                    <span className="mt-1 block text-xs text-muted">{municipality.province} · {municipality.barangays.length} barangays · {municipality.officials.length} officials · {activeCount} active</span>
+                  </span>
+                  <span className={`shrink-0 text-lg text-accent transition-transform duration-300 ${municipalityOpen ? "rotate-180" : ""}`}>⌄</span>
+                </button>
+                <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${municipalityOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+                  <div className="min-h-0 overflow-hidden">
+                    <div className="space-y-2 border-t border-glass-border p-3 sm:p-4">
+                      {municipality.barangays.map((barangay) => {
+                        const barangayOpen = expandedBarangay === barangay.id;
+                        return (
+                          <div key={barangay.id} className="rounded-xl border border-glass-border bg-surface-elevated/35">
+                            <button
+                              type="button"
+                              onClick={() => setExpandedBarangay(barangayOpen ? null : barangay.id)}
+                              aria-expanded={barangayOpen}
+                              className="flex w-full items-center justify-between gap-3 px-3 py-3 text-left transition hover:bg-surface-elevated/70"
+                            >
+                              <span className="truncate text-sm font-semibold text-foreground">Barangay {barangay.name}</span>
+                              <span className="flex shrink-0 items-center gap-2 text-xs text-muted"><span>{barangay.officials.length} officials</span><span className={`text-accent transition-transform duration-300 ${barangayOpen ? "rotate-180" : ""}`}>⌄</span></span>
+                            </button>
+                            <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${barangayOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+                              <div className="min-h-0 overflow-hidden">
+                                <div className="grid gap-2 border-t border-glass-border p-3 md:grid-cols-2">
+                                  {barangay.officials.map((official) => (
+                                    <div key={official.id} className="rounded-xl border border-glass-border bg-surface p-3">
+                                      <div className="flex items-start justify-between gap-3">
+                                        <div className="min-w-0"><p className="truncate text-sm font-semibold text-foreground">{formatOfficialFullName(official)}</p><p className="mt-1 text-xs text-muted">{formatEnumLabel(official.position)} · {formatDate(official.dateElected)}</p></div>
+                                        <span className="shrink-0 rounded-full bg-surface-elevated px-2 py-1 text-[10px] font-semibold text-muted">{official.status}</span>
+                                      </div>
+                                      <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-muted"><span className="rounded-full bg-accent/10 px-2 py-1">Admission: {official.admissionStatus}</span>{isAdmin ? <><button type="button" onClick={() => setEditingOfficial(official)} className="rounded-lg border border-glass-border px-2 py-1 font-semibold text-foreground hover:bg-surface-elevated">Edit</button><button type="button" disabled={savingOfficialId === official.id} onClick={() => void setOfficialStatus(official, official.status === "ACTIVE" ? "INACTIVE" : "ACTIVE")} className="rounded-lg border border-glass-border px-2 py-1 font-semibold text-foreground hover:bg-surface-elevated disabled:opacity-60">{official.status === "ACTIVE" ? "Deactivate" : "Reactivate"}</button></> : null}</div>
+                                    </div>
+                                  ))}
+                                  {barangay.officials.length === 0 ? <p className="text-xs text-muted">No officials in this barangay.</p> : null}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </section>
+      ) : null}
+
+      <section className={`${viewMode === "nested" ? "hidden " : ""}overflow-hidden rounded-2xl border border-glass-border bg-surface shadow-xl backdrop-blur-md`}>
         {loading ? (
           <p className="px-5 py-8 text-center text-sm text-muted">Loading officials...</p>
         ) : officials.length === 0 ? (
