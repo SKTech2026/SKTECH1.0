@@ -92,21 +92,26 @@ type RoleShellProps = {
 const isActivePath = (pathname: string, href: string) =>
   pathname === href || pathname.startsWith(`${href}/`);
 
-const OFFICIAL_COLLAPSE_STORAGE_KEY = "sktech.roleShell.official.collapsed";
+const ROLE_SHELL_COLLAPSE_EVENT = "sktech.roleShell.collapse";
+const COLLAPSE_STORAGE_KEYS = {
+  adminCn: "sktech.roleShell.admin.collapsed",
+  staffCn: "sktech.roleShell.staff.collapsed",
+  officialCn: "sktech.roleShell.official.collapsed",
+} as const;
 
-const subscribeOfficialCollapse = (onStoreChange: () => void) => {
-  window.addEventListener(OFFICIAL_COLLAPSE_STORAGE_KEY, onStoreChange);
+const subscribeRoleCollapse = (onStoreChange: () => void) => {
+  window.addEventListener(ROLE_SHELL_COLLAPSE_EVENT, onStoreChange);
   window.addEventListener("storage", onStoreChange);
   return () => {
-    window.removeEventListener(OFFICIAL_COLLAPSE_STORAGE_KEY, onStoreChange);
+    window.removeEventListener(ROLE_SHELL_COLLAPSE_EVENT, onStoreChange);
     window.removeEventListener("storage", onStoreChange);
   };
 };
 
-const getOfficialCollapseSnapshot = () =>
-  window.localStorage.getItem(OFFICIAL_COLLAPSE_STORAGE_KEY) === "true";
+const getCollapseSnapshot = (storageKey: string) =>
+  window.localStorage.getItem(storageKey) === "true";
 
-const getOfficialCollapseServerSnapshot = () => false;
+const getCollapseServerSnapshot = () => false;
 
 const ADMIN_GROUPS = [
   {
@@ -150,6 +155,48 @@ const STAFF_GROUPS = [
   },
 ];
 
+const ADMIN_DROPDOWN_GROUPS = [
+  { label: "Home", icon: "layoutDashboard", items: ["System Overview"] },
+  {
+    label: "Management",
+    icon: "userCog",
+    items: ["Overall Analytics", "Municipalities", "Staff Admission", "Staff Access", "SK Profiling"],
+  },
+  {
+    label: "Services",
+    icon: "settings",
+    items: ["Event Management", "ID Production", "ID Scanning", "Internal Feed", "Public News Feed", "Settings"],
+  },
+] as const;
+
+const STAFF_DROPDOWN_GROUPS = [
+  { label: "Home", icon: "layoutDashboard", items: ["Operations Hub"] },
+  { label: "Announcements", icon: "megaphone", items: ["Announcements"] },
+  {
+    label: "Services",
+    icon: "settings",
+    items: [
+      "Digital ID Admission",
+      "SK Profiling",
+      "Attendance Monitor",
+      "ID Scanning",
+      "Event Kiosk",
+      "Events",
+      "Chat",
+      "Settings",
+    ],
+  },
+] as const;
+
+const STAFF_DESKTOP_EXTRA_ITEMS: RoleShellItem[] = [
+  {
+    href: "/dashboard/staff/digital-admission",
+    label: "Digital ID Admission",
+    description: "Digital admission workspace",
+    icon: "userCheck",
+  },
+];
+
 const OFFICIAL_GROUPS = [
   { label: "Home", icon: "layoutDashboard", items: ["Official Briefing"] },
   { label: "Announcements", icon: "megaphone", items: ["Announcements", "Municipal SK Federation Feed"] },
@@ -186,15 +233,18 @@ export default function RoleShell({
   const isStaffCn = variant === "staffCn";
   const isOfficialCn = variant === "officialCn";
   const isConsoleCn = isAdminCn || isStaffCn || isOfficialCn;
-  const [adminCollapsed, setAdminCollapsed] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-  const [openOfficialGroups, setOpenOfficialGroups] = useState<Record<string, boolean>>({});
-  const officialCollapsed = useSyncExternalStore(
-    subscribeOfficialCollapse,
-    getOfficialCollapseSnapshot,
-    getOfficialCollapseServerSnapshot,
+  const [openNavGroups, setOpenNavGroups] = useState<Record<string, boolean>>({});
+  const collapseStorageKey = isStaffCn
+    ? COLLAPSE_STORAGE_KEYS.staffCn
+    : isOfficialCn
+      ? COLLAPSE_STORAGE_KEYS.officialCn
+      : COLLAPSE_STORAGE_KEYS.adminCn;
+  const collapsed = useSyncExternalStore(
+    subscribeRoleCollapse,
+    () => getCollapseSnapshot(collapseStorageKey),
+    getCollapseServerSnapshot,
   );
-  const collapsed = isOfficialCn ? officialCollapsed : adminCollapsed;
 
   const activeItem = useMemo(
     () =>
@@ -215,15 +265,25 @@ export default function RoleShell({
     [isOfficialCn, isStaffCn, items],
   );
 
-  const officialNavGroups = useMemo(
-    () =>
-      OFFICIAL_GROUPS.map((group) => ({
+  const desktopNavGroups = useMemo(
+    () => {
+      const desktopItems = isStaffCn
+        ? [
+            ...items,
+            ...STAFF_DESKTOP_EXTRA_ITEMS.filter(
+              (extraItem) => !items.some((item) => item.href === extraItem.href),
+            ),
+          ]
+        : items;
+
+      return (isStaffCn ? STAFF_DROPDOWN_GROUPS : isOfficialCn ? OFFICIAL_GROUPS : ADMIN_DROPDOWN_GROUPS).map((group) => ({
         ...group,
         items: group.items
-          .map((label) => items.find((item) => item.label === label))
+          .map((label) => desktopItems.find((item) => item.label === label))
           .filter((item): item is RoleShellItem => Boolean(item)),
-      })),
-    [items],
+      })).filter((group) => group.items.length > 0);
+    },
+    [isOfficialCn, isStaffCn, items],
   );
 
   if (isConsoleCn) {
@@ -286,10 +346,10 @@ export default function RoleShell({
       );
     };
 
-    const renderOfficialNavGroup = (group: (typeof officialNavGroups)[number]) => {
+    const renderDesktopNavGroup = (group: (typeof desktopNavGroups)[number]) => {
       const GroupIcon = ICONS[group.icon];
       const active = group.items.some((item) => isActivePath(pathname, item.href));
-      const open = openOfficialGroups[group.label] ?? active;
+      const open = openNavGroups[group.label] ?? active;
 
       if (group.items.length === 1) {
         return renderAdminNavItem(group.items[0], { compact: collapsed });
@@ -303,7 +363,7 @@ export default function RoleShell({
             aria-label={`${open ? "Collapse" : "Expand"} ${group.label}`}
             aria-expanded={open}
             onClick={() =>
-              setOpenOfficialGroups((current) => ({
+              setOpenNavGroups((current) => ({
                 ...current,
                 [group.label]: !open,
               }))
@@ -421,7 +481,7 @@ export default function RoleShell({
 
         <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-4 [scrollbar-color:color-mix(in_oklab,var(--color-accent)_30%,transparent)_transparent] [scrollbar-width:thin]">
           <div className="space-y-5">
-            {isOfficialCn && !mobile ? officialNavGroups.map(renderOfficialNavGroup) : navGroups.map((group) => (
+            {!mobile ? desktopNavGroups.map(renderDesktopNavGroup) : navGroups.map((group) => (
               <div key={group.label}>
                 {!collapsed || mobile ? (
                   <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
@@ -494,11 +554,8 @@ export default function RoleShell({
                     type="button"
                     onClick={() => {
                       const next = !collapsed;
-                      setAdminCollapsed(next);
-                      if (isOfficialCn) {
-                        window.localStorage.setItem(OFFICIAL_COLLAPSE_STORAGE_KEY, String(next));
-                        window.dispatchEvent(new Event(OFFICIAL_COLLAPSE_STORAGE_KEY));
-                      }
+                      window.localStorage.setItem(collapseStorageKey, String(next));
+                      window.dispatchEvent(new Event(ROLE_SHELL_COLLAPSE_EVENT));
                     }}
                     className="hidden h-10 w-10 items-center justify-center rounded-lg border border-glass-border bg-surface-elevated/60 text-muted transition hover:text-foreground lg:inline-flex"
                     aria-label={
