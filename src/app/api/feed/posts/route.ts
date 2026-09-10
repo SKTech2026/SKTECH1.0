@@ -8,6 +8,16 @@ import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
+const DEFAULT_TAKE = 10;
+const MAX_TAKE = 20;
+
+function parseTake(value: string | null) {
+  const take = Number(value);
+  return Number.isInteger(take) && take >= 1
+    ? Math.min(take, MAX_TAKE)
+    : DEFAULT_TAKE;
+}
+
 function errorResponse(error: unknown, fallback: string) {
   const status = error instanceof FeedAuthError
     ? error.status
@@ -17,18 +27,46 @@ function errorResponse(error: unknown, fallback: string) {
   return NextResponse.json({ error: error instanceof Error ? error.message : fallback }, { status });
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const viewer = await requireFeedViewer();
+    const take = parseTake(request.nextUrl.searchParams.get("take"));
+    const cursorId = request.nextUrl.searchParams.get("cursor");
+    const visibilityWhere = viewer.role === Role.ADMIN
+      ? {}
+      : { OR: [{ municipalityId: null }, { municipalityId: viewer.municipalityId }] };
+    let cursorWhere = {};
+
+    if (cursorId) {
+      const cursorPost = await prisma.feedPost.findFirst({
+        where: { AND: [visibilityWhere, { id: cursorId }] },
+        select: { id: true, createdAt: true },
+      });
+
+      if (cursorPost) {
+        cursorWhere = {
+          OR: [
+            { createdAt: { lt: cursorPost.createdAt } },
+            { createdAt: cursorPost.createdAt, id: { lt: cursorPost.id } },
+          ],
+        };
+      }
+    }
+
     const posts = await prisma.feedPost.findMany({
-      where: viewer.role === Role.ADMIN
-        ? {}
-        : { OR: [{ municipalityId: null }, { municipalityId: viewer.municipalityId }] },
-      orderBy: { createdAt: "desc" },
-      take: 50,
+      where: { AND: [visibilityWhere, cursorWhere] },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: take + 1,
       include: feedPostInclude,
     });
-    return NextResponse.json({ posts: posts.filter((post) => canViewFeedPost(viewer, post.municipalityId)).map((post) => serializeFeedPost(post, viewer.userId)) });
+    const visiblePosts = posts.filter((post) => canViewFeedPost(viewer, post.municipalityId));
+    const hasMore = visiblePosts.length > take;
+    const pagePosts = hasMore ? visiblePosts.slice(0, take) : visiblePosts;
+    return NextResponse.json({
+      posts: pagePosts.map((post) => serializeFeedPost(post, viewer.userId)),
+      nextCursor: hasMore ? pagePosts[pagePosts.length - 1].id : null,
+      hasMore,
+    });
   } catch (error) {
     return errorResponse(error, "Failed to load feed posts.");
   }
