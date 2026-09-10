@@ -1,4 +1,5 @@
 import { getServerSession } from "next-auth";
+import Link from "next/link";
 
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -6,9 +7,31 @@ import { requireOfficialFeatureAccess } from "@/lib/roleGuard";
 
 export const dynamic = "force-dynamic";
 
-export default async function OfficialAttendanceLogsPage() {
+const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
+const DEFAULT_PAGE_SIZE = PAGE_SIZE_OPTIONS[0];
+
+function parsePage(value: string | string[] | undefined) {
+  const page = Number(Array.isArray(value) ? value[0] : value);
+  return Number.isInteger(page) && page >= 1 ? page : 1;
+}
+
+function parsePageSize(value: string | string[] | undefined) {
+  const pageSize = Number(Array.isArray(value) ? value[0] : value);
+  return PAGE_SIZE_OPTIONS.includes(pageSize as (typeof PAGE_SIZE_OPTIONS)[number])
+    ? pageSize
+    : DEFAULT_PAGE_SIZE;
+}
+
+export default async function OfficialAttendanceLogsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const session = await getServerSession(authOptions);
   const authorizedSession = await requireOfficialFeatureAccess(session);
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const requestedPage = parsePage(resolvedSearchParams.page);
+  const pageSize = parsePageSize(resolvedSearchParams.pageSize);
 
   const user = await prisma.user.findUnique({
     where: { id: authorizedSession.user.id },
@@ -23,12 +46,20 @@ export default async function OfficialAttendanceLogsPage() {
     },
   });
 
-  const logs = user?.official
+  const attendanceWhere = user?.official
+    ? { officialId: user.official.id }
+    : null;
+  const totalRecords = attendanceWhere
+    ? await prisma.officialAttendance.count({ where: attendanceWhere })
+    : 0;
+  const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
+  const page = Math.min(requestedPage, totalPages);
+  const logs = attendanceWhere
     ? await prisma.officialAttendance.findMany({
-        where: {
-          officialId: user.official.id,
-        },
+        where: attendanceWhere,
         orderBy: { createdAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
         include: {
           event: {
             select: {
@@ -38,6 +69,15 @@ export default async function OfficialAttendanceLogsPage() {
         },
       })
     : [];
+  const firstRecord = totalRecords === 0 ? 0 : (page - 1) * pageSize + 1;
+  const lastRecord = totalRecords === 0 ? 0 : firstRecord + logs.length - 1;
+  const pageHref = (nextPage: number, nextPageSize = pageSize) => {
+    const params = new URLSearchParams({
+      page: String(nextPage),
+      pageSize: String(nextPageSize),
+    });
+    return `?${params.toString()}`;
+  };
 
   return (
     <div className="space-y-6">
@@ -100,6 +140,69 @@ export default async function OfficialAttendanceLogsPage() {
             )}
           </tbody>
         </table>
+        {totalRecords > 0 ? (
+          <footer className="flex flex-col gap-4 border-t border-glass-border px-5 py-4 text-sm text-muted sm:flex-row sm:items-center sm:justify-between">
+            <p>
+              Showing {firstRecord}-{lastRecord} of {totalRecords} records
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-1" aria-label="Page size">
+                <span className="mr-1 text-xs">Rows</span>
+                {PAGE_SIZE_OPTIONS.map((option) => (
+                  <Link
+                    key={option}
+                    href={pageHref(1, option)}
+                    aria-current={option === pageSize ? "page" : undefined}
+                    className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
+                      option === pageSize
+                        ? "bg-accent text-accent-foreground"
+                        : "text-muted hover:bg-surface-elevated hover:text-foreground"
+                    }`}
+                  >
+                    {option}
+                  </Link>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                {page > 1 ? (
+                  <Link
+                    href={pageHref(page - 1)}
+                    aria-label="Go to previous attendance page"
+                    className="rounded-lg border border-glass-border px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-surface-elevated"
+                  >
+                    Previous
+                  </Link>
+                ) : (
+                  <span
+                    aria-disabled="true"
+                    className="cursor-not-allowed rounded-lg border border-glass-border px-3 py-1.5 text-xs font-semibold text-muted opacity-50"
+                  >
+                    Previous
+                  </span>
+                )}
+                <span className="whitespace-nowrap text-xs font-semibold text-foreground">
+                  Page {page} of {totalPages}
+                </span>
+                {page < totalPages ? (
+                  <Link
+                    href={pageHref(page + 1)}
+                    aria-label="Go to next attendance page"
+                    className="rounded-lg border border-glass-border px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-surface-elevated"
+                  >
+                    Next
+                  </Link>
+                ) : (
+                  <span
+                    aria-disabled="true"
+                    className="cursor-not-allowed rounded-lg border border-glass-border px-3 py-1.5 text-xs font-semibold text-muted opacity-50"
+                  >
+                    Next
+                  </span>
+                )}
+              </div>
+            </div>
+          </footer>
+        ) : null}
       </section>
     </div>
   );
