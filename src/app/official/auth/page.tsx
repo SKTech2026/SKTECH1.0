@@ -8,80 +8,13 @@ import { useState } from "react";
 
 import AuthLayout from "@/components/layouts/AuthLayout";
 
-type SendOtpResponse = {
-  message?: string;
-  error?: string;
-  retryAfterSeconds?: number;
-  cooldownSeconds?: number;
-};
-
-const OTP_REQUEST_TIMEOUT_MS = 60000;
-
-async function readOtpResponse(response: Response): Promise<SendOtpResponse> {
-  const contentType = response.headers.get("content-type") ?? "";
-  if (contentType.includes("application/json")) {
-    return (await response.json()) as SendOtpResponse;
-  }
-
-  return { error: await response.text() };
-}
-
 export default function OfficialAuthPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-
-  const onOtpSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      const controller = new AbortController();
-      const timeout = window.setTimeout(() => controller.abort(), OTP_REQUEST_TIMEOUT_MS);
-
-      let response: Response;
-      try {
-        response = await fetch("/api/official/send-otp", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            mode: "LOGIN",
-            email,
-          }),
-          signal: controller.signal,
-        });
-      } finally {
-        window.clearTimeout(timeout);
-      }
-
-      const payload = await readOtpResponse(response);
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Failed to send OTP.");
-      }
-
-      setSuccess(payload.message ?? "Verification code sent.");
-      const normalizedEmail = email.trim().toLowerCase();
-      router.push(
-        `/official/auth/verify?mode=LOGIN&email=${encodeURIComponent(normalizedEmail)}&cooldown=${payload.cooldownSeconds ?? 60}`,
-      );
-    } catch (submitError) {
-      setError(
-        submitError instanceof DOMException && submitError.name === "AbortError"
-          ? "Sending the code took too long. Please try again in a moment."
-          : submitError instanceof Error
-            ? submitError.message
-            : "Failed to send OTP.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const onPasswordSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -115,10 +48,11 @@ export default function OfficialAuthPage() {
 
   return (
     <AuthLayout
-      title="Official Login"
-      subtitle="Sign in with email + password, or request OTP when needed."
-      illustrationTitle="SKTech Official Portal"
-      illustrationSubtitle="Provincial-grade authentication for SK officials with clean and secure OTP access."
+      title="SKTECH Official Portal"
+      subtitle="Secure access for SK Officials"
+      illustrationTitle="Integrated E-Governance Platform"
+      illustrationSubtitle="Digital ID • Attendance • Announcements • SK Services"
+      cardClassName="max-w-[500px]"
     >
       {error ? (
         <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
@@ -132,75 +66,70 @@ export default function OfficialAuthPage() {
         </p>
       ) : null}
 
-      <form onSubmit={onPasswordSubmit} className="mt-4 space-y-4">
+      <div className="mb-5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-blue-700">
+        <span className="h-1.5 w-8 rounded-full bg-[#1452d9]" />
+        <span className="h-1.5 w-4 rounded-full bg-[#cf2638]" />
+        <span className="h-1.5 w-4 rounded-full bg-[#f3c72b]" />
+        Secure official access
+      </div>
+
+      <form onSubmit={onPasswordSubmit} className="space-y-5">
         <div>
-          <label className="text-sm font-medium text-slate-700">Official Gmail Address</label>
+          <label className="text-sm font-semibold text-slate-700">User Account</label>
+          <p className="mt-1 text-xs text-slate-500">Use the Gmail/email address you registered with.</p>
           <input
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            placeholder="you@gmail.com"
+            placeholder="registered email address"
+            autoComplete="username"
             required
-            className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+            className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#1452d9] focus:ring-4 focus:ring-[#1452d9]/10"
           />
         </div>
         <div>
-          <label className="text-sm font-medium text-slate-700">Password</label>
+          <div className="flex items-center justify-between gap-3">
+            <label className="text-sm font-semibold text-slate-700">Password</label>
+            <Link href="/forgot-password" className="text-xs font-semibold text-[#1452d9] hover:text-[#0f43b5]">
+              Forgot Password?
+            </Link>
+          </div>
           <input
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            placeholder="********"
+            placeholder="Enter your password"
+            autoComplete="current-password"
             required
-            className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+            className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#1452d9] focus:ring-4 focus:ring-[#1452d9]/10"
           />
         </div>
 
         <button
           type="submit"
           disabled={passwordLoading}
-          className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-xl bg-[#1452d9] px-4 py-3 text-sm font-bold text-white shadow-[0_16px_30px_-18px_#1452d9] transition hover:bg-[#0f43b5] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {passwordLoading ? "Signing in..." : "Login with Email + Password"}
+          {passwordLoading ? "Signing in..." : "Sign in to Official Portal"}
         </button>
       </form>
 
-      <div className="my-5 flex items-center gap-3">
-        <div className="h-px flex-1 bg-slate-200" />
-        <span className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">OR</span>
-        <div className="h-px flex-1 bg-slate-200" />
+      <div className="mt-5 rounded-xl border border-[#f3c72b]/40 bg-[#fff9df] px-4 py-3 text-xs leading-5 text-slate-600">
+        Need access? Register as an SK Official and wait for Staff/Admin approval before using dashboard services.
       </div>
-
-      <form onSubmit={onOtpSubmit} className="space-y-4">
-        <div>
-          <label className="text-sm font-medium text-slate-700">Use OTP instead</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="you@gmail.com"
-            required
-            className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {loading ? "Sending Code..." : "Send OTP Code"}
-        </button>
-      </form>
 
       <p className="mt-6 text-sm text-slate-600">
         Don&apos;t have an account?{" "}
         <Link
           href="/official/auth/register"
-          className="font-semibold text-blue-600 hover:text-blue-500"
+          className="font-semibold text-[#1452d9] hover:text-[#0f43b5]"
         >
-          Create one
+          Register as an SK Official
         </Link>
+      </p>
+
+      <p className="mt-5 text-center text-[11px] leading-5 text-slate-400">
+        SKTECH is a capstone project prototype system and not an official government-issued system.
       </p>
 
     </AuthLayout>
