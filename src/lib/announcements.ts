@@ -61,26 +61,47 @@ export async function getActiveAnnouncements(take = ACTIVE_ANNOUNCEMENT_LIMIT) {
   });
 }
 
-export async function getArchivedAnnouncements(take = 20) {
-  const now = getAnnouncementCutoff();
+type ArchivedAnnouncementOptions = {
+  skip?: number;
+  take?: number;
+};
+
+async function getArchivedAnnouncementQuery(now = getAnnouncementCutoff()) {
   const activeIds = await getActiveAnnouncementIds(now);
 
-  return prisma.event.findMany({
-    where: {
-      OR: [
-        getArchivedAnnouncementWhere(now),
-        {
-          eventDate: {
-            gte: now,
-          },
-          id: {
-            notIn: activeIds,
-          },
+  return {
+    OR: [
+      getArchivedAnnouncementWhere(now),
+      {
+        eventDate: {
+          gte: now,
         },
-      ],
-    },
+        id: {
+          notIn: activeIds,
+        },
+      },
+    ],
+  };
+}
+
+export async function getArchivedAnnouncements(
+  options: ArchivedAnnouncementOptions | number = {},
+) {
+  const { skip = 0, take = typeof options === "number" ? options : 20 } =
+    typeof options === "number" ? {} : options;
+  const where = await getArchivedAnnouncementQuery();
+
+  return prisma.event.findMany({
+    where,
     orderBy: [{ createdAt: "desc" }, { eventDate: "desc" }, { id: "asc" }],
-    take,
+    skip: Math.max(0, skip),
+    take: Math.max(0, take),
     select: announcementSummarySelect,
+  });
+}
+
+export async function countArchivedAnnouncements() {
+  return prisma.event.count({
+    where: await getArchivedAnnouncementQuery(),
   });
 }
