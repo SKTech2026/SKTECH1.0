@@ -10,6 +10,7 @@
  * - Single active template: deactivates others before activating default
  */
 
+import type { Prisma } from "@prisma/client";
 import { DEFAULT_ID_TEMPLATE } from "../src/components/id-template/default-template";
 import {
   extractFields,
@@ -162,12 +163,12 @@ async function importDefaultTemplate(): Promise<ImportResult> {
         };
         await prisma.idTemplateField.update({
           where: { id: existingField.id },
-          data: updateData as any,
+          data: updateData as Prisma.IdTemplateFieldUpdateInput,
         });
       } else {
         // Create new field
-        const createData = {
-          templateId: template.id,
+        const createData: Prisma.IdTemplateFieldCreateInput = {
+          template: { connect: { id: template.id } },
           side: field.side,
           type: field.type,
           sourceKey: field.sourceKey,
@@ -183,7 +184,7 @@ async function importDefaultTemplate(): Promise<ImportResult> {
           ...(field.styleJson !== null ? { styleJson: field.styleJson } : {}),
         };
         await prisma.idTemplateField.create({
-          data: createData as any,
+          data: createData,
         });
       }
     }
