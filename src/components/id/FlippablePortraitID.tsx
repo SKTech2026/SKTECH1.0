@@ -189,66 +189,61 @@ export default function FlippablePortraitID({
     />
   );
 
-  const idField = (label: string, value: string, className = "") => (
+  const idField = (label: string, value: string, className = "", light = false) => (
     <div className={`min-w-0 ${className}`}>
-      <dt className="text-[0.55rem] font-bold uppercase tracking-[0.12em] text-[#a9bdd4]">{label}</dt>
-      <dd className="mt-0.5 break-words text-[0.74rem] font-bold uppercase leading-tight tracking-wide text-white">{value}</dd>
+      <dt className={`text-[0.55rem] font-bold uppercase tracking-[0.12em] ${light ? "text-[#4b5563]" : "text-[#a9bdd4]"}`}>{label}</dt>
+      <dd className={`mt-0.5 break-words text-[0.74rem] font-bold uppercase leading-tight tracking-wide ${light ? "text-[#111827]" : "text-white"}`}>{value}</dd>
     </div>
   );
 
-  const DesktopFront = ({ print = false }: { print?: boolean }) => (
-    <section className="id-face absolute inset-0 overflow-hidden rounded-[0.72rem] border border-[#d4ad43] bg-[#071b3d] text-white shadow-[0_28px_70px_-34px_rgba(2,6,23,0.75)] [backface-visibility:hidden]">
+  const DesktopFront = () => (
+    <section className="id-face absolute inset-0 overflow-hidden rounded-[0.72rem] border border-[#aeb4bd] bg-[#d9d9d9] text-[#111827] shadow-[0_28px_70px_-34px_rgba(2,6,23,0.75)] [backface-visibility:hidden]">
       <div className="id-front-glow" />
-      <div className="id-front-bars" />
-      <div className="relative z-10 flex h-full flex-col px-[4.8%] py-[3.5%]">
-        <header className="flex items-center justify-between border-b border-[#d4ad43]/60 pb-[2.2%]">
-          {logo(sktechLogoUrl, "SKTECH logo", "h-[2.45rem] w-[5rem]")}
-          <div className="flex items-center gap-2 text-center">
-            {logo(provincialSealUrl, "Province of Oriental Mindoro official seal", "h-[3.15rem] w-[3.15rem]")}
+      <div className="relative z-10 flex h-full flex-col">
+        <header className="id-reference-header flex items-center justify-between px-[2.8%] py-[1.8%]">
+          {logo(provincialSealUrl, "Province of Oriental Mindoro official seal", "h-[4.6rem] w-[4.6rem]")}
+          <div className="flex flex-1 items-center justify-center gap-3 text-center">
             <div>
-              <h2 className="text-[1rem] font-black uppercase leading-none tracking-[0.16em] text-[#f4d36a]">{provinceName}</h2>
-              <p className="mt-1 text-[0.49rem] font-bold uppercase tracking-[0.12em] text-white/80">Sangguniang Kabataan Provincial Federation</p>
+              <h2 className="text-[1.15rem] font-black uppercase leading-none tracking-[0.25em] text-white">{provinceName}</h2>
+              <p className="mt-1 text-[0.53rem] font-bold uppercase tracking-[0.1em] text-white/90">Sangguniang Kabataan Provincial Federation</p>
             </div>
           </div>
-          {logo(skfedLogoUrl, "Sangguniang Kabataan logo", "h-[2.7rem] w-[3.5rem]")}
+          {logo(skfedLogoUrl, "Sangguniang Kabataan logo", "h-[4.4rem] w-[5.2rem]")}
         </header>
 
-        <div className="flex items-end justify-between pt-[2.2%]">
+        <div className="flex items-end justify-center border-b-[0.35rem] border-[#8c0909] px-[4.8%] pb-[1.2%] pt-[1.7%]">
           <div>
-            <p className="text-[0.55rem] font-bold uppercase tracking-[0.28em] text-[#f4d36a]">SKTECH</p>
-            <h3 className="mt-0.5 text-[1.12rem] font-black uppercase tracking-[0.13em]">Identification Card</h3>
+            <h3 className="text-[0.95rem] font-black uppercase tracking-[0.25em] text-[#111827]">Identification Card</h3>
           </div>
-          <span className={`rounded-full border px-3 py-1 text-[0.54rem] font-black uppercase tracking-wide ${verified ? "border-emerald-300/50 bg-emerald-400/15 text-emerald-200" : "border-amber-300/50 bg-amber-400/15 text-amber-200"}`}>{statusLabel}</span>
         </div>
 
-        <div className="mt-[2.4%] grid min-h-0 flex-1 grid-cols-[21%_1fr_20%] gap-[3.4%]">
-          <div className="flex flex-col">
-            <div className="relative aspect-[4/5] overflow-hidden rounded-md border-2 border-[#f4d36a] bg-[#dce7f2]">{photo("180px")}</div>
-            <p className="mt-1 text-center text-[0.5rem] font-bold uppercase tracking-[0.15em] text-white/70">Official portrait</p>
+        <div className="grid min-h-0 flex-1 grid-cols-[18%_1fr_18%] gap-[3%] px-[4.8%] py-[2.3%]">
+          <div className="flex flex-col justify-center">
+            <div className="relative aspect-[4/5] overflow-hidden rounded-sm border-2 border-black bg-white">{photo("180px")}</div>
+            <p className="mt-1 text-center text-[0.48rem] font-bold uppercase tracking-[0.12em] text-[#111827]">Official portrait</p>
           </div>
 
-          <dl className="grid content-start grid-cols-2 gap-x-5 gap-y-[0.58rem] pt-1">
-            {idField("Name", compact(fullName, 30), "col-span-2")}
-            {idField("Date of Birth", formatDisplayDate(birthDate))}
-            {idField("Position", compact(displayPosition, 26))}
-            {idField("Address", compact(addressLine, 45), "col-span-2")}
-            {idField("Date Elected", formatDisplayDate(dateElected))}
-            {idField("SKMF / SKPF Position", skfedPosition || "Not recorded", "col-span-2")}
-            {idField("ID No.", documentId)}
-            {idField("Municipality", compact(municipality, 24))}
-            {idField("Term of Service", serviceTerm)}
+          <dl className="grid content-center grid-cols-2 gap-x-5 gap-y-[0.48rem]">
+            {idField("Name", compact(fullName, 30), "col-span-2", true)}
+            {idField("Sex", "Not recorded", "", true)}
+            {idField("Date of Birth", formatDisplayDate(birthDate), "", true)}
+            {idField("Address", compact(addressLine, 45), "col-span-2", true)}
+            {idField("Position", compact(displayPosition, 26), "", true)}
+            {idField("Date Elected", formatDisplayDate(dateElected), "", true)}
+            {idField("SKMF / SKPF Position", skfedPosition || "Not recorded", "col-span-2", true)}
+            {idField("ID No.", documentId, "", true)}
+            {idField("Term of Service", serviceTerm, "", true)}
           </dl>
 
-          <div className="flex flex-col items-center justify-end pb-1">
-            <div className="rounded-md border-4 border-white bg-white p-1"><QRCodeSVG value={qrValue} size={print ? 70 : 82} level="M" includeMargin /></div>
-            <p className="mt-1 text-center text-[0.5rem] font-bold uppercase tracking-[0.12em] text-[#f4d36a]">Scan to verify</p>
-            <div className="mt-3 w-full text-center"><p className="text-[0.48rem] font-bold uppercase tracking-wide text-white/60">Official signature</p><div className="mt-2 border-b border-white/70" /></div>
+          <div className="flex flex-col items-center justify-end pb-[5%]">
+            <div className="w-full text-center"><p className="text-[0.48rem] font-bold uppercase tracking-wide text-[#111827]">Official signature</p><div className="mt-2 border-b-2 border-[#111827]" /></div>
           </div>
         </div>
 
-        <div className="mt-[1.8%] flex items-center justify-between border-t border-[#d4ad43]/60 pt-1 text-[0.49rem] font-bold uppercase tracking-[0.12em] text-white/70">
-          <span>{municipality} Municipal Official</span>
-          <span className="text-[#f4d36a]">{WATERMARK}</span>
+        <div className="relative flex items-center justify-between border-t-[0.35rem] border-[#8c0909] bg-[#d9d9d9] px-[4.8%] py-[1.1%] text-[0.5rem] font-bold uppercase tracking-[0.08em] text-[#111827]">
+          {logo(sktechLogoUrl, "SKTECH logo", "h-[2.2rem] w-[4.5rem]")}
+          <span>{municipality} · {statusLabel}</span>
+          <span className="absolute bottom-0 left-1/2 w-full -translate-x-1/2 translate-y-[115%] text-center text-[0.38rem] font-black tracking-[0.04em] text-[#4b5563]">{WATERMARK}</span>
         </div>
       </div>
     </section>
@@ -371,7 +366,7 @@ export default function FlippablePortraitID({
 
       <div className="id-print-stack hidden">
         <div className="official-id-print-card relative overflow-hidden">
-          <DesktopFront print />
+          <DesktopFront />
         </div>
         <div className="official-id-print-card relative overflow-hidden">
           <DesktopBack print />
@@ -418,10 +413,13 @@ function IDStyles() {
         pointer-events: none;
         position: absolute;
         inset: 0;
-        background:
-          radial-gradient(circle at 12% 18%, rgba(44, 121, 184, 0.42), transparent 30%),
-          linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 42%),
-          linear-gradient(315deg, rgba(4, 12, 36, 0.92), rgba(8, 38, 78, 0.72));
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.22), transparent 42%);
+      }
+
+      .id-reference-header {
+        min-height: 19%;
+        background: #071b3d;
+        border-bottom: 2px solid #071b3d;
       }
 
       .id-front-bars,
