@@ -5,7 +5,7 @@ import type { MouseEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 
 import IdTemplateRenderer from "@/components/id-template/IdTemplateRenderer";
-import { DEFAULT_ID_TEMPLATE } from "@/components/id-template/default-template";
+import { DEFAULT_ID_TEMPLATE, type IdTemplate } from "@/components/id-template/default-template";
 import { resolveOfficialIdTemplateData } from "@/lib/id-template/resolve-official-id-data";
 
 type IDVariant = "full" | "dashboardPreview" | "mobilePreview" | "mobileFull" | "mobileViewer";
@@ -18,6 +18,7 @@ type FlippablePortraitIDProps = {
   idNumber: string;
   qrValue: string;
   photoUrl?: string;
+  template?: IdTemplate;
   sitio?: string | null;
   skfedPosition?: string | null;
   dateElected?: string | null;
@@ -62,6 +63,7 @@ export default function FlippablePortraitID({
   idNumber,
   qrValue,
   photoUrl = DEFAULT_PHOTO_URL,
+  template = DEFAULT_ID_TEMPLATE,
   sitio,
   skfedPosition,
   dateElected,
@@ -173,7 +175,7 @@ export default function FlippablePortraitID({
 
   const DesktopFront = () => (
     <IdTemplateRenderer
-      template={DEFAULT_ID_TEMPLATE}
+      template={template}
       data={templateData}
       side="front"
       onImageError={handleTemplateImageError}
@@ -182,7 +184,7 @@ export default function FlippablePortraitID({
 
   const DesktopBack = ({ print = false }: { print?: boolean }) => (
     <IdTemplateRenderer
-      template={DEFAULT_ID_TEMPLATE}
+      template={template}
       data={templateData}
       side="back"
       print={print}

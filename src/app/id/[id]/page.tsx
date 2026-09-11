@@ -1,7 +1,11 @@
 import FlippablePortraitID from "@/components/id/FlippablePortraitID";
+import { DEFAULT_ID_TEMPLATE, type IdTemplate } from "@/components/id-template/default-template";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/db";
 import { formatEnumLabel, formatOfficialFullName } from "@/lib/sk-official";
+import { loadActiveIdTemplate } from "@/lib/id-template/load-active-id-template";
+import { convertDbTemplateToRendererTemplate } from "@/lib/id-template/db-to-renderer-converter";
+import { validateIdTemplateOrDefault } from "@/lib/id-template/validate-template";
 
 export const dynamic = "force-dynamic";
 
@@ -94,6 +98,21 @@ export default async function IDPage({
   const municipality = official.municipality ?? fallbackMunicipality ?? "Not specified";
   const idNumber = official.id.replace(/-/g, "").slice(-12).toUpperCase();
 
+  // Load active ID template
+  let template: IdTemplate = DEFAULT_ID_TEMPLATE;
+  try {
+    const dbTemplate = await loadActiveIdTemplate();
+    if (dbTemplate) {
+      const rendererTemplate = convertDbTemplateToRendererTemplate(dbTemplate);
+      if (rendererTemplate) {
+        template = validateIdTemplateOrDefault(rendererTemplate);
+      }
+    }
+  } catch (error) {
+    // Silently fall back to default template on error
+    console.error("Failed to load active ID template:", error instanceof Error ? error.message : String(error));
+  }
+
   return (
     <div className="min-h-screen bg-[#eef2f6] px-4 py-8 text-[#13213b] sm:px-6 sm:py-12">
       <div className="mx-auto w-full max-w-5xl">
@@ -133,6 +152,7 @@ export default async function IDPage({
             day: "2-digit",
             year: "numeric",
           }).format(new Date())}
+          template={template}
         />
       </div>
     </div>

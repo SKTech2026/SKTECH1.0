@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import FlippablePortraitID from "@/components/id/FlippablePortraitID";
+import type { IdTemplate } from "@/components/id-template/default-template";
 import { formatEnumLabel } from "@/lib/sk-official";
 
 type OfficialRecord = {
@@ -39,11 +40,13 @@ type MunicipalityOption = {
 };
 
 type IdProductionClientProps = {
+  template: IdTemplate;
   officials: OfficialRecord[];
   municipalities: MunicipalityOption[];
 };
 
 export default function IdProductionClient({
+  template,
   officials,
   municipalities,
 }: IdProductionClientProps) {
@@ -261,6 +264,7 @@ export default function IdProductionClient({
                 sktechLogoUrl="/sk-tech-logo.png"
                 provincialSealUrl="/images/provincial-seal-logo.png"
                 skfedLogoUrl="/login-logo.png"
+                template={template}
               />
             </>
           ) : (

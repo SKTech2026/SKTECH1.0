@@ -1,9 +1,13 @@
 import { Role } from "@prisma/client";
 import { getServerSession } from "next-auth";
 
+import { DEFAULT_ID_TEMPLATE, type IdTemplate } from "@/components/id-template/default-template";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/roleGuard";
+import { loadActiveIdTemplate } from "@/lib/id-template/load-active-id-template";
+import { convertDbTemplateToRendererTemplate } from "@/lib/id-template/db-to-renderer-converter";
+import { validateIdTemplateOrDefault } from "@/lib/id-template/validate-template";
 import IdProductionClient from "./id-production-client";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +15,21 @@ export const dynamic = "force-dynamic";
 export default async function AdminIdProductionPage() {
   const session = await getServerSession(authOptions);
   requireRole(session, [Role.ADMIN]);
+
+  // Load active ID template
+  let template: IdTemplate = DEFAULT_ID_TEMPLATE;
+  try {
+    const dbTemplate = await loadActiveIdTemplate();
+    if (dbTemplate) {
+      const rendererTemplate = convertDbTemplateToRendererTemplate(dbTemplate);
+      if (rendererTemplate) {
+        template = validateIdTemplateOrDefault(rendererTemplate);
+      }
+    }
+  } catch (error) {
+    // Silently fall back to default template on error
+    console.error("Failed to load active ID template:", error instanceof Error ? error.message : String(error));
+  }
 
   const [officials, municipalities] = await Promise.all([
     prisma.sKOfficial.findMany({
@@ -75,6 +94,7 @@ export default async function AdminIdProductionPage() {
       </section>
 
       <IdProductionClient
+        template={template}
         officials={officials.map((official) => ({
           id: official.id,
           firstName: official.firstName,

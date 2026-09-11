@@ -2,10 +2,14 @@ import Link from "next/link";
 import { getServerSession } from "next-auth";
 
 import FlippablePortraitID from "@/components/id/FlippablePortraitID";
+import { DEFAULT_ID_TEMPLATE, type IdTemplate } from "@/components/id-template/default-template";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { requireOfficialFeatureAccess } from "@/lib/roleGuard";
 import { formatEnumLabel, formatOfficialFullName } from "@/lib/sk-official";
+import { loadActiveIdTemplate } from "@/lib/id-template/load-active-id-template";
+import { convertDbTemplateToRendererTemplate } from "@/lib/id-template/db-to-renderer-converter";
+import { validateIdTemplateOrDefault } from "@/lib/id-template/validate-template";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +50,21 @@ export default async function OfficialDigitalIdPage() {
   });
   const photoUrl =
     user?.image && user.image.startsWith("/") ? user.image : "/images/default-official.svg";
+
+  // Load active ID template
+  let template: IdTemplate = DEFAULT_ID_TEMPLATE;
+  try {
+    const dbTemplate = await loadActiveIdTemplate();
+    if (dbTemplate) {
+      const rendererTemplate = convertDbTemplateToRendererTemplate(dbTemplate);
+      if (rendererTemplate) {
+        template = validateIdTemplateOrDefault(rendererTemplate);
+      }
+    }
+  } catch (error) {
+    // Silently fall back to default template on error
+    console.error("Failed to load active ID template:", error instanceof Error ? error.message : String(error));
+  }
 
   return (
     <div className="space-y-6">
@@ -119,6 +138,7 @@ export default async function OfficialDigitalIdPage() {
               qrValue={`/id/${user.official.id}`}
               photoUrl={photoUrl}
               registryStatus={user.official.status}
+              template={template}
             />
           </div>
         </article>
