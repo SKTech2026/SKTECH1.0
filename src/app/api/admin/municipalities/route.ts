@@ -22,10 +22,6 @@ type UpdateMunicipalityBody = {
   presidentId?: string | null;
 };
 
-type DeleteMunicipalityBody = {
-  id?: string;
-};
-
 const requireAdminSession = async () => {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
@@ -337,82 +333,16 @@ export async function PATCH(request: Request) {
   }
 }
 
-export async function DELETE(request: Request) {
+export async function DELETE() {
   try {
     const guard = await requireAdminSession();
     if (guard.error) {
       return guard.error;
     }
-
-    let body: DeleteMunicipalityBody;
-    try {
-      body = (await request.json()) as DeleteMunicipalityBody;
-    } catch {
-      return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
-    }
-
-    const id = body.id?.trim() ?? "";
-    if (!id) {
-      return NextResponse.json({ error: "Municipality ID is required." }, { status: 400 });
-    }
-
-    const [staffLinked, officersLinked, admissionsLinked, officialRecordsLinked, barangaysLinked] =
-      await Promise.all([
-      prisma.user.count({
-        where: {
-          municipalityPresidentId: id,
-        },
-      }),
-      prisma.user.count({
-        where: {
-          municipalityOfficerId: id,
-        },
-      }),
-      prisma.officialAdmission.count({
-        where: {
-          municipalityId: id,
-        },
-      }),
-      prisma.sKOfficial.count({
-        where: {
-          municipalityId: id,
-        },
-      }),
-      prisma.barangay.count({
-        where: {
-          municipalityId: id,
-        },
-      }),
-    ]);
-
-    if (
-      staffLinked > 0 ||
-      officersLinked > 0 ||
-      admissionsLinked > 0 ||
-      officialRecordsLinked > 0 ||
-      barangaysLinked > 0
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "Cannot delete municipality while it has linked staff, officers, official records, admissions, or barangays.",
-          linked: {
-            staffLinked,
-            officersLinked,
-            admissionsLinked,
-            officialRecordsLinked,
-            barangaysLinked,
-          },
-        },
-        { status: 409 },
-      );
-    }
-
-    await prisma.municipality.delete({
-      where: { id },
-    });
-
-    return NextResponse.json({ message: "Municipality deleted successfully." }, { status: 200 });
+    return NextResponse.json(
+      { error: "Permanent deletion is disabled. Use edit, unpublish, deactivate, or archive instead." },
+      { status: 409 },
+    );
   } catch (error) {
     if (process.env.NODE_ENV !== "production") console.error("DELETE /api/admin/municipalities error:", error);
     return NextResponse.json({ error: "Failed to delete municipality." }, { status: 500 });

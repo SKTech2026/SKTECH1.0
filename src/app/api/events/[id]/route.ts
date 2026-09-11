@@ -1,17 +1,12 @@
 import { Role, UserStatus } from "@prisma/client";
 import { getServerSession } from "next-auth";
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { NextResponse } from "next/server";
 
 import { authOptions } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 
-
-type RouteContext = {
-  params: Promise<{ id: string }>;
-};
 
 const requireAdminOrStaff = async () => {
   const session = await getServerSession(authOptions);
@@ -21,43 +16,16 @@ const requireAdminOrStaff = async () => {
   return { session };
 };
 
-export async function DELETE(_request: NextRequest, context: RouteContext) {
+export async function DELETE() {
   try {
     const authError = await requireAdminOrStaff();
     if (authError.error) {
       return authError.error;
     }
-
-    const { id } = await context.params;
-
-    if (!id) {
-      return NextResponse.json({ error: "id is required" }, { status: 400 });
-    }
-
-    const event = await prisma.event.findFirst({
-      where: {
-        id,
-        ...(authError.session.user.role === Role.STAFF
-          ? { municipalityId: authError.session.user.municipalityPresidentId ?? "" }
-          : {}),
-      },
-      select: { id: true },
-    });
-
-    if (!event) {
-      return NextResponse.json({ error: "Event not found" }, { status: 404 });
-    }
-
-    await prisma.$transaction([
-      prisma.officialAttendance.deleteMany({
-        where: { eventId: id },
-      }),
-      prisma.event.delete({
-        where: { id },
-      }),
-    ]);
-
-    return NextResponse.json({ success: true }, { status: 200 });
+    return NextResponse.json(
+      { error: "Permanent deletion is disabled. Use edit, unpublish, deactivate, or archive instead." },
+      { status: 409 },
+    );
   } catch (error) {
     if (process.env.NODE_ENV !== "production") console.error("DELETE /api/events/[id] error:", error);
     return NextResponse.json(

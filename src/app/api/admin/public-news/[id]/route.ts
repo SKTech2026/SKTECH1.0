@@ -47,14 +47,14 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   }
 }
 
-export async function DELETE(_request: NextRequest, context: RouteContext) {
+export async function DELETE() {
   try {
     const viewer = await requireFeedViewer();
     if (viewer.role !== Role.ADMIN) return NextResponse.json({ error: "Admin access required." }, { status: 403 });
-    const { id } = await context.params;
-    const post = await prisma.publicNewsPost.delete({ where: { id } });
-    if (post.imagePath) await deleteFeedImage(PUBLIC_NEWS_BUCKET, post.imagePath);
-    return NextResponse.json({ success: true });
+    return NextResponse.json(
+      { error: "Permanent deletion is disabled. Use edit, unpublish, deactivate, or archive instead." },
+      { status: 409 },
+    );
   } catch (error) {
     return failure(error);
   }
