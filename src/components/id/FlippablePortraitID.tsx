@@ -189,142 +189,101 @@ export default function FlippablePortraitID({
     />
   );
 
-  const desktopRow = (label: string, value: string, valueClass = "text-[0.9rem]") => (
-    <div className="grid grid-cols-[8rem_0.55rem_1fr] items-baseline gap-1 text-[0.68rem] leading-tight text-[#09235d]">
-      <dt className="font-black uppercase">{label}</dt>
-      <dd className="font-black">:</dd>
-      <dd className={`${valueClass} min-w-0 break-words font-black uppercase tracking-wide`}>
-        {value}
-      </dd>
-    </div>
-  );
-
-  const infoBlock = (label: string, value: string) => (
-    <div className="min-w-0 rounded-xl border border-[#d5e0ed] bg-white px-3 py-2">
-      <dt className="text-[0.66rem] font-black uppercase tracking-wide text-[#61728b]">{label}</dt>
-      <dd className="mt-1 break-words text-sm font-bold leading-snug text-[#172653]">{value}</dd>
+  const idField = (label: string, value: string, className = "") => (
+    <div className={`min-w-0 ${className}`}>
+      <dt className="text-[0.55rem] font-bold uppercase tracking-[0.12em] text-[#a9bdd4]">{label}</dt>
+      <dd className="mt-0.5 break-words text-[0.74rem] font-bold uppercase leading-tight tracking-wide text-white">{value}</dd>
     </div>
   );
 
   const DesktopFront = ({ print = false }: { print?: boolean }) => (
-    <section className="id-face absolute inset-0 overflow-hidden rounded-[0.72rem] border border-[#d7c26c] bg-white text-[#09235d] shadow-[0_28px_70px_-34px_rgba(2,6,23,0.75)] [backface-visibility:hidden]">
-      <div className="id-corner id-corner-left" />
-      <div className="id-corner id-corner-right" />
-      <div className="id-dots" />
-      <div className="id-soft-logo left-[5%] top-[8%] h-[38%] w-[40%]">
-        <Image src={sktechLogoUrl} alt="" fill className="object-contain opacity-15" sizes="360px" />
-      </div>
-
-      <div className="relative z-10 flex h-full flex-col px-[4.6%] py-[3.1%]">
-        <header className="grid grid-cols-[1fr_1fr_1fr] items-start gap-3">
-          {logo(sktechLogoUrl, "SKTECH logo", "h-[3.5rem] w-[6.3rem]")}
-          {logo(provincialSealUrl, "Province of Oriental Mindoro official seal", "mx-auto h-[4.45rem] w-[4.45rem]")}
-          {logo(skfedLogoUrl, "Sangguniang Kabataan logo", "ml-auto h-[4.15rem] w-[5rem]")}
+    <section className="id-face absolute inset-0 overflow-hidden rounded-[0.72rem] border border-[#d4ad43] bg-[#071b3d] text-white shadow-[0_28px_70px_-34px_rgba(2,6,23,0.75)] [backface-visibility:hidden]">
+      <div className="id-front-glow" />
+      <div className="id-front-bars" />
+      <div className="relative z-10 flex h-full flex-col px-[4.8%] py-[3.5%]">
+        <header className="flex items-center justify-between border-b border-[#d4ad43]/60 pb-[2.2%]">
+          {logo(sktechLogoUrl, "SKTECH logo", "h-[2.45rem] w-[5rem]")}
+          <div className="flex items-center gap-2 text-center">
+            {logo(provincialSealUrl, "Province of Oriental Mindoro official seal", "h-[3.15rem] w-[3.15rem]")}
+            <div>
+              <h2 className="text-[1rem] font-black uppercase leading-none tracking-[0.16em] text-[#f4d36a]">{provinceName}</h2>
+              <p className="mt-1 text-[0.49rem] font-bold uppercase tracking-[0.12em] text-white/80">Sangguniang Kabataan Provincial Federation</p>
+            </div>
+          </div>
+          {logo(skfedLogoUrl, "Sangguniang Kabataan logo", "h-[2.7rem] w-[3.5rem]")}
         </header>
 
-        <div className="mt-[0.42rem] text-center">
-          <h2 className="text-[1.05rem] font-black uppercase leading-tight tracking-wide">
-            SK Federation Identification of {provinceName}
-          </h2>
-          <p className="mt-1 text-[0.78rem] font-black uppercase tracking-wide text-[#f2af00]">
-            SKTECH Digital Identification System
-          </p>
-          <div className="mx-auto mt-2 h-[0.14rem] w-[84%] bg-[#f2db84]" />
+        <div className="flex items-end justify-between pt-[2.2%]">
+          <div>
+            <p className="text-[0.55rem] font-bold uppercase tracking-[0.28em] text-[#f4d36a]">SKTECH</p>
+            <h3 className="mt-0.5 text-[1.12rem] font-black uppercase tracking-[0.13em]">Identification Card</h3>
+          </div>
+          <span className={`rounded-full border px-3 py-1 text-[0.54rem] font-black uppercase tracking-wide ${verified ? "border-emerald-300/50 bg-emerald-400/15 text-emerald-200" : "border-amber-300/50 bg-amber-400/15 text-amber-200"}`}>{statusLabel}</span>
         </div>
 
-        <div className="mt-[0.7rem] grid min-h-0 flex-1 grid-cols-[24%_1fr_18%] gap-[2.4%]">
-          <div>
-            <div className="relative aspect-[4/5] overflow-hidden rounded-md border border-[#c9c9c9] bg-[#eef3f9]">
-              {photo("180px")}
-            </div>
-            <p className="mt-1 text-center text-[0.66rem] font-black uppercase leading-tight">
-              Profile Photo
-            </p>
+        <div className="mt-[2.4%] grid min-h-0 flex-1 grid-cols-[21%_1fr_20%] gap-[3.4%]">
+          <div className="flex flex-col">
+            <div className="relative aspect-[4/5] overflow-hidden rounded-md border-2 border-[#f4d36a] bg-[#dce7f2]">{photo("180px")}</div>
+            <p className="mt-1 text-center text-[0.5rem] font-bold uppercase tracking-[0.15em] text-white/70">Official portrait</p>
           </div>
 
-          <dl className="grid content-start gap-[0.58rem] pt-3">
-            {desktopRow("Full Name", compact(fullName.toUpperCase(), 34))}
-            {desktopRow("SK Position", compact(displayPosition.toUpperCase(), 34))}
-            {desktopRow("Municipality", compact(municipality.toUpperCase(), 24))}
-            {desktopRow("Barangay", compact(barangay.toUpperCase(), 24))}
-            <div className="grid grid-cols-[9.3rem_1fr] items-baseline gap-1 text-[0.68rem] leading-tight text-[#09235d]">
-              <dt className="font-black uppercase">SKTECH ID Number</dt>
-              <dd className="break-words text-[0.8rem] font-black uppercase tracking-wide">{documentId}</dd>
-            </div>
-            <div className="grid grid-cols-[8.4rem_1fr] items-baseline gap-2 text-[0.68rem] leading-tight text-[#09235d]">
-              <dt className="font-black uppercase">Term of Service</dt>
-              <dd className="text-[0.92rem] font-black uppercase tracking-wide">{serviceTerm}</dd>
-            </div>
+          <dl className="grid content-start grid-cols-2 gap-x-5 gap-y-[0.58rem] pt-1">
+            {idField("Name", compact(fullName, 30), "col-span-2")}
+            {idField("Date of Birth", formatDisplayDate(birthDate))}
+            {idField("Position", compact(displayPosition, 26))}
+            {idField("Address", compact(addressLine, 45), "col-span-2")}
+            {idField("Date Elected", formatDisplayDate(dateElected))}
+            {idField("SKMF / SKPF Position", skfedPosition || "Not recorded", "col-span-2")}
+            {idField("ID No.", documentId)}
+            {idField("Municipality", compact(municipality, 24))}
+            {idField("Term of Service", serviceTerm)}
           </dl>
 
-          <div className="flex flex-col items-center justify-center gap-2">
-            <div className={`rounded-full px-2 py-1 text-center text-[0.58rem] font-black uppercase leading-tight ${verified ? "bg-[#e8f5ef] text-[#167447]" : "bg-[#fff4d6] text-[#946700]"}`}>
-              {statusLabel} Status
-            </div>
-            <div className="rounded-md border border-[#d6d6d6] bg-white p-1">
-              <QRCodeSVG value={qrValue} size={print ? 84 : 96} level="M" includeMargin />
-            </div>
-            <p className="text-center text-[0.62rem] font-black uppercase tracking-wide">Scan to Verify</p>
+          <div className="flex flex-col items-center justify-end pb-1">
+            <div className="rounded-md border-4 border-white bg-white p-1"><QRCodeSVG value={qrValue} size={print ? 70 : 82} level="M" includeMargin /></div>
+            <p className="mt-1 text-center text-[0.5rem] font-bold uppercase tracking-[0.12em] text-[#f4d36a]">Scan to verify</p>
+            <div className="mt-3 w-full text-center"><p className="text-[0.48rem] font-bold uppercase tracking-wide text-white/60">Official signature</p><div className="mt-2 border-b border-white/70" /></div>
           </div>
         </div>
 
-        <p className="relative z-20 mt-1 text-center text-[0.47rem] font-black uppercase tracking-[0.08em] text-[#09235d]/55">
-          {WATERMARK}
-        </p>
+        <div className="mt-[1.8%] flex items-center justify-between border-t border-[#d4ad43]/60 pt-1 text-[0.49rem] font-bold uppercase tracking-[0.12em] text-white/70">
+          <span>{municipality} Municipal Official</span>
+          <span className="text-[#f4d36a]">{WATERMARK}</span>
+        </div>
       </div>
     </section>
   );
 
   const DesktopBack = ({ print = false }: { print?: boolean }) => (
-    <section className={`id-face absolute inset-0 overflow-hidden rounded-[0.72rem] border border-[#d7c26c] bg-white text-[#172653] shadow-[0_28px_70px_-34px_rgba(2,6,23,0.75)] [backface-visibility:hidden] ${print ? "" : "[transform:rotateY(180deg)]"}`}>
-      <div className="id-soft-logo left-[-3%] top-[-4%] h-[38%] w-[43%]">
-        <Image src={sktechLogoUrl} alt="" fill className="object-contain opacity-15" sizes="390px" />
-      </div>
-      <div className="id-soft-logo bottom-[-20%] right-[-8%] h-[64%] w-[43%]">
-        <Image src={provincialSealUrl} alt="" fill className="object-contain opacity-20" sizes="340px" />
-      </div>
-      <div className="id-dots" />
-
-      <div className="relative z-10 grid h-full grid-cols-[41%_25%_1fr] gap-[3%] px-[5.2%] py-[4.2%]">
-        <dl className="grid content-start gap-2">
-          {infoBlock("Birth Date", formatDisplayDate(birthDate))}
-          {infoBlock("Contact Number", contactNo || "Not recorded")}
-          {infoBlock("Email Address", email || "Not recorded")}
-          {infoBlock("Complete Address", addressLine || "Not recorded")}
-        </dl>
-
-        <dl className="grid content-start gap-2">
-          {infoBlock("Date Elected", formatDisplayDate(dateElected))}
-          {infoBlock("Term Expiration", formatDisplayDate(termEnd))}
-          {infoBlock("Account Status", accountStatus || registryStatus || "Not recorded")}
-        </dl>
-
-        <div className="flex min-w-0 flex-col items-center rounded-xl border border-[#d5e0ed] bg-white p-3">
-          <p className="mb-2 text-center text-[0.66rem] font-black uppercase tracking-wide">
-            QR Verification Code
-          </p>
-          <QRCodeSVG value={qrValue} size={126} level="M" includeMargin />
-          <p className="mt-2 text-[0.62rem] font-medium leading-tight text-[#172653]">
-            {contactInfo}
-          </p>
+    <section className={`id-face absolute inset-0 overflow-hidden rounded-[0.72rem] border border-[#d4ad43] bg-[#071b3d] text-white shadow-[0_28px_70px_-34px_rgba(2,6,23,0.75)] [backface-visibility:hidden] ${print ? "" : "[transform:rotateY(180deg)]"}`}>
+      <div className="id-back-bars" />
+      <div className="relative z-10 grid h-full grid-cols-[24%_1fr_34%] gap-[4%] px-[5.2%] py-[5%]">
+        <div className="flex flex-col items-center justify-center border-r border-[#d4ad43]/60 pr-[16%]">
+          <div className="rounded-md border-4 border-white bg-white p-1"><QRCodeSVG value={qrValue} size={print ? 110 : 126} level="M" includeMargin /></div>
+          <p className="mt-2 text-center text-[0.52rem] font-black uppercase tracking-[0.16em] text-[#f4d36a]">Scan to verify</p>
         </div>
 
-        <div className="absolute bottom-[8%] left-[5.2%] w-[30%]">
-          <p className="text-center text-[0.62rem] font-black uppercase">Holder&apos;s Signature</p>
-          <div className="mt-1 h-3 border-b-2 border-[#172653]" />
+        <div className="flex min-w-0 flex-col justify-center gap-3">
+          <div><p className="text-[0.55rem] font-bold uppercase tracking-[0.18em] text-[#f4d36a]">Official identification record</p><h3 className="mt-1 text-[1.05rem] font-black uppercase tracking-[0.1em]">{provinceName} SK Federation</h3></div>
+          <div className="grid grid-cols-2 gap-x-5 gap-y-3">
+            {idField("Birth Date", formatDisplayDate(birthDate))}
+            {idField("Date Elected", formatDisplayDate(dateElected))}
+            {idField("Term Expiration", formatDisplayDate(termEnd))}
+            {idField("Account Status", accountStatus || registryStatus || "Not recorded")}
+            {idField("Contact", contactNo || "Not recorded")}
+            {idField("Email", email || "Not recorded")}
+            {idField("Serial / ID No.", documentId, "col-span-2")}
+          </div>
         </div>
 
-        <div className="absolute bottom-[5%] left-1/2 flex -translate-x-1/2 items-center gap-2 text-[#172653]">
-          <span aria-hidden="true" className="h-3.5 w-3.5 rounded-full border-2 border-[#f5b300]" />
-          <span className="text-[0.82rem] font-black tracking-wide">{websiteUrl}</span>
+        <div className="flex min-w-0 flex-col justify-center border-l border-[#d4ad43]/60 pl-[12%]">
+          {logo(sktechLogoUrl, "SKTECH logo", "mb-3 h-[2.4rem] w-[6rem]")}
+          <p className="text-[0.62rem] leading-relaxed text-white/80">{contactInfo}</p>
+          <p className="mt-3 text-[0.55rem] font-bold uppercase tracking-wide text-[#f4d36a]">{websiteUrl}</p>
+          <p className="mt-1 text-[0.48rem] uppercase tracking-wide text-white/55">Issued: {issued}</p>
         </div>
 
-        <p className="absolute bottom-[3.2%] right-[4.2%] text-[0.5rem] font-semibold text-[#172653]">
-          Issued: {issued}
-        </p>
-        <p className="absolute bottom-[1.6%] left-1/2 z-20 w-[88%] -translate-x-1/2 text-center text-[0.46rem] font-black uppercase tracking-[0.08em] text-[#09235d]/55">
-          {WATERMARK}
-        </p>
+        <p className="absolute bottom-[3.2%] left-1/2 z-20 w-[88%] -translate-x-1/2 text-center text-[0.46rem] font-black uppercase tracking-[0.08em] text-white/55">{WATERMARK}</p>
       </div>
     </section>
   );
@@ -453,6 +412,35 @@ function IDStyles() {
       .id-face {
         isolation: isolate;
         font-family: Arial, Helvetica, sans-serif;
+      }
+
+      .id-front-glow {
+        pointer-events: none;
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(circle at 12% 18%, rgba(44, 121, 184, 0.42), transparent 30%),
+          linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 42%),
+          linear-gradient(315deg, rgba(4, 12, 36, 0.92), rgba(8, 38, 78, 0.72));
+      }
+
+      .id-front-bars,
+      .id-back-bars {
+        pointer-events: none;
+        position: absolute;
+        inset: 0;
+        opacity: 0.8;
+        background:
+          linear-gradient(112deg, transparent 0 67%, rgba(244, 211, 106, 0.22) 67.3% 68%, transparent 68.3%),
+          linear-gradient(112deg, transparent 0 72%, rgba(69, 142, 190, 0.24) 72.3% 73%, transparent 73.3%),
+          linear-gradient(112deg, transparent 0 77%, rgba(244, 211, 106, 0.13) 77.3% 78%, transparent 78.3%);
+      }
+
+      .id-back-bars {
+        opacity: 0.72;
+        background:
+          linear-gradient(90deg, rgba(244, 211, 106, 0.9) 0 1.4%, transparent 1.4% 3.2%, rgba(69, 142, 190, 0.8) 3.2% 4.2%, transparent 4.2% 96%, rgba(244, 211, 106, 0.9) 96% 97.4%, transparent 97.4%),
+          linear-gradient(135deg, transparent 0 62%, rgba(244, 211, 106, 0.2) 62.3% 63%, transparent 63.3% 70%, rgba(69, 142, 190, 0.2) 70.3% 71%, transparent 71.3%);
       }
 
       .id-face::after {
