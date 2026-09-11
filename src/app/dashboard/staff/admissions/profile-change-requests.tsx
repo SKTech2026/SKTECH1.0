@@ -124,22 +124,26 @@ export default function ProfileChangeRequests() {
   };
 
   return (
-    <section className="rounded-2xl border border-glass-border bg-surface p-5 shadow-xl backdrop-blur-md">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_18px_45px_-28px_rgba(15,23,42,0.45)]">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 px-5 py-5 sm:px-6">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">Municipal Review</p>
-          <h3 className="mt-1 text-lg font-semibold text-foreground">Profile Change Requests</h3>
-          <p className="mt-1 text-sm text-muted">Review photo and profile changes from Officials assigned to your municipality.</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-sky-700">Municipal Review</p>
+            <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">{requests.length} pending</span>
+          </div>
+          <h3 className="mt-1 text-lg font-bold text-slate-900">Profile Change Requests</h3>
+          <p className="mt-1 text-sm text-slate-500">Review photo and profile changes from officials assigned to your municipality.</p>
         </div>
-        <button type="button" onClick={() => void loadRequests()} className="rounded-lg border border-glass-border px-3 py-2 text-xs font-semibold text-foreground hover:bg-surface-elevated">
+        <button type="button" onClick={() => void loadRequests()} className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">
           Refresh
         </button>
       </div>
 
-      {error ? <p className="mt-4 rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">{error}</p> : null}
-      {success ? <p className="mt-4 rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">{success}</p> : null}
-      {loading ? <p className="mt-5 text-sm text-muted">Loading profile change requests...</p> : null}
-      {!loading && requests.length === 0 ? <p className="mt-5 text-sm text-muted">No pending profile changes for your municipality.</p> : null}
+      <div className="px-5 pb-6 sm:px-6">
+      {error ? <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}
+      {success ? <p className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{success}</p> : null}
+      {loading ? <p className="mt-5 rounded-xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-500"><span className="font-semibold text-slate-700">Loading profile change requests</span><span className="mt-1 block text-xs">Fetching the latest review queue...</span></p> : null}
+      {!loading && requests.length === 0 ? <p className="mt-5 rounded-xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-500"><span className="font-semibold text-slate-700">No pending profile changes</span><span className="mt-1 block text-xs">Your municipality review queue is clear.</span></p> : null}
 
       <div className="mt-5 space-y-4">
         {requests.map((request) => {
@@ -151,52 +155,64 @@ export default function ProfileChangeRequests() {
           const currentPhoto = typeof current.photoUrl === "string" ? current.photoUrl : null;
           const busy = savingId === request.id;
 
+          const officialName = [request.official.firstName, request.official.middleName, request.official.lastName].filter(Boolean).join(" ");
+          const initials = officialName.split(" ").filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "OF";
+          const faceCheckClass = request.faceCheckStatus === "MATCHED" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700";
+
           return (
-            <article key={request.id} className="rounded-xl border border-glass-border bg-surface-elevated/35 p-4">
+            <article key={request.id} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 shadow-sm sm:p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h4 className="font-semibold text-foreground">{[request.official.firstName, request.official.middleName, request.official.lastName].filter(Boolean).join(" ")}</h4>
-                  <p className="mt-1 text-xs text-muted">{request.official.municipality ?? "Not recorded"} / {request.official.barangay ?? "Not recorded"}</p>
-                  <p className="mt-1 text-xs text-muted">Submitted {new Date(request.createdAt).toLocaleString()}</p>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-sky-100 text-sm font-bold text-sky-700">
+                    {request.official.user?.image ? <Image src={request.official.user.image} alt="" width={44} height={44} unoptimized className="h-full w-full object-cover" /> : initials}
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-slate-900">{officialName || "Unnamed Official"}</h4>
+                    <p className="mt-1 text-xs text-slate-500">{request.official.municipality ?? "Not recorded"} / {request.official.barangay ?? "Not recorded"}</p>
+                    <p className="mt-1 text-xs text-slate-500">Submitted {new Date(request.createdAt).toLocaleString()}</p>
+                  </div>
                 </div>
-                <span className="rounded-full bg-amber-500/15 px-3 py-1 text-xs font-semibold text-amber-200">PENDING</span>
+                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">PENDING</span>
               </div>
 
               {request.requestedPhotoUrl ? (
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   {[{ label: "Current approved photo", url: currentPhoto }, { label: "Requested photo", url: request.requestedPhotoUrl }].map((photo) => (
                     <div key={photo.label}>
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted">{photo.label}</p>
-                      <div className="relative aspect-[4/5] max-w-[180px] overflow-hidden rounded-lg border border-glass-border bg-surface">
-                        {photo.url ? <Image src={photo.url} alt={photo.label} fill unoptimized className="object-cover" sizes="180px" /> : <div className="flex h-full items-center justify-center text-xs text-muted">Not recorded</div>}
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">{photo.label}</p>
+                      <div className="relative aspect-[4/5] max-w-[180px] overflow-hidden rounded-xl border border-slate-200 bg-white">
+                        {photo.url ? <Image src={photo.url} alt={photo.label} fill unoptimized className="object-cover" sizes="180px" /> : <div className="flex h-full items-center justify-center text-xs text-slate-500">Not recorded</div>}
                       </div>
                     </div>
                   ))}
                 </div>
               ) : null}
 
-              <div className="mt-4 rounded-lg border border-glass-border bg-surface/50 p-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Requested field changes</p>
+              <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Requested field changes</p>
                 <div className="mt-2 grid gap-2 md:grid-cols-2">
                   {changedFields.length === 0 ? <p className="text-sm text-muted">Photo-only change.</p> : changedFields.map((field) => (
-                    <div key={field} className="rounded-md border border-glass-border px-3 py-2 text-sm">
-                      <p className="text-xs font-semibold text-muted">{FIELD_LABELS[field]}</p>
-                      <p className="mt-1 text-foreground">{displayValue(current[field])} <span className="text-accent">-&gt;</span> {displayValue(requested[field])}</p>
+                    <div key={field} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+                      <p className="text-xs font-semibold text-slate-500">{FIELD_LABELS[field]}</p>
+                      <p className="mt-1 text-slate-800">{displayValue(current[field])} <span className="text-sky-600">-&gt;</span> {displayValue(requested[field])}</p>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <p className="mt-3 text-xs text-amber-200">
-                Face check: {request.faceCheckStatus === "UNAVAILABLE" ? "UNAVAILABLE - manual photo verification required" : request.faceCheckStatus}{request.faceMatchScore !== null ? ` (${request.faceMatchScore.toFixed(3)})` : ""}
-              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                <span className={`rounded-full px-2.5 py-1 font-semibold ${faceCheckClass}`}>Face check: {request.faceCheckStatus}</span>
+                {request.faceMatchScore !== null ? <span className="text-slate-500">Score {request.faceMatchScore.toFixed(3)}</span> : null}
+                {request.faceCheckStatus !== "MATCHED" ? <span className="font-medium text-amber-700">Manual photo verification required</span> : null}
+              </div>
               <div className="mt-4 flex flex-wrap gap-2">
-                <button type="button" disabled={busy} onClick={() => void review(request.id, "APPROVE")} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{busy ? "Saving..." : "Approve"}</button>
-                <button type="button" disabled={busy} onClick={() => void review(request.id, "REJECT")} className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">Reject</button>
+                <button type="button" disabled={busy} onClick={() => void review(request.id, "APPROVE")} className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60">{busy ? "Saving..." : "Approve"}</button>
+                <button type="button" disabled={busy} onClick={() => void review(request.id, "REJECT")} className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60">Reject</button>
               </div>
             </article>
           );
         })}
+      </div>
       </div>
 
       {rejectionRequestId ? (
