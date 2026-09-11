@@ -53,6 +53,9 @@ export default function ProfileChangeRequests() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [rejectionRequestId, setRejectionRequestId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [approvalWarningRequestId, setApprovalWarningRequestId] = useState<string | null>(null);
 
   const loadRequests = async () => {
     setLoading(true);
@@ -73,17 +76,10 @@ export default function ProfileChangeRequests() {
     void loadRequests();
   }, []);
 
-  const review = async (id: string, action: "APPROVE" | "REJECT") => {
-    const reason = action === "REJECT" ? window.prompt("Provide rejection reason:")?.trim() : null;
-    if (action === "REJECT" && (!reason || reason.length < 3)) {
+  const submitReview = async (id: string, action: "APPROVE" | "REJECT", reason: string | null) => {
+    if (action === "REJECT" && (!reason || reason.trim().length < 3)) {
       setError("A rejection reason is required.");
       return;
-    }
-    if (action === "APPROVE") {
-      const request = requests.find((item) => item.id === id);
-      if (request && (request.faceCheckStatus === "UNAVAILABLE" || request.faceCheckStatus === "MISMATCHED") && !window.confirm("Face comparison is not positive. Confirm that you manually verified the requested photo against the approved record.")) {
-        return;
-      }
     }
 
     setSavingId(id);
@@ -98,12 +94,33 @@ export default function ProfileChangeRequests() {
       const payload = (await response.json()) as { message?: string; error?: string };
       if (!response.ok) throw new Error(payload.error ?? "Review failed.");
       setSuccess(payload.message ?? "Profile change reviewed.");
+      setRejectionRequestId(null);
+      setRejectionReason("");
+      setApprovalWarningRequestId(null);
       await loadRequests();
     } catch (reviewError) {
       setError(reviewError instanceof Error ? reviewError.message : "Review failed.");
     } finally {
       setSavingId(null);
     }
+  };
+
+  const review = (id: string, action: "APPROVE" | "REJECT") => {
+    if (action === "REJECT") {
+      setError(null);
+      setRejectionRequestId(id);
+      setRejectionReason("");
+      return;
+    }
+
+    const request = requests.find((item) => item.id === id);
+    if (request && (request.faceCheckStatus === "UNAVAILABLE" || request.faceCheckStatus === "MISMATCHED")) {
+      setError(null);
+      setApprovalWarningRequestId(id);
+      return;
+    }
+
+    void submitReview(id, action, null);
   };
 
   return (
@@ -181,6 +198,48 @@ export default function ProfileChangeRequests() {
           );
         })}
       </div>
+
+      {rejectionRequestId ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-glass-border bg-surface p-6 shadow-2xl">
+            <h3 className="text-xl font-semibold text-foreground">Reject Profile Change</h3>
+            <p className="mt-2 text-sm text-muted">Provide a reason for rejecting this profile change request.</p>
+            <textarea
+              value={rejectionReason}
+              onChange={(event) => setRejectionReason(event.target.value)}
+              rows={4}
+              autoFocus
+              placeholder="Rejection reason"
+              className="mt-4 w-full rounded-lg border border-glass-border bg-surface-elevated px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent"
+            />
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" onClick={() => { setRejectionRequestId(null); setRejectionReason(""); }} className="rounded-lg border border-glass-border px-4 py-2 text-sm font-semibold text-foreground hover:bg-surface-elevated/60">
+                Cancel
+              </button>
+              <button type="button" disabled={savingId === rejectionRequestId} onClick={() => void submitReview(rejectionRequestId, "REJECT", rejectionReason)} className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">
+                {savingId === rejectionRequestId ? "Saving..." : "Reject Profile Change"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {approvalWarningRequestId ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-amber-400/40 bg-surface p-6 shadow-2xl">
+            <h3 className="text-xl font-semibold text-foreground">Confirm Photo Verification</h3>
+            <p className="mt-2 text-sm text-muted">Face comparison is not positive. Confirm that you manually verified the requested photo against the approved record.</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" onClick={() => setApprovalWarningRequestId(null)} className="rounded-lg border border-glass-border px-4 py-2 text-sm font-semibold text-foreground hover:bg-surface-elevated/60">
+                Cancel
+              </button>
+              <button type="button" disabled={savingId === approvalWarningRequestId} onClick={() => void submitReview(approvalWarningRequestId, "APPROVE", null)} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">
+                {savingId === approvalWarningRequestId ? "Saving..." : "Approve Anyway"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

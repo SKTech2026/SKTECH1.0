@@ -66,6 +66,8 @@ export default function StaffAdmissionsPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<AdmissionRecord | null>(null);
+  const [rejectionRecordId, setRejectionRecordId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
   const [search, setSearch] = useState("");
   const [municipalityFilter, setMunicipalityFilter] = useState("");
 
@@ -101,15 +103,11 @@ export default function StaffAdmissionsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const updateStatus = async (id: string, action: "APPROVE" | "REJECT") => {
-    let reason: string | null = null;
-    if (action === "REJECT") {
-      const value = window.prompt("Provide rejection reason:");
-      if (!value || value.trim().length < 3) {
+  const updateStatus = async (id: string, action: "APPROVE" | "REJECT", providedReason?: string) => {
+    const reason = action === "REJECT" ? providedReason?.trim() ?? "" : null;
+    if (action === "REJECT" && (!reason || reason.length < 3)) {
         setError("Rejection reason is required (minimum 3 characters).");
         return;
-      }
-      reason = value.trim();
     }
 
     setSavingId(id);
@@ -135,6 +133,8 @@ export default function StaffAdmissionsPage() {
       }
 
       setSuccess(payload.message ?? "Admission updated.");
+      setRejectionRecordId(null);
+      setRejectionReason("");
       await loadRecords();
     } catch (updateError) {
       setError(updateError instanceof Error ? updateError.message : "Update failed.");
@@ -296,7 +296,11 @@ export default function StaffAdmissionsPage() {
                         <button
                           type="button"
                           disabled={savingId === record.id}
-                          onClick={() => void updateStatus(record.id, "REJECT")}
+                          onClick={() => {
+                            setError(null);
+                            setRejectionRecordId(record.id);
+                            setRejectionReason("");
+                          }}
                           className="rounded-lg bg-rose-600 px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           Reject
@@ -392,6 +396,31 @@ export default function StaffAdmissionsPage() {
               ) : (
                 <p className="mt-1 text-sm text-muted">No proof uploaded.</p>
               )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {rejectionRecordId ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-glass-border bg-surface p-6 shadow-2xl">
+            <h3 className="text-xl font-semibold text-foreground">Reject Admission</h3>
+            <p className="mt-2 text-sm text-muted">Provide a reason for rejecting this admission request.</p>
+            <textarea
+              value={rejectionReason}
+              onChange={(event) => setRejectionReason(event.target.value)}
+              rows={4}
+              autoFocus
+              placeholder="Rejection reason"
+              className="mt-4 w-full rounded-lg border border-glass-border bg-surface-elevated px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent"
+            />
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" onClick={() => { setRejectionRecordId(null); setRejectionReason(""); }} className="rounded-lg border border-glass-border px-4 py-2 text-sm font-semibold text-foreground hover:bg-surface-elevated/60">
+                Cancel
+              </button>
+              <button type="button" disabled={savingId === rejectionRecordId} onClick={() => void updateStatus(rejectionRecordId, "REJECT", rejectionReason)} className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">
+                {savingId === rejectionRecordId ? "Saving..." : "Reject Admission"}
+              </button>
             </div>
           </div>
         </div>
