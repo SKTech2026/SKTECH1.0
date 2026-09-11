@@ -115,7 +115,6 @@ async function uploadOfficialPhotoObject(
   photoBuffer: Buffer,
   contentType: string,
 ): Promise<void> {
-  console.info("[PHOTO] uploading to Supabase");
   try {
     const supabase = await ensureOfficialPhotosBucket();
     const { error } = await supabase.storage
@@ -130,10 +129,11 @@ async function uploadOfficialPhotoObject(
       throw new Error(`Unable to upload official profile photo: ${error.message}`);
     }
   } catch (error) {
-    console.error(`[PHOTO] upload failed: ${getSafePhotoErrorMessage(error)}`);
+    if (process.env.NODE_ENV !== "production") {
+      console.error(`[PHOTO] upload failed: ${getSafePhotoErrorMessage(error)}`);
+    }
     throw error;
   }
-  console.info("[PHOTO] Supabase upload success");
 }
 
 export async function saveOfficialProfilePhoto(

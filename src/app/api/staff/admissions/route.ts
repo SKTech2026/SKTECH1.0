@@ -317,15 +317,7 @@ Oriental Mindoro SK Federation E-Governance`,
             `,
           });
           notificationSent = true;
-        } catch (emailError) {
-          console.warn("Official admission approval email failed.", {
-            officialId: existing.id,
-            error:
-              emailError instanceof Error
-                ? emailError.message
-                : "Unknown email error",
-          });
-        }
+        } catch {}
       }
     }
 

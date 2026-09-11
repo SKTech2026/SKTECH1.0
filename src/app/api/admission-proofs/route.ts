@@ -55,9 +55,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.redirect(data.signedUrl);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to open proof document.";
-    console.error("[ADMISSION_PROOF] signed URL failed:", message);
+  } catch {
     return NextResponse.json({ error: "Unable to open proof document." }, { status: 500 });
   }
 }

@@ -385,7 +385,6 @@ export const authOptions: NextAuthOptions = {
               municipalityOfficerId: user.municipalityOfficerId,
             };
           } catch (error) {
-            console.error("Credentials authorize error:", error);
             if (isDatabaseConnectionError(error)) {
               throw new Error("DatabaseUnavailable");
             }

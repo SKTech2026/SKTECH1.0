@@ -79,8 +79,6 @@ export async function POST(request: Request) {
 
     const mode = body.mode;
     const email = normalizeEmail(body.email);
-    console.info("[OTP] Official OTP request received", { mode, email });
-
     if (!GMAIL_PATTERN.test(email)) {
       return NextResponse.json(
         { error: "Only @gmail.com email addresses are allowed." },
@@ -212,7 +210,6 @@ export async function POST(request: Request) {
     });
 
     const otpCode = generateOtpCode();
-    console.info("[OTP] Official OTP generated", { mode, email });
     const record = await prisma.officialOTP.create({
       data: {
         email,
@@ -230,23 +227,19 @@ export async function POST(request: Request) {
         expiresAt: true,
       },
     });
-    console.info("[OTP] Official OTP stored", { mode, email, otpId: record.id });
-
     try {
-      console.info("[OTP] Attempting official OTP email delivery", { mode, email });
       await sendOfficialOtpEmail({
         to: email,
         code: otpCode,
         mode,
       });
-      console.info("[OTP] Official OTP email sent", { mode, email });
     } catch (emailError) {
       await prisma.officialOTP
         .delete({ where: { id: record.id } })
         .catch(() => undefined);
 
       const message = getSafeErrorMessage(emailError);
-      console.error("[OTP] Email delivery failed:", message);
+      if (process.env.NODE_ENV !== "production") console.error("[OTP] Email delivery failed:", message);
       const isConfigError = message.includes("Missing email server environment variables");
       const isTimeoutError =
         message.toLowerCase().includes("timeout") ||

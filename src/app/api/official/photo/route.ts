@@ -16,7 +16,6 @@ import { createSupabaseAdminClient } from "@/utils/supabase/admin";
 export const dynamic = "force-dynamic";
 
 const imageErrorResponse = (message: string, status = 404) => {
-  console.error(`[PHOTO] photo serve failed: ${message}`);
   return new NextResponse(null, {
     status,
     headers: {
@@ -28,13 +27,10 @@ const imageErrorResponse = (message: string, status = 404) => {
 
 export async function GET(request: NextRequest) {
   try {
-    console.info("[PHOTO] serve request received");
     const objectPath = request.nextUrl.searchParams.get("path")?.trim() ?? "";
     if (!isOfficialPhotoObjectPath(objectPath)) {
       return imageErrorResponse("Invalid official photo path.", 400);
     }
-    console.info("[PHOTO] requested object path valid");
-
     const session = await getServerSession(authOptions);
     const photoUrl = buildOfficialPhotoUrl(objectPath);
     const official = await prisma.sKOfficial.findFirst({
@@ -102,14 +98,11 @@ export async function GET(request: NextRequest) {
     ) {
       return imageErrorResponse("Staff photo request is outside assigned municipality.", 403);
     }
-    console.info("[PHOTO] database ownership/reference found");
-
     const contentType = getOfficialPhotoContentType(objectPath);
     if (!contentType) {
       return imageErrorResponse("Invalid official photo type.", 400);
     }
 
-    console.info("[PHOTO] downloading from Supabase");
     const supabase = createSupabaseAdminClient();
     const { data, error } = await supabase.storage
       .from(OFFICIAL_PROFILE_PHOTOS_BUCKET)
@@ -120,14 +113,11 @@ export async function GET(request: NextRequest) {
         error ? getSafePhotoErrorMessage(error) : "Supabase returned no photo data.",
       );
     }
-    console.info("[PHOTO] download success");
-
     const imageBytes = await data.arrayBuffer();
     if (imageBytes.byteLength === 0) {
       return imageErrorResponse("Supabase returned an empty photo object.");
     }
 
-    console.info("[PHOTO] response returning");
     return new NextResponse(Buffer.from(imageBytes), {
       status: 200,
       headers: {
@@ -138,7 +128,9 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error(`[PHOTO] photo serve failed: ${getSafePhotoErrorMessage(error)}`);
+    if (process.env.NODE_ENV !== "production") {
+      console.error(`[PHOTO] photo serve failed: ${getSafePhotoErrorMessage(error)}`);
+    }
     return imageErrorResponse("Failed to load official photo.", 500);
   }
 }

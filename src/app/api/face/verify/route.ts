@@ -127,7 +127,6 @@ async function markAttendanceOnce(
 
 export async function POST(request: NextRequest) {
   try {
-    console.info("[FACE] request received");
     const guard = await requireAdminOrStaff();
     if (guard.error) {
       return guard.error;
@@ -150,8 +149,6 @@ export async function POST(request: NextRequest) {
     if (!body.imageBase64 || typeof body.imageBase64 !== "string") {
       return NextResponse.json({ error: "imageBase64 is required." }, { status: 400 });
     }
-    console.info("[FACE] image validated");
-
     const livenessFrames = Array.isArray(body.livenessFrames)
       ? body.livenessFrames.filter((frame) => typeof frame === "string")
       : [];
@@ -179,11 +176,6 @@ export async function POST(request: NextRequest) {
       livenessFrames,
       threshold: typeof body.threshold === "number" ? body.threshold : undefined,
     });
-    console.info("[FACE] AI recognition complete", {
-      totalFaces: aiResponse.totalFaces,
-      matchedCount: aiResponse.matchedCount,
-    });
-
     const recognizedUserIds = Array.from(
       new Set(
         aiResponse.faces
@@ -342,10 +334,6 @@ export async function POST(request: NextRequest) {
 
     const verifiedFaces = faces.filter((face) => face.status === "VERIFIED");
     const latestMatch = verifiedFaces.sort((a, b) => b.confidence - a.confidence)[0] ?? null;
-    console.info("[FACE] attendance response complete", {
-      verifiedCount: verifiedFaces.length,
-    });
-
     return NextResponse.json(
       {
         success: true,
@@ -361,7 +349,7 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Face verification failed.";
-    console.error("[FACE] verification failed:", message);
+    if (process.env.NODE_ENV !== "production") console.error("[FACE] verification failed:", message);
     const normalized = message.toLowerCase();
     const statusCode =
       normalized.includes("too many") || normalized.includes("rate limit") ? 429 : 500;
