@@ -148,9 +148,9 @@ export default function IdTemplateRenderer({
   print = false,
   onImageError,
 }: IdTemplateRendererProps) {
-  const fields = [...template.sides[side].fields].sort(
-    (first, second) => (first.zIndex ?? 0) - (second.zIndex ?? 0),
-  );
+  const fields = [...template.sides[side].fields]
+    .filter((field) => field.visible !== false)
+    .sort((first, second) => (first.zIndex ?? 0) - (second.zIndex ?? 0));
 
   return (
     <section
