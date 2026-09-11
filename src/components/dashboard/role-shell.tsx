@@ -127,7 +127,7 @@ const ADMIN_GROUPS = [
   },
   {
     label: "OPERATIONS",
-    items: ["Event Management", "Internal Feed", "Public News Feed", "ID Production", "ID Scanning"],
+    items: ["Event Management", "Internal Feed", "Public News Feed", "ID Production", "ID Template Designer", "ID Scanning"],
   },
   {
     label: "SYSTEM",
@@ -168,7 +168,7 @@ const ADMIN_DROPDOWN_GROUPS = [
   {
     label: "Services",
     icon: "settings",
-    items: ["Event Management", "ID Production", "ID Scanning", "Internal Feed", "Public News Feed", "Settings"],
+    items: ["Event Management", "ID Production", "ID Template Designer", "ID Scanning", "Internal Feed", "Public News Feed", "Settings"],
   },
 ] as const;
 

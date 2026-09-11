@@ -74,6 +74,12 @@ const adminItems: RoleShellItem[] = [
     icon: "badgeCheck",
   },
   {
+    href: "/dashboard/admin/id-template",
+    label: "ID Template Designer",
+    description: "Design official ID layout",
+    icon: "badgeCheck",
+  },
+  {
     href: "/dashboard/admin/id-scanning",
     label: "ID Scanning",
     description: "Attendance verification",
