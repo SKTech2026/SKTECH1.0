@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Heart, MessageCircle, MoreHorizontal, Send, ThumbsUp, X } from "lucide-react";
+import { Heart, MessageCircle, Send, ThumbsUp, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 type FeedComment = {
@@ -31,7 +31,7 @@ function Avatar({ name, photoUrl, className = "h-10 w-10" }: { name: string; pho
   return <div className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#1452d9]/15 text-xs font-black text-[#1452d9] ${className}`}><span>{initials(name)}</span>{photoUrl ? <Image src={photoUrl} alt="" fill className="object-cover" sizes="40px" /> : null}</div>;
 }
 
-export default function FeedPostCard({ post, canDelete = false, onChanged }: { post: FeedPost; canDelete?: boolean; onChanged: () => void }) {
+export default function FeedPostCard({ post, onChanged }: { post: FeedPost; canDelete?: boolean; onChanged: () => void }) {
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
@@ -69,17 +69,10 @@ export default function FeedPostCard({ post, canDelete = false, onChanged }: { p
     } catch (commentError) { setError(commentError instanceof Error ? commentError.message : "Unable to add comment."); } finally { setBusy(false); }
   };
 
-  const deletePost = async () => {
-    if (!window.confirm("Delete this post?")) return;
-    setBusy(true);
-    try { const response = await fetch(`/api/feed/posts/${post.id}`, { method: "DELETE" }); if (!response.ok) throw new Error("Unable to delete post."); onChanged(); } catch (deleteError) { setError(deleteError instanceof Error ? deleteError.message : "Unable to delete post."); } finally { setBusy(false); }
-  };
-
   return <article className="overflow-hidden rounded-2xl border border-glass-border bg-surface shadow-[0_18px_40px_-26px_var(--shadow-color)]">
     <div className="flex items-start gap-3 p-4 sm:p-5">
       <Avatar name={post.author.name} photoUrl={post.author.photoUrl} />
       <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-foreground">{post.author.name}</p><p className="mt-0.5 text-xs text-muted">{post.author.role === "ADMIN" ? "SKTECH Admin" : "Municipal Staff"}{post.municipality ? ` · ${post.municipality}` : " · Province-wide"}{post.author.barangay ? ` · Barangay ${post.author.barangay}` : ""}</p><time className="mt-1 block text-[11px] text-muted">{new Date(post.createdAt).toLocaleString()}</time></div>
-      {canDelete ? <button type="button" onClick={() => void deletePost()} disabled={busy} aria-label="Post actions" className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted hover:bg-surface-elevated hover:text-foreground"><MoreHorizontal className="h-4 w-4" /></button> : null}
     </div>
     {post.content ? <p className="whitespace-pre-wrap break-words px-4 pb-4 text-sm leading-6 text-foreground sm:px-5">{post.content}</p> : null}
     {post.imageUrl && !imageError ? <button type="button" onClick={() => setPhotoViewerOpen(true)} aria-label="View full photo" className="group relative block aspect-[16/10] w-full cursor-pointer bg-surface-elevated text-left"><img src={post.imageUrl} alt="Feed pubmat" className="h-full w-full object-cover transition group-hover:brightness-95" onError={() => setImageError(true)} /></button> : null}

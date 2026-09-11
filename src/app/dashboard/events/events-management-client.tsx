@@ -49,7 +49,6 @@ export default function EventsManagementClient({
   const [createError, setCreateError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isSubmittingCreate, setIsSubmittingCreate] = useState(false);
-  const [deletingEventId, setDeletingEventId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [eventDate, setEventDate] = useState("");
@@ -176,38 +175,6 @@ export default function EventsManagementClient({
     }
   };
 
-  const handleDeleteEvent = async (eventId: string, eventTitle: string) => {
-    setActionError(null);
-
-    const shouldDelete = window.confirm(
-      `Delete "${eventTitle}" and all related attendance records?`
-    );
-    if (!shouldDelete) return;
-
-    setDeletingEventId(eventId);
-
-    try {
-      const res = await fetch(`/api/events/${eventId}`, {
-        method: "DELETE",
-      });
-
-      if (!res.ok) {
-        const errorBody = (await res.json().catch(() => null)) as
-          | { error?: string }
-          | null;
-        throw new Error(errorBody?.error || "Failed to delete event");
-      }
-
-      await fetchEvents();
-    } catch (error) {
-      setActionError(
-        error instanceof Error ? error.message : "Failed to delete event"
-      );
-    } finally {
-      setDeletingEventId(null);
-    }
-  };
-
   return (
     <>
       <div className="rounded-xl border border-glass-border bg-surface-elevated shadow-xl">
@@ -260,15 +227,7 @@ export default function EventsManagementClient({
                   </div>
                   <p className="mt-3 break-words text-xs leading-5 text-muted">{event.description || "No description"}</p>
                   <p className="mt-2 text-xs text-muted">Attendance: {event.totalAttendanceCount}</p>
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => void handleDeleteEvent(event.id, event.title)}
-                      disabled={deletingEventId === event.id}
-                      className="rounded-lg bg-red-700 px-3 py-2 text-xs font-medium text-foreground disabled:cursor-not-allowed disabled:opacity-70"
-                    >
-                      {deletingEventId === event.id ? "Deleting..." : "Delete"}
-                    </button>
+                  <div className="mt-3 grid grid-cols-1 gap-2">
                     <Link
                       href={`${eventBasePath}/${event.id}`}
                       className="rounded-lg bg-surface-elevated px-3 py-2 text-center text-xs font-medium text-foreground"
@@ -344,14 +303,6 @@ export default function EventsManagementClient({
                           className="rounded-md border border-glass-border px-3 py-1.5 text-xs font-medium text-muted opacity-70 cursor-not-allowed"
                         >
                           Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteEvent(event.id, event.title)}
-                          disabled={deletingEventId === event.id}
-                          className="rounded-md bg-red-700 px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-70"
-                        >
-                          {deletingEventId === event.id ? "Deleting..." : "Delete"}
                         </button>
                         <Link
                           href={`${eventBasePath}/${event.id}`}

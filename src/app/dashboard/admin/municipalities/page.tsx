@@ -181,43 +181,6 @@ export default function AdminMunicipalitiesPage() {
     }
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    const shouldDelete = window.confirm(
-      `Delete ${name}? This only works when no linked staff, officers, admissions, or barangays exist.`,
-    );
-
-    if (!shouldDelete) {
-      return;
-    }
-
-    setSaving(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      const response = await fetch("/api/admin/municipalities", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      });
-
-      const payload = (await response.json()) as { error?: string; message?: string };
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Failed to delete municipality.");
-      }
-
-      setSuccess(payload.message ?? "Municipality deleted.");
-      if (editForm?.id === id) {
-        setEditForm(null);
-      }
-      await loadData();
-    } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : "Delete failed.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
   return (
     <div className="space-y-6">
       <section className="rounded-3xl border border-glass-border bg-surface p-6 shadow-[0_24px_48px_-24px_var(--shadow-color)] backdrop-blur-md sm:p-8">
@@ -483,14 +446,6 @@ export default function AdminMunicipalitiesPage() {
                           className="rounded-lg border border-glass-border bg-surface/45 px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-elevated/70"
                         >
                           Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void handleDelete(record.id, record.name)}
-                          disabled={saving}
-                          className="rounded-lg border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-200 transition hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          Delete
                         </button>
                       </div>
                     </td>
