@@ -92,6 +92,31 @@ enum FeedReactionType {
   SUPPORT
 }
 
+enum IdTemplateStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum IdTemplateSide {
+  FRONT
+  BACK
+}
+
+enum IdTemplateFieldType {
+  STATIC_TEXT
+  TEXT
+  IMAGE
+  QR
+  SHAPE
+}
+
+enum IdTemplateAssetKind {
+  BACKGROUND
+  LOGO
+  IMAGE
+}
+
 model User {
   id                      String     @id @default(cuid())
   employeeId              String?    @unique
@@ -125,6 +150,8 @@ model User {
   feedComments            FeedComment[]
   publicNewsPosts         PublicNewsPost[]               @relation("PublicNewsPostAuthor")
   createdEvents           Event[]                        @relation("EventCreatedBy")
+  createdIdTemplates      IdTemplate[]                   @relation("IdTemplateCreatedBy")
+  updatedIdTemplates      IdTemplate[]                   @relation("IdTemplateUpdatedBy")
   municipalityAsPresident Municipality?                  @relation("MunicipalPresident", fields: [municipalityPresidentId], references: [id], onDelete: SetNull)
   municipalityAsOfficer   Municipality?                  @relation("MunicipalOfficers", fields: [municipalityOfficerId], references: [id], onDelete: SetNull)
 
@@ -423,6 +450,84 @@ model PublicNewsPost {
 
   @@index([published, createdAt])
   @@index([authorId, createdAt])
+}
+
+model IdTemplate {
+  id           String           @id @default(cuid())
+  name         String
+  description  String?
+  status       IdTemplateStatus @default(DRAFT)
+  isActive     Boolean          @default(false)
+  version      Int              @default(1)
+  canvasWidth  Float
+  canvasHeight Float
+  createdById  String?
+  updatedById  String?
+  archivedAt   DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  fields    IdTemplateField[]
+  assets    IdTemplateAsset[]
+  createdBy User?             @relation("IdTemplateCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User?             @relation("IdTemplateUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([isActive])
+  @@index([createdById])
+  @@index([updatedById])
+  @@index([archivedAt])
+  @@index([createdAt])
+}
+
+model IdTemplateField {
+  id            String              @id @default(cuid())
+  templateId    String
+  side          IdTemplateSide
+  type          IdTemplateFieldType
+  sourceKey     String?
+  staticValue   String?
+  label         String?
+  xPercent      Float
+  yPercent      Float
+  widthPercent  Float
+  heightPercent Float
+  zIndex        Int                 @default(0)
+  fit           String?
+  radius        Float?
+  styleJson     Json?
+  visible       Boolean             @default(true)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  template IdTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+  @@index([templateId, side])
+  @@index([templateId, visible])
+  @@index([side])
+  @@index([type])
+  @@index([sourceKey])
+  @@index([zIndex])
+}
+
+model IdTemplateAsset {
+  id         String              @id @default(cuid())
+  templateId String
+  side       IdTemplateSide
+  kind       IdTemplateAssetKind
+  objectPath String?
+  publicUrl  String?
+  mimeType   String?
+  width      Int?
+  height     Int?
+  createdAt  DateTime            @default(now())
+
+  template IdTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+  @@index([templateId, side])
+  @@index([kind])
 }
 
 model Attendance {
