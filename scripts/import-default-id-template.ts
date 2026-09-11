@@ -32,6 +32,14 @@ interface ImportResult {
   isNew: boolean;
 }
 
+function toPrismaJsonObject(value: unknown): Prisma.InputJsonObject | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  return value as Prisma.InputJsonObject;
+}
+
 async function importDefaultTemplate(): Promise<ImportResult> {
   try {
     // Extract all fields from the code template
@@ -149,6 +157,7 @@ async function importDefaultTemplate(): Promise<ImportResult> {
 
       if (existingField) {
         // Update existing field
+        const styleJson = toPrismaJsonObject(field.styleJson);
         const updateData = {
           sourceKey: field.sourceKey,
           staticValue: field.staticValue,
@@ -159,7 +168,7 @@ async function importDefaultTemplate(): Promise<ImportResult> {
           fit: field.fit,
           radius: field.radius,
           updatedAt: new Date(),
-          ...(field.styleJson !== null ? { styleJson: field.styleJson } : {}),
+          ...(styleJson !== undefined ? { styleJson } : {}),
         };
         await prisma.idTemplateField.update({
           where: { id: existingField.id },
@@ -167,6 +176,7 @@ async function importDefaultTemplate(): Promise<ImportResult> {
         });
       } else {
         // Create new field
+        const styleJson = toPrismaJsonObject(field.styleJson);
         const createData: Prisma.IdTemplateFieldCreateInput = {
           template: { connect: { id: template.id } },
           side: field.side,
@@ -181,7 +191,7 @@ async function importDefaultTemplate(): Promise<ImportResult> {
           zIndex: field.zIndex,
           fit: field.fit,
           radius: field.radius,
-          ...(field.styleJson !== null ? { styleJson: field.styleJson } : {}),
+          ...(styleJson !== undefined ? { styleJson } : {}),
         };
         await prisma.idTemplateField.create({
           data: createData,
