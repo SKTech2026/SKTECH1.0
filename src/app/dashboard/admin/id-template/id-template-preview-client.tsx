@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 
 import IdTemplateRenderer from "@/components/id-template/IdTemplateRenderer";
 import type {
@@ -65,6 +66,18 @@ type AdminTemplateResponse = {
   templateName?: string;
 };
 
+type DragState = {
+  fieldId: string;
+  startX: number;
+  startY: number;
+  originX: number;
+  originY: number;
+  width: number;
+  height: number;
+  canvasWidth: number;
+  canvasHeight: number;
+};
+
 type FieldTypeBadgeProps = {
   type: IdTemplateFieldType;
 };
@@ -96,6 +109,7 @@ export default function IdTemplatePreviewClient({
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [dragState, setDragState] = useState<DragState | null>(null);
 
   const currentFields = templateState.sides[side].fields;
   const selectedField = currentFields.find((field) => field.id === selectedId) ?? currentFields[0] ?? null;
@@ -138,6 +152,76 @@ export default function IdTemplatePreviewClient({
       isMounted = false;
     };
   }, []);
+
+  const beginDragField = (fieldId: string, event: ReactPointerEvent<HTMLDivElement>) => {
+    const field = templateState.sides[side].fields.find((item) => item.id === fieldId) ?? null;
+    if (!field) return;
+
+    const renderer = event.currentTarget.closest(".id-template-renderer") as HTMLElement | null;
+    if (!renderer) return;
+
+    const bounds = renderer.getBoundingClientRect();
+    const nextDrag: DragState = {
+      fieldId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: field.xPercent,
+      originY: field.yPercent,
+      width: field.widthPercent,
+      height: field.heightPercent,
+      canvasWidth: bounds.width || canvasWidth,
+      canvasHeight: bounds.height || canvasHeight,
+    };
+
+    setSelectedId(field.id);
+    setDragState(nextDrag);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  useEffect(() => {
+    if (!dragState) return;
+
+    const handleMove = (event: PointerEvent) => {
+      if (!dragState) return;
+
+      const dx = event.clientX - dragState.startX;
+      const dy = event.clientY - dragState.startY;
+      if (!Number.isFinite(dx) || !Number.isFinite(dy)) return;
+
+      const dxPercent = (dx / dragState.canvasWidth) * 100;
+      const dyPercent = (dy / dragState.canvasHeight) * 100;
+      const rawX = dragState.originX + dxPercent;
+      const rawY = dragState.originY + dyPercent;
+      const xLimit = Math.max(0, 100 - dragState.width);
+      const yLimit = Math.max(0, 100 - dragState.height);
+      const nextX = clampValue(rawX, 0, xLimit);
+      const nextY = clampValue(rawY, 0, yLimit);
+
+      setTemplateState((current) => {
+        const next = cloneTemplate(current);
+        const selected = next.sides[side].fields.find((field) => field.id === dragState.fieldId);
+        if (!selected) return next;
+
+        selected.xPercent = round2(nextX);
+        selected.yPercent = round2(nextY);
+        return next;
+      });
+    };
+
+    const stopDrag = () => {
+      setDragState(null);
+    };
+
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", stopDrag);
+    window.addEventListener("pointercancel", stopDrag);
+
+    return () => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", stopDrag);
+      window.removeEventListener("pointercancel", stopDrag);
+    };
+  }, [dragState, side, canvasHeight, canvasWidth]);
 
   const updateSelectedField = (patch: Partial<IdTemplateField>) => {
     if (!selectedField) return;
@@ -362,6 +446,7 @@ export default function IdTemplatePreviewClient({
                   editable
                   selectedFieldId={selectedField?.id ?? null}
                   onSelectField={setSelectedId}
+                  onFieldPointerDown={beginDragField}
                 />
               </div>
             </div>
@@ -660,4 +745,14 @@ function clampPositivePercent(value: number, fallback: number) {
 function normalizeNumber(value: number, fallback: number) {
   if (!Number.isFinite(value)) return fallback;
   return value;
+}
+
+function clampValue(value: number, min: number, max: number) {
+  if (!Number.isFinite(value)) return min;
+  return Math.min(Math.max(value, min), max);
+}
+
+function round2(value: number) {
+  if (!Number.isFinite(value)) return 0;
+  return Number(value.toFixed(2));
 }

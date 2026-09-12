@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { QRCodeSVG } from "qrcode.react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 
 import type { IdTemplate, IdTemplateField, IdTemplateSide } from "@/components/id-template/default-template";
 import type { OfficialIdTemplateData } from "@/lib/id-template/resolve-official-id-data";
@@ -17,6 +17,7 @@ type IdTemplateRendererProps = {
   editable?: boolean;
   selectedFieldId?: string | null;
   onSelectField?: (fieldId: string) => void;
+  onFieldPointerDown?: (fieldId: string, event: ReactPointerEvent<HTMLDivElement>) => void;
 };
 
 const DEFAULT_IMAGE_URL = "/images/default-official.svg";
@@ -153,6 +154,7 @@ export default function IdTemplateRenderer({
   editable = false,
   selectedFieldId = null,
   onSelectField,
+  onFieldPointerDown,
 }: IdTemplateRendererProps) {
   const fields = [...template.sides[side].fields]
     .filter((field) => field.visible !== false)
@@ -177,7 +179,7 @@ export default function IdTemplateRenderer({
             aria-label={editable ? `Select ${label}` : undefined}
             className={
               editable
-                ? `group cursor-pointer outline outline-0 outline-offset-0 transition-[outline,box-shadow] hover:outline-1 hover:outline-sky-300/80 ${
+                ? `group cursor-move outline outline-0 outline-offset-0 transition-[outline,box-shadow,transform] hover:outline-1 hover:outline-sky-300/80 ${
                     selected
                       ? "z-[999] outline-2 outline-sky-400 ring-2 ring-sky-400/45"
                       : ""
@@ -191,8 +193,10 @@ export default function IdTemplateRenderer({
             onPointerDown={
               editable
                 ? (event) => {
+                    event.preventDefault();
                     event.stopPropagation();
                     onSelectField?.(field.id);
+                    onFieldPointerDown?.(field.id, event);
                   }
                 : undefined
             }
