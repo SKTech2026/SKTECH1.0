@@ -25,6 +25,7 @@ export type IdTemplateField = {
   zIndex?: number;
   fit?: "cover" | "contain";
   radius?: string;
+  visible?: boolean;
   style?: IdTemplateTextStyle & {
     background?: string;
     border?: string;
