@@ -42,7 +42,21 @@ const STYLE_KEYS = new Set([
   "opacity",
 ]);
 
-const FONT_WEIGHTS = new Set(["normal", "medium", "semibold", "bold", "400", "500", "600", "700", "800"]);
+const FONT_WEIGHTS = new Set([
+  "normal",
+  "bold",
+  "lighter",
+  "bolder",
+  "100",
+  "200",
+  "300",
+  "400",
+  "500",
+  "600",
+  "700",
+  "800",
+  "900",
+]);
 const TEXT_TRANSFORMS = new Set(["none", "uppercase", "lowercase", "capitalize"]);
 const FONT_STYLES = new Set(["normal", "italic"]);
 const BASIC_COLORS = new Set([
@@ -106,6 +120,31 @@ function isSafeColor(value: string) {
   return false;
 }
 
+function normalizeFontWeight(styleValue: unknown): string {
+  if (typeof styleValue === "number") {
+    if (!Number.isFinite(styleValue) || !Number.isInteger(styleValue)) {
+      throw new Error("fontWeight is invalid. Expected a CSS-safe fontWeight value.");
+    }
+    if (styleValue < 100 || styleValue > 900 || styleValue % 100 !== 0) {
+      throw new Error("fontWeight is invalid. Expected a CSS-safe fontWeight value from 100 to 900 in 100-step increments.");
+    }
+    return String(styleValue);
+  }
+
+  if (typeof styleValue === "string") {
+    const trimmed = styleValue.trim();
+    if (!trimmed) {
+      throw new Error("fontWeight is invalid. Empty fontWeight is not allowed.");
+    }
+    if (!FONT_WEIGHTS.has(trimmed)) {
+      throw new Error("fontWeight is invalid. Expected one of: normal, bold, lighter, bolder, 100, 200, 300, 400, 500, 600, 700, 800, 900.");
+    }
+    return trimmed;
+  }
+
+  throw new Error("fontWeight is invalid. Expected one of: normal, bold, lighter, bolder, 100, 200, 300, 400, 500, 600, 700, 800, 900.");
+}
+
 function sanitizeStyleJson(value: unknown, dbField: DbIdTemplateField): Prisma.InputJsonObject | undefined {
   if (value === undefined) return undefined;
   if (!TEXT_FIELD_TYPES.has(dbField.type)) return undefined;
@@ -131,11 +170,8 @@ function sanitizeStyleJson(value: unknown, dbField: DbIdTemplateField): Prisma.I
     }
 
     if (key === "fontWeight") {
-      const normalized = typeof styleValue === "number" ? String(styleValue) : styleValue;
-      if (typeof normalized !== "string" || !FONT_WEIGHTS.has(normalized)) {
-        throw new Error("fontWeight is invalid.");
-      }
-      sanitized.fontWeight = typeof styleValue === "number" ? styleValue : normalized;
+      const normalized = normalizeFontWeight(styleValue);
+      sanitized.fontWeight = normalized;
     }
 
     if (key === "color") {

@@ -238,7 +238,7 @@ export default function IdTemplatePreviewClient({
     setSaveError(null);
   };
 
-  const updateSelectedStyle = (updates: Partial<IdTemplateTextStyle> & { color?: string; align?: "left" | "center" | "right"; fontSize?: number; fontWeight?: number }) => {
+  const updateSelectedStyle = (updates: Partial<IdTemplateTextStyle> & { color?: string; align?: "left" | "center" | "right"; fontSize?: number; fontWeight?: number | string }) => {
     if (!selectedField) return;
 
     setTemplateState((current) => {
@@ -687,6 +687,38 @@ function buildSaveFields(template: IdTemplate) {
   }));
 }
 
+const SAFE_FONT_WEIGHTS = new Set([
+  "normal",
+  "bold",
+  "lighter",
+  "bolder",
+  "100",
+  "200",
+  "300",
+  "400",
+  "500",
+  "600",
+  "700",
+  "800",
+  "900",
+]);
+
+function normalizeFontWeight(value: number | string | undefined) {
+  if (typeof value === "number") {
+    if (!Number.isFinite(value) || !Number.isInteger(value)) return undefined;
+    if (value < 100 || value > 900 || value % 100 !== 0) return undefined;
+    return String(value);
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return undefined;
+    return SAFE_FONT_WEIGHTS.has(trimmed) ? trimmed : undefined;
+  }
+
+  return undefined;
+}
+
 function sanitizeTextStyle(style: IdTemplateField["style"]) {
   if (!style) return undefined;
 
@@ -695,9 +727,12 @@ function sanitizeTextStyle(style: IdTemplateField["style"]) {
   if (typeof style.fontSize === "number" && Number.isFinite(style.fontSize)) {
     safeStyle.fontSize = style.fontSize;
   }
-  if (typeof style.fontWeight === "number" && Number.isFinite(style.fontWeight)) {
-    safeStyle.fontWeight = style.fontWeight;
+
+  const normalizedFontWeight = normalizeFontWeight(style.fontWeight);
+  if (normalizedFontWeight) {
+    safeStyle.fontWeight = normalizedFontWeight;
   }
+
   if (typeof style.color === "string") {
     safeStyle.color = style.color;
   }

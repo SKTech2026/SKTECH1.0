@@ -4,7 +4,7 @@ export type IdTemplateFieldType = "staticText" | "text" | "image" | "qr" | "shap
 
 export type IdTemplateTextStyle = {
   fontSize?: number;
-  fontWeight?: number;
+  fontWeight?: number | string;
   color?: string;
   align?: "left" | "center" | "right";
   lineHeight?: number;
