@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import IdTemplateRenderer from "@/components/id-template/IdTemplateRenderer";
 import type {
@@ -59,6 +59,12 @@ type IdTemplatePreviewClientProps = {
   hasQr: boolean;
 };
 
+type AdminTemplateResponse = {
+  success?: boolean;
+  template?: IdTemplate;
+  templateName?: string;
+};
+
 type FieldTypeBadgeProps = {
   type: IdTemplateFieldType;
 };
@@ -83,13 +89,55 @@ export default function IdTemplatePreviewClient({
 }: IdTemplatePreviewClientProps) {
   const [side, setSide] = useState<IdTemplateSide>("front");
   const [templateState, setTemplateState] = useState<IdTemplate>(() => cloneTemplate(template));
+  const [savedTemplateState, setSavedTemplateState] = useState<IdTemplate>(() => cloneTemplate(template));
+  const [savedSnapshot, setSavedSnapshot] = useState(() => serializeTemplate(template));
   const [selectedId, setSelectedId] = useState<string | null>(template.sides.front.fields[0]?.id ?? null);
   const [showJson, setShowJson] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const currentFields = templateState.sides[side].fields;
   const selectedField = currentFields.find((field) => field.id === selectedId) ?? currentFields[0] ?? null;
+  const currentFrontFields = templateState.sides.front.fields;
+  const currentBackFields = templateState.sides.back.fields;
+  const currentTotalFields = currentFrontFields.length + currentBackFields.length;
+  const currentHasQr = [...currentFrontFields, ...currentBackFields].some((field) => field.type === "qr");
 
   const printableSide = useMemo(() => side, [side]);
+  const currentSnapshot = useMemo(() => serializeTemplate(templateState), [templateState]);
+  const isDirty = currentSnapshot !== savedSnapshot;
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadEditableTemplate = async () => {
+      try {
+        const response = await fetch("/api/admin/id-template", { cache: "no-store" });
+        if (!response.ok) return;
+
+        const result = (await response.json()) as AdminTemplateResponse;
+        if (!isMounted || !result.template) return;
+
+        const editableTemplate = cloneTemplate(result.template);
+        setTemplateState(editableTemplate);
+        setSavedTemplateState(cloneTemplate(editableTemplate));
+        setSavedSnapshot(serializeTemplate(editableTemplate));
+        setSelectedId(editableTemplate.sides.front.fields[0]?.id ?? null);
+        setSide("front");
+      } catch {
+        if (isMounted) {
+          setSaveError("Unable to load the editable template. Showing the server preview.");
+        }
+      }
+    };
+
+    loadEditableTemplate();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const updateSelectedField = (patch: Partial<IdTemplateField>) => {
     if (!selectedField) return;
@@ -102,6 +150,8 @@ export default function IdTemplatePreviewClient({
       Object.assign(selected, patch);
       return next;
     });
+    setSaveMessage(null);
+    setSaveError(null);
   };
 
   const updateSelectedStyle = (updates: Partial<IdTemplateTextStyle> & { color?: string; align?: "left" | "center" | "right"; fontSize?: number; fontWeight?: number }) => {
@@ -117,12 +167,53 @@ export default function IdTemplatePreviewClient({
       };
       return next;
     });
+    setSaveMessage(null);
+    setSaveError(null);
   };
 
   const resetTemplate = () => {
-    setTemplateState(cloneTemplate(template));
-    setSelectedId(template.sides.front.fields[0]?.id ?? null);
+    const savedTemplate = cloneTemplate(savedTemplateState);
+    setTemplateState(savedTemplate);
+    setSelectedId(savedTemplate.sides.front.fields[0]?.id ?? null);
     setSide("front");
+    setSaveMessage(null);
+    setSaveError(null);
+  };
+
+  const saveTemplate = async () => {
+    if (!isDirty || isSaving) return;
+
+    setIsSaving(true);
+    setSaveMessage(null);
+    setSaveError(null);
+
+    try {
+      const response = await fetch("/api/admin/id-template", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fields: buildSaveFields(templateState),
+        }),
+      });
+
+      const result = (await response.json().catch(() => null)) as { error?: string } | null;
+
+      if (!response.ok) {
+        throw new Error(result?.error ?? "Unable to save ID template.");
+      }
+
+      const savedTemplate = cloneTemplate(templateState);
+      const nextSnapshot = serializeTemplate(savedTemplate);
+      setSavedTemplateState(savedTemplate);
+      setSavedSnapshot(nextSnapshot);
+      setSaveMessage("Template saved.");
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Unable to save ID template.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -139,12 +230,25 @@ export default function IdTemplatePreviewClient({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            {isDirty ? (
+              <span className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-200">
+                Unsaved changes
+              </span>
+            ) : null}
             <button
               type="button"
               onClick={resetTemplate}
               className="rounded-lg border border-glass-border px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-elevated/70"
             >
               Reset
+            </button>
+            <button
+              type="button"
+              onClick={saveTemplate}
+              disabled={!isDirty || isSaving}
+              className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isSaving ? "Saving..." : "Save Template"}
             </button>
             <Link
               href="/dashboard/admin/id-production"
@@ -154,6 +258,16 @@ export default function IdTemplatePreviewClient({
             </Link>
           </div>
         </div>
+        {saveMessage ? (
+          <p className="mt-4 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-200">
+            {saveMessage}
+          </p>
+        ) : null}
+        {saveError ? (
+          <p className="mt-4 rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm font-semibold text-rose-200">
+            {saveError}
+          </p>
+        ) : null}
       </section>
 
       <section className="rounded-3xl border border-glass-border bg-surface p-6 shadow-[0_24px_48px_-24px_var(--shadow-color)] backdrop-blur-md">
@@ -191,12 +305,12 @@ export default function IdTemplatePreviewClient({
             </button>
           </div>
           <div className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-amber-200">
-            Preview only. Layout editing will be added in the next phase.
+            Changes are saved only when you click Save Template.
           </div>
         </div>
 
         <div className="mt-5 rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm font-medium text-amber-200">
-          Live preview only. Changes are not saved yet. Save to database will be added in the next phase.
+          Changes are saved only when you click Save Template.
         </div>
 
         <div className="mt-6 grid gap-6 xl:grid-cols-[280px_minmax(620px,1fr)_320px]">
@@ -262,19 +376,19 @@ export default function IdTemplatePreviewClient({
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-muted">Total</span>
-                  <span className="font-semibold text-foreground">{totalFields}</span>
+                  <span className="font-semibold text-foreground">{currentTotalFields || totalFields}</span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-muted">Front</span>
-                  <span className="font-semibold text-foreground">{frontFields}</span>
+                  <span className="font-semibold text-foreground">{currentFrontFields.length || frontFields}</span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-muted">Back</span>
-                  <span className="font-semibold text-foreground">{backFields}</span>
+                  <span className="font-semibold text-foreground">{currentBackFields.length || backFields}</span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-muted">QR</span>
-                  <span className="font-semibold text-foreground">{hasQr ? "Yes" : "No"}</span>
+                  <span className="font-semibold text-foreground">{currentHasQr || hasQr ? "Yes" : "No"}</span>
                 </div>
               </div>
             </div>
@@ -458,6 +572,66 @@ export default function IdTemplatePreviewClient({
 
 function cloneTemplate(template: IdTemplate): IdTemplate {
   return JSON.parse(JSON.stringify(template));
+}
+
+function serializeTemplate(template: IdTemplate) {
+  return JSON.stringify(buildSaveFields(template));
+}
+
+function buildSaveFields(template: IdTemplate) {
+  return [...template.sides.front.fields, ...template.sides.back.fields].map((field) => ({
+    id: field.id,
+    xPercent: field.xPercent,
+    yPercent: field.yPercent,
+    widthPercent: field.widthPercent,
+    heightPercent: field.heightPercent,
+    zIndex: field.zIndex ?? 0,
+    visible: field.visible !== false,
+    ...(field.type === "text" || field.type === "staticText"
+      ? { styleJson: sanitizeTextStyle(field.style) }
+      : {}),
+  }));
+}
+
+function sanitizeTextStyle(style: IdTemplateField["style"]) {
+  if (!style) return undefined;
+
+  const safeStyle: Record<string, string | number> = {};
+
+  if (typeof style.fontSize === "number" && Number.isFinite(style.fontSize)) {
+    safeStyle.fontSize = style.fontSize;
+  }
+  if (typeof style.fontWeight === "number" && Number.isFinite(style.fontWeight)) {
+    safeStyle.fontWeight = style.fontWeight;
+  }
+  if (typeof style.color === "string") {
+    safeStyle.color = style.color;
+  }
+  if (style.align === "left" || style.align === "center" || style.align === "right") {
+    safeStyle.align = style.align;
+  }
+  if (typeof style.lineHeight === "number" && Number.isFinite(style.lineHeight)) {
+    safeStyle.lineHeight = style.lineHeight;
+  }
+  if (typeof style.letterSpacing === "string") {
+    safeStyle.letterSpacing = style.letterSpacing;
+  }
+  if (
+    style.textTransform === "none" ||
+    style.textTransform === "uppercase" ||
+    style.textTransform === "lowercase" ||
+    style.textTransform === "capitalize"
+  ) {
+    safeStyle.textTransform = style.textTransform;
+  }
+  if (style.fontStyle === "normal" || style.fontStyle === "italic") {
+    safeStyle.fontStyle = style.fontStyle;
+  }
+  if (typeof style.opacity === "number" && Number.isFinite(style.opacity)) {
+    safeStyle.opacity = style.opacity;
+  }
+
+  return Object.keys(safeStyle).length > 0 ? safeStyle : undefined;
 }
 
 function clampPercent(value: number, fallback: number) {
