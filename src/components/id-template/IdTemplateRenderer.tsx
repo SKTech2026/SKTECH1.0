@@ -14,6 +14,9 @@ type IdTemplateRendererProps = {
   className?: string;
   print?: boolean;
   onImageError?: (source: string) => void;
+  editable?: boolean;
+  selectedFieldId?: string | null;
+  onSelectField?: (fieldId: string) => void;
 };
 
 const DEFAULT_IMAGE_URL = "/images/default-official.svg";
@@ -147,6 +150,9 @@ export default function IdTemplateRenderer({
   className,
   print = false,
   onImageError,
+  editable = false,
+  selectedFieldId = null,
+  onSelectField,
 }: IdTemplateRendererProps) {
   const fields = [...template.sides[side].fields]
     .filter((field) => field.visible !== false)
@@ -159,16 +165,60 @@ export default function IdTemplateRenderer({
       } ${side === "back" && !print ? "[transform:rotateY(180deg)]" : ""} ${className ?? ""}`}
       style={{ containerType: "inline-size" }}
     >
-      {fields.map((field) => (
-        <div key={field.id} style={boxStyle(field)}>
-          {field.type === "text" || field.type === "staticText"
-            ? renderTextField(field, data)
-            : null}
-          {field.type === "image" ? renderImageField(field, data, onImageError) : null}
-          {field.type === "qr" ? renderQrField(field, data) : null}
-          {field.type === "shape" ? renderShapeField(field) : null}
-        </div>
-      ))}
+      {fields.map((field) => {
+        const selected = editable && field.id === selectedFieldId;
+        const label = field.sourceKey ?? field.id ?? field.type;
+
+        return (
+          <div
+            key={field.id}
+            role={editable ? "button" : undefined}
+            tabIndex={editable ? 0 : undefined}
+            aria-label={editable ? `Select ${label}` : undefined}
+            className={
+              editable
+                ? `group cursor-pointer outline outline-0 outline-offset-0 transition-[outline,box-shadow] hover:outline-1 hover:outline-sky-300/80 ${
+                    selected
+                      ? "z-[999] outline-2 outline-sky-400 ring-2 ring-sky-400/45"
+                      : ""
+                  }`
+                : undefined
+            }
+            style={{
+              ...boxStyle(field),
+              ...(selected ? { zIndex: 999 } : {}),
+            }}
+            onPointerDown={
+              editable
+                ? (event) => {
+                    event.stopPropagation();
+                    onSelectField?.(field.id);
+                  }
+                : undefined
+            }
+            onClick={
+              editable
+                ? (event) => {
+                    event.stopPropagation();
+                    onSelectField?.(field.id);
+                  }
+                : undefined
+            }
+          >
+            {field.type === "text" || field.type === "staticText"
+              ? renderTextField(field, data)
+              : null}
+            {field.type === "image" ? renderImageField(field, data, onImageError) : null}
+            {field.type === "qr" ? renderQrField(field, data) : null}
+            {field.type === "shape" ? renderShapeField(field) : null}
+            {selected ? (
+              <span className="pointer-events-none absolute left-0 top-0 max-w-full truncate rounded-br bg-sky-500 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-white">
+                {label}
+              </span>
+            ) : null}
+          </div>
+        );
+      })}
     </section>
   );
 }

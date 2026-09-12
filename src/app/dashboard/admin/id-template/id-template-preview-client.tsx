@@ -359,6 +359,9 @@ export default function IdTemplatePreviewClient({
                   data={DEMO_DATA}
                   side={printableSide}
                   className="absolute inset-0 h-full w-full"
+                  editable
+                  selectedFieldId={selectedField?.id ?? null}
+                  onSelectField={setSelectedId}
                 />
               </div>
             </div>
