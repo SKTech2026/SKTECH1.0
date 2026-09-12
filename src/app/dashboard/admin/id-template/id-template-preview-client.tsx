@@ -217,15 +217,15 @@ export default function IdTemplatePreviewClient({
   };
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-3xl border border-glass-border bg-surface p-6 shadow-[0_24px_48px_-24px_var(--shadow-color)] backdrop-blur-md sm:p-8">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
+    <div className="w-full max-w-none space-y-4 overflow-x-hidden">
+      <section className="min-w-0 rounded-2xl border border-glass-border bg-surface p-4 shadow-[0_24px_48px_-24px_var(--shadow-color)] backdrop-blur-md sm:p-6">
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-4">
+          <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
               ID Template Designer
             </p>
-            <h2 className="mt-3 text-3xl font-bold text-foreground">Admin Template Editor</h2>
-            <p className="mt-2 text-sm text-muted">
+            <h2 className="mt-2 text-2xl font-bold text-foreground sm:text-3xl">Admin Template Editor</h2>
+            <p className="mt-2 truncate text-sm text-muted">
               {templateName}
             </p>
           </div>
@@ -270,7 +270,7 @@ export default function IdTemplatePreviewClient({
         ) : null}
       </section>
 
-      <section className="rounded-3xl border border-glass-border bg-surface p-6 shadow-[0_24px_48px_-24px_var(--shadow-color)] backdrop-blur-md">
+      <section className="min-w-0 overflow-hidden rounded-2xl border border-glass-border bg-surface p-4 shadow-[0_24px_48px_-24px_var(--shadow-color)] backdrop-blur-md sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap gap-2">
             <button
@@ -304,17 +304,17 @@ export default function IdTemplatePreviewClient({
               Back
             </button>
           </div>
-          <div className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-amber-200">
+          <div className="max-w-full rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-amber-200">
             Changes are saved only when you click Save Template.
           </div>
         </div>
 
-        <div className="mt-5 rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm font-medium text-amber-200">
+        <div className="mt-4 rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-sm font-medium text-amber-200">
           Changes are saved only when you click Save Template.
         </div>
 
-        <div className="mt-6 grid gap-6 xl:grid-cols-[280px_minmax(620px,1fr)_320px]">
-          <aside className="rounded-2xl border border-glass-border bg-surface-elevated/50 p-4">
+        <div className="mt-5 grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[250px_minmax(0,1fr)] xl:grid-cols-[260px_minmax(0,1fr)_300px] 2xl:grid-cols-[280px_minmax(0,1fr)_320px]">
+          <aside className="min-w-0 rounded-xl border border-glass-border bg-surface-elevated/50 p-3">
             <div className="mb-3 flex items-center justify-between">
               <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
                 Fields
@@ -323,13 +323,13 @@ export default function IdTemplatePreviewClient({
                 {side}
               </span>
             </div>
-            <div className="max-h-[540px] space-y-2 overflow-y-auto pr-1">
+            <div className="max-h-[360px] space-y-2 overflow-y-auto pr-1 lg:max-h-[620px]">
               {templateState.sides[side].fields.map((field) => (
                 <button
                   key={field.id}
                   type="button"
                   onClick={() => setSelectedId(field.id)}
-                  className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left transition ${
+                  className={`flex min-w-0 w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left transition ${
                     selectedField?.id === field.id
                       ? "border-accent bg-accent/20 text-accent"
                       : "border-glass-border bg-surface-elevated/30 text-foreground hover:bg-surface-elevated/70"
@@ -343,50 +343,55 @@ export default function IdTemplatePreviewClient({
                       {field.type}
                     </span>
                   </span>
-                  <FieldTypeBadge type={field.type} />
+                  <span className="shrink-0">
+                    <FieldTypeBadge type={field.type} />
+                  </span>
                 </button>
               ))}
             </div>
           </aside>
 
-          <article className="rounded-2xl border border-glass-border bg-surface-elevated/40 p-4">
-            <div className="relative mx-auto aspect-[856/532] w-full max-w-[680px]">
-              <IdTemplateRenderer
-                template={templateState}
-                data={DEMO_DATA}
-                side={printableSide}
-                className="absolute inset-0 h-full w-full"
-              />
+          <article className="min-w-0 overflow-hidden rounded-xl border border-glass-border bg-surface-elevated/40 p-3">
+            <div className="flex min-w-0 w-full max-w-full justify-center overflow-hidden">
+              <div className="relative aspect-[856/540] w-full max-w-[680px] min-w-0">
+                <IdTemplateRenderer
+                  template={templateState}
+                  data={DEMO_DATA}
+                  side={printableSide}
+                  className="absolute inset-0 h-full w-full"
+                />
+              </div>
             </div>
           </article>
 
-          <aside className="rounded-2xl border border-glass-border bg-surface-elevated/50 p-4">
-            <div className="rounded-xl border border-glass-border bg-surface-elevated/30 p-3">
+          <aside className="min-w-0 rounded-xl border border-glass-border bg-surface-elevated/50 p-3 lg:col-span-2 xl:col-span-1">
+            <div className="max-h-none min-w-0 overflow-y-auto pr-1 xl:max-h-[720px]">
+            <div className="rounded-lg border border-glass-border bg-surface-elevated/30 p-3">
               <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
                 Template Metadata
               </div>
-              <div className="mt-3 space-y-2 text-[11px]">
-                <div className="flex items-center justify-between gap-3">
+              <div className="mt-2 grid gap-2 text-[11px] sm:grid-cols-2 xl:grid-cols-1">
+                <div className="flex min-w-0 items-center justify-between gap-3">
                   <span className="text-muted">Template</span>
                   <span className="font-semibold text-foreground truncate max-w-[150px]">{templateName}</span>
                 </div>
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center justify-between gap-3">
                   <span className="text-muted">Canvas</span>
                   <span className="font-semibold text-foreground">{canvasWidth}×{canvasHeight}</span>
                 </div>
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center justify-between gap-3">
                   <span className="text-muted">Total</span>
                   <span className="font-semibold text-foreground">{currentTotalFields || totalFields}</span>
                 </div>
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center justify-between gap-3">
                   <span className="text-muted">Front</span>
                   <span className="font-semibold text-foreground">{currentFrontFields.length || frontFields}</span>
                 </div>
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center justify-between gap-3">
                   <span className="text-muted">Back</span>
                   <span className="font-semibold text-foreground">{currentBackFields.length || backFields}</span>
                 </div>
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center justify-between gap-3">
                   <span className="text-muted">QR</span>
                   <span className="font-semibold text-foreground">{currentHasQr || hasQr ? "Yes" : "No"}</span>
                 </div>
@@ -421,7 +426,7 @@ export default function IdTemplatePreviewClient({
                 </div>
 
                 <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
                     <label className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
                       X%
                       <input
@@ -448,7 +453,7 @@ export default function IdTemplatePreviewClient({
                     </label>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
                     <label className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
                       Width%
                       <input
@@ -475,7 +480,7 @@ export default function IdTemplatePreviewClient({
                     </label>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
                     <label className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
                       zIndex
                       <input
@@ -498,7 +503,7 @@ export default function IdTemplatePreviewClient({
 
                   {(selectedField.type === "staticText" || selectedField.type === "text") ? (
                     <div className="space-y-3">
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
                         <label className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
                           Font Size
                           <input
@@ -522,7 +527,7 @@ export default function IdTemplatePreviewClient({
                         </label>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
                         <label className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
                           Color
                           <input
@@ -563,6 +568,7 @@ export default function IdTemplatePreviewClient({
             ) : (
               <div className="mt-4 text-sm text-muted">No field selected.</div>
             )}
+            </div>
           </aside>
         </div>
       </section>
