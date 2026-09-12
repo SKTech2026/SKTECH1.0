@@ -301,6 +301,51 @@ function validateMergedTemplate(template: DbIdTemplate, updates: ValidatedLayout
   }
 }
 
+function normalizeJsonPrimitive(value: unknown) {
+  if (value === undefined || value === null) return "null";
+  return JSON.stringify(value);
+}
+
+function valuesChanged(existing: { xPercent: number; yPercent: number; widthPercent: number; heightPercent: number; zIndex: number; visible: boolean; styleJson?: unknown }, incoming: ValidatedLayoutField) {
+  if (existing.xPercent !== incoming.xPercent) return true;
+  if (existing.yPercent !== incoming.yPercent) return true;
+  if (existing.widthPercent !== incoming.widthPercent) return true;
+  if (existing.heightPercent !== incoming.heightPercent) return true;
+  if (existing.zIndex !== incoming.zIndex) return true;
+  if (existing.visible !== incoming.visible) return true;
+
+  if (incoming.styleJson === undefined) {
+    return false;
+  }
+
+  return normalizeJsonPrimitive(existing.styleJson) !== normalizeJsonPrimitive(incoming.styleJson);
+}
+
+function classifyValidationError(error: unknown) {
+  if (!(error instanceof Error)) return false;
+
+  const message = error.message;
+  const validationHints = [
+    "must be",
+    "must",
+    "invalid",
+    "unsafe key",
+    "Duplicate field",
+    "Submitted field does not belong",
+    "Payload must",
+    "styleJson",
+    "fontWeight",
+    "xPercent",
+    "yPercent",
+    "widthPercent",
+    "heightPercent",
+    "zIndex",
+    "visible",
+  ];
+
+  return validationHints.some((hint) => message.includes(hint));
+}
+
 async function findActiveTemplate() {
   return prisma.idTemplate.findFirst({
     where: {
@@ -385,43 +430,77 @@ export async function PATCH(request: Request) {
     const updates = validateFields(body.fields, activeTemplate.fields as DbIdTemplateField[]);
     validateMergedTemplate(activeTemplate as DbIdTemplate, updates);
 
-    const updatedTemplate = await prisma.$transaction(async (tx) => {
-      for (const field of updates) {
-        await tx.idTemplateField.update({
-          where: { id: field.id },
-          data: {
-            xPercent: field.xPercent,
-            yPercent: field.yPercent,
-            widthPercent: field.widthPercent,
-            heightPercent: field.heightPercent,
-            zIndex: field.zIndex,
-            visible: field.visible,
-            ...(field.styleJson !== undefined ? { styleJson: field.styleJson } : {}),
-          },
-        });
+    const dbFieldMap = new Map(activeTemplate.fields.map((field) => [field.id, field]));
+    const fieldOps: Array<Prisma.PrismaPromise<unknown>> = [];
+    const changedIds = new Set<string>();
+
+    for (const field of updates) {
+      const dbField = dbFieldMap.get(field.id);
+      if (!dbField) {
+        continue;
       }
 
-      return tx.idTemplate.update({
-        where: { id: activeTemplate.id },
-        data: {
-          updatedById: guard.session.user.id,
-          updatedAt: new Date(),
-        },
-        select: {
-          id: true,
-          updatedAt: true,
-        },
+      if (!valuesChanged(dbField, field)) {
+        continue;
+      }
+
+      changedIds.add(field.id);
+
+      const data: Prisma.IdTemplateFieldUpdateInput = {
+        xPercent: field.xPercent,
+        yPercent: field.yPercent,
+        widthPercent: field.widthPercent,
+        heightPercent: field.heightPercent,
+        zIndex: field.zIndex,
+        visible: field.visible,
+      };
+
+      if (field.styleJson !== undefined) {
+        data.styleJson = field.styleJson;
+      }
+
+      fieldOps.push(
+        prisma.idTemplateField.update({
+          where: { id: field.id },
+          data,
+        }),
+      );
+    }
+
+    if (fieldOps.length === 0) {
+      return NextResponse.json({
+        success: true,
+        updatedFieldCount: 0,
+        templateId: activeTemplate.id,
+        updatedAt: activeTemplate.updatedAt,
       });
+    }
+
+    await Promise.all(fieldOps);
+
+    const updatedTemplate = await prisma.idTemplate.update({
+      where: { id: activeTemplate.id },
+      data: {
+        updatedById: guard.session.user.id,
+        updatedAt: new Date(),
+      },
+      select: {
+        id: true,
+        updatedAt: true,
+      },
     });
 
     return NextResponse.json({
       success: true,
-      updatedFieldCount: updates.length,
+      updatedFieldCount: changedIds.size,
       templateId: updatedTemplate.id,
       updatedAt: updatedTemplate.updatedAt,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to save ID template.";
-    return jsonError(message, 400);
+    if (error instanceof Error && classifyValidationError(error)) {
+      return jsonError(error.message, 400);
+    }
+
+    return jsonError("Unable to save ID template.", 500);
   }
 }
