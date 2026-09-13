@@ -159,12 +159,13 @@ export default function IdTemplateRenderer({
   const fields = [...template.sides[side].fields]
     .filter((field) => field.visible !== false)
     .sort((first, second) => (first.zIndex ?? 0) - (second.zIndex ?? 0));
+  const selectedField = editable ? fields.find((field) => field.id === selectedFieldId) : undefined;
 
   return (
     <section
       className={`id-template-renderer id-face absolute inset-0 overflow-hidden rounded-[0.72rem] border text-[#111827] shadow-[0_28px_70px_-34px_rgba(2,6,23,0.75)] [backface-visibility:hidden] ${
         side === "front" ? "border-[#aeb4bd] bg-[#d9d9d9]" : "border-[#d4ad43] bg-[#071b3d]"
-      } ${side === "back" && !print ? "[transform:rotateY(180deg)]" : ""} ${className ?? ""}`}
+      } ${side === "back" && !print && !editable ? "[transform:rotateY(180deg)]" : ""} ${className ?? ""}`}
       style={{ containerType: "inline-size" }}
     >
       {fields.map((field) => {
@@ -181,15 +182,12 @@ export default function IdTemplateRenderer({
               editable
                 ? `group cursor-move outline outline-0 outline-offset-0 transition-[outline,box-shadow,transform] hover:outline-1 hover:outline-sky-300/80 ${
                     selected
-                      ? "z-[999] outline-2 outline-sky-400 ring-2 ring-sky-400/45"
+                      ? "outline-2 outline-sky-400 ring-2 ring-sky-400/45"
                       : ""
                   }`
                 : undefined
             }
-            style={{
-              ...boxStyle(field),
-              ...(selected ? { zIndex: 999 } : {}),
-            }}
+            style={boxStyle(field)}
             onPointerDown={
               editable
                 ? (event) => {
@@ -215,14 +213,16 @@ export default function IdTemplateRenderer({
             {field.type === "image" ? renderImageField(field, data, onImageError) : null}
             {field.type === "qr" ? renderQrField(field, data) : null}
             {field.type === "shape" ? renderShapeField(field) : null}
-            {selected ? (
-              <span className="pointer-events-none absolute left-0 top-0 max-w-full truncate rounded-br bg-sky-500 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-white">
-                {label}
-              </span>
-            ) : null}
           </div>
         );
       })}
+      {selectedField ? (
+        <div aria-hidden="true" className="pointer-events-none outline outline-2 outline-sky-400 ring-2 ring-sky-400/45" style={{ ...boxStyle(selectedField), zIndex: 1001 }}>
+          <span className="absolute left-0 top-0 max-w-full truncate rounded-br bg-sky-500 px-1.5 py-0.5 text-[9px] font-bold uppercase text-white">
+            {selectedField.sourceKey ?? selectedField.id}
+          </span>
+        </div>
+      ) : null}
     </section>
   );
 }

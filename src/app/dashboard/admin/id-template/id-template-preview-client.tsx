@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Square, Trash2, Type } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 
@@ -10,7 +11,6 @@ import type {
   IdTemplateField,
   IdTemplateFieldType,
   IdTemplateSide,
-  IdTemplateTextStyle,
 } from "@/components/id-template/default-template";
 import type { OfficialIdTemplateData } from "@/lib/id-template/resolve-official-id-data";
 
@@ -110,6 +110,13 @@ export default function IdTemplatePreviewClient({
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const savedIds = new Set([...savedTemplateState.sides.front.fields, ...savedTemplateState.sides.back.fields].map((field) => field.id));
+  const localFields = [...templateState.sides.front.fields, ...templateState.sides.back.fields].filter((field) => !savedIds.has(field.id));
+  const saveableTemplate = persistedLayout(templateState, savedTemplateState);
+  const hasSaveableChanges = JSON.stringify(buildSaveFields(saveableTemplate)) !== JSON.stringify(buildSaveFields(savedTemplateState));
+  const hasLocalChanges = serializeTemplate(templateState) !== serializeTemplate(saveableTemplate);
 
   const currentFields = templateState.sides[side].fields;
   const selectedField = currentFields.find((field) => field.id === selectedId) ?? currentFields[0] ?? null;
@@ -143,6 +150,8 @@ export default function IdTemplatePreviewClient({
         if (isMounted) {
           setSaveError("Unable to load the editable template. Showing the server preview.");
         }
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
     };
 
@@ -154,6 +163,7 @@ export default function IdTemplatePreviewClient({
   }, []);
 
   const beginDragField = (fieldId: string, event: ReactPointerEvent<HTMLDivElement>) => {
+    if (isLoading || isSaving || event.button !== 0) return;
     const field = templateState.sides[side].fields.find((item) => item.id === fieldId) ?? null;
     if (!field) return;
 
@@ -238,7 +248,7 @@ export default function IdTemplatePreviewClient({
     setSaveError(null);
   };
 
-  const updateSelectedStyle = (updates: Partial<IdTemplateTextStyle> & { color?: string; align?: "left" | "center" | "right"; fontSize?: number; fontWeight?: number | string }) => {
+  const updateSelectedStyle = (updates: NonNullable<IdTemplateField["style"]>) => {
     if (!selectedField) return;
 
     setTemplateState((current) => {
@@ -256,6 +266,7 @@ export default function IdTemplatePreviewClient({
   };
 
   const resetTemplate = () => {
+    setDragState(null);
     const savedTemplate = cloneTemplate(savedTemplateState);
     setTemplateState(savedTemplate);
     setSelectedId(savedTemplate.sides.front.fields[0]?.id ?? null);
@@ -265,8 +276,9 @@ export default function IdTemplatePreviewClient({
   };
 
   const saveTemplate = async () => {
-    if (!isDirty || isSaving) return;
+    if (!hasSaveableChanges || isSaving || isLoading) return;
 
+    setDragState(null);
     setIsSaving(true);
     setSaveMessage(null);
     setSaveError(null);
@@ -278,7 +290,7 @@ export default function IdTemplatePreviewClient({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          fields: buildSaveFields(templateState),
+          fields: buildSaveFields(saveableTemplate),
         }),
       });
 
@@ -288,11 +300,11 @@ export default function IdTemplatePreviewClient({
         throw new Error(result?.error ?? "Unable to save ID template.");
       }
 
-      const savedTemplate = cloneTemplate(templateState);
+      const savedTemplate = cloneTemplate(saveableTemplate);
       const nextSnapshot = serializeTemplate(savedTemplate);
       setSavedTemplateState(savedTemplate);
       setSavedSnapshot(nextSnapshot);
-      setSaveMessage("Template saved.");
+      setSaveMessage(hasLocalChanges ? "Existing field layout saved. Local-only edits remain unsaved." : "Template saved.");
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "Unable to save ID template.");
     } finally {
@@ -300,8 +312,36 @@ export default function IdTemplatePreviewClient({
     }
   };
 
+  const addElement = (type: "staticText" | "shape") => {
+    if (isLoading || isSaving) return;
+    const id = `local-${type === "staticText" ? "text" : "shape"}-${crypto.randomUUID()}`;
+    const field: IdTemplateField = {
+      id, type, xPercent: 38, yPercent: 40, widthPercent: 24,
+      heightPercent: type === "staticText" ? 6 : 18,
+      zIndex: Math.min(1000, Math.max(0, ...currentFields.map((item) => item.zIndex ?? 0)) + 1),
+      visible: true,
+      ...(type === "staticText"
+        ? { value: "New Text", style: { fontSize: 16, fontWeight: "700", color: "#111827", align: "left" as const } }
+        : { radius: "8px", style: { background: "#2563eb", opacity: 1 } }),
+    };
+    setTemplateState((current) => ({ ...current, sides: { ...current.sides, [side]: { fields: [...current.sides[side].fields, field] } } }));
+    setSelectedId(id);
+    setSaveMessage(null);
+    setSaveError(null);
+  };
+
+  const removeLocalElement = () => {
+    if (!selectedField || savedIds.has(selectedField.id) || !["staticText", "shape"].includes(selectedField.type)) return;
+    setDragState(null);
+    const fields = currentFields.filter((field) => field.id !== selectedField.id);
+    setTemplateState((current) => ({ ...current, sides: { ...current.sides, [side]: { fields } } }));
+    setSelectedId(fields[0]?.id ?? null);
+    setSaveMessage(null);
+    setSaveError(null);
+  };
+
   return (
-    <div className="w-full max-w-none space-y-4 overflow-x-hidden">
+    <fieldset disabled={isLoading || isSaving} aria-busy={isLoading || isSaving} className="min-w-0 w-full max-w-none space-y-4 overflow-x-hidden">
       <section className="min-w-0 rounded-2xl border border-glass-border bg-surface p-4 shadow-[0_24px_48px_-24px_var(--shadow-color)] backdrop-blur-md sm:p-6">
         <div className="flex min-w-0 flex-wrap items-center justify-between gap-4">
           <div className="min-w-0">
@@ -314,6 +354,12 @@ export default function IdTemplatePreviewClient({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            <button type="button" onClick={() => addElement("staticText")} className="inline-flex items-center gap-2 rounded-lg border border-glass-border px-3 py-2 text-sm font-semibold">
+              <Type size={16} aria-hidden="true" /> Add Text
+            </button>
+            <button type="button" onClick={() => addElement("shape")} className="inline-flex items-center gap-2 rounded-lg border border-glass-border px-3 py-2 text-sm font-semibold">
+              <Square size={16} aria-hidden="true" /> Add Shape
+            </button>
             {isDirty ? (
               <span className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-200">
                 Unsaved changes
@@ -329,7 +375,7 @@ export default function IdTemplatePreviewClient({
             <button
               type="button"
               onClick={saveTemplate}
-              disabled={!isDirty || isSaving}
+              disabled={!hasSaveableChanges || isSaving || isLoading}
               className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSaving ? "Saving..." : "Save Template"}
@@ -342,6 +388,8 @@ export default function IdTemplatePreviewClient({
             </Link>
           </div>
         </div>
+        {localFields.length > 0 ? <p role="status" className="mt-3 text-sm text-amber-200">New local elements are not saved yet. Phase 3F2 will add database saving for new elements.</p> : null}
+        {hasLocalChanges ? <p className="mt-2 text-sm text-amber-200">Text content and shape appearance edits are local-only. Reset restores the last saved template and removes local elements and local-only edits.</p> : null}
         {saveMessage ? (
           <p className="mt-4 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-200">
             {saveMessage}
@@ -389,12 +437,8 @@ export default function IdTemplatePreviewClient({
             </button>
           </div>
           <div className="max-w-full rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-amber-200">
-            Changes are saved only when you click Save Template.
+            {isLoading ? "Loading template..." : "Existing field layout is saved with Save Template."}
           </div>
-        </div>
-
-        <div className="mt-4 rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-sm font-medium text-amber-200">
-          Changes are saved only when you click Save Template.
         </div>
 
         <div className="mt-5 grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[250px_minmax(0,1fr)] xl:grid-cols-[260px_minmax(0,1fr)_300px] 2xl:grid-cols-[280px_minmax(0,1fr)_320px]">
@@ -508,12 +552,35 @@ export default function IdTemplatePreviewClient({
                     </span>
                     <FieldTypeBadge type={selectedField.type} />
                   </div>
-                  <div className="mt-2 text-sm font-semibold text-foreground">
+                  <div className="mt-2 break-all text-sm font-semibold text-foreground">
                     {selectedField.sourceKey ?? selectedField.id}
                   </div>
                 </div>
 
                 <div className="space-y-3">
+                  {selectedField.type === "staticText" ? (
+                    <label className="block text-xs font-semibold text-muted">
+                      Text content (local only)
+                      <textarea maxLength={120} rows={3} value={selectedField.value ?? ""} onChange={(event) => updateSelectedField({ value: event.target.value.slice(0, 120) })} className="mt-1 w-full resize-y rounded-lg border border-glass-border bg-surface-elevated p-2 text-sm text-foreground" />
+                    </label>
+                  ) : null}
+                  {selectedField.type === "shape" ? (
+                    <div className="space-y-3">
+                      <label className="block text-xs font-semibold text-muted">Fill (local only)
+                        <input type="color" value={/^#[0-9a-f]{6}$/i.test(selectedField.style?.background ?? "") ? selectedField.style!.background : "#2563eb"} onChange={(event) => { if (/^#[0-9a-f]{6}$/i.test(event.target.value)) updateSelectedStyle({ background: event.target.value }); }} className="mt-1 h-10 w-full" />
+                      </label>
+                      <label className="block text-xs font-semibold text-muted">Radius (px, local only)
+                        <input type="number" min={0} max={100} value={radiusPixels(selectedField.radius)} onChange={(event) => updateSelectedField({ radius: `${clampValue(event.target.valueAsNumber, 0, 100)}px` })} className="mt-1 w-full rounded-lg border border-glass-border bg-surface-elevated p-2" />
+                      </label>
+                      <label className="block text-xs font-semibold text-muted">Opacity (local only)
+                        <input type="range" min={0} max={1} step={0.05} value={selectedField.style?.opacity ?? 1} onChange={(event) => updateSelectedStyle({ opacity: clampValue(event.target.valueAsNumber, 0, 1) })} className="mt-1 w-full" />
+                      </label>
+                    </div>
+                  ) : null}
+                  <button type="button" onClick={removeLocalElement} disabled={savedIds.has(selectedField.id)} className="inline-flex items-center gap-2 rounded-lg border border-glass-border px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50">
+                    <Trash2 size={16} aria-hidden="true" /> Remove element
+                  </button>
+                  {savedIds.has(selectedField.id) ? <p className="text-xs text-muted">Saved fields cannot be removed yet. This will be added in a later protected hide/restore phase.</p> : null}
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
                     <label className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
                       X%
@@ -660,7 +727,7 @@ export default function IdTemplatePreviewClient({
           </aside>
         </div>
       </section>
-    </div>
+    </fieldset>
   );
 }
 
@@ -669,7 +736,30 @@ function cloneTemplate(template: IdTemplate): IdTemplate {
 }
 
 function serializeTemplate(template: IdTemplate) {
-  return JSON.stringify(buildSaveFields(template));
+  return JSON.stringify(template);
+}
+
+// Only API-supported changes to known server fields enter the save baseline.
+function persistedLayout(current: IdTemplate, saved: IdTemplate): IdTemplate {
+  const next = cloneTemplate(saved);
+  for (const side of ["front", "back"] as const) {
+    next.sides[side].fields = next.sides[side].fields.map((original) => {
+      const field = current.sides[side].fields.find((item) => item.id === original.id);
+      if (!field) return original;
+      return { ...original, xPercent: field.xPercent, yPercent: field.yPercent,
+        widthPercent: field.widthPercent, heightPercent: field.heightPercent,
+        ...(field.zIndex !== undefined ? { zIndex: field.zIndex } : {}),
+        ...(field.visible !== undefined ? { visible: field.visible } : {}),
+        ...(["text", "staticText"].includes(field.type) && field.style ? { style: field.style } : {}),
+      };
+    });
+  }
+  return next;
+}
+
+function radiusPixels(radius?: string) {
+  const match = radius?.match(/^(\d+(?:\.\d+)?)(px|rem)$/);
+  return match ? clampValue(Number(match[1]) * (match[2] === "rem" ? 16 : 1), 0, 100) : 0;
 }
 
 function buildSaveFields(template: IdTemplate) {
