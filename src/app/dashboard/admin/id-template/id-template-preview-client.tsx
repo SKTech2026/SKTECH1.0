@@ -291,19 +291,26 @@ export default function IdTemplatePreviewClient({
         },
         body: JSON.stringify({
           fields: buildSaveFields(saveableTemplate),
+          creates: buildCreateFields(templateState),
         }),
       });
 
-      const result = (await response.json().catch(() => null)) as { error?: string } | null;
+      const result = (await response.json().catch(() => null)) as { error?: string; createdFieldIdMap?: Record<string, string> } | null;
 
       if (!response.ok) {
         throw new Error(result?.error ?? "Unable to save ID template.");
       }
 
+      const createdFieldIdMap = result?.createdFieldIdMap ?? {};
       const savedTemplate = cloneTemplate(saveableTemplate);
       const nextSnapshot = serializeTemplate(savedTemplate);
-      setSavedTemplateState(savedTemplate);
+      setSavedTemplateState(applyCreatedFieldIds(savedTemplate, createdFieldIdMap));
       setSavedSnapshot(nextSnapshot);
+      setTemplateState((current) => applyCreatedFieldIds(current, createdFieldIdMap));
+      setSelectedId((current) => {
+        if (!current) return null;
+        return createdFieldIdMap[current] ?? current;
+      });
       setSaveMessage(hasLocalChanges ? "Existing field layout saved. Local-only edits remain unsaved." : "Template saved.");
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "Unable to save ID template.");
@@ -388,7 +395,7 @@ export default function IdTemplatePreviewClient({
             </Link>
           </div>
         </div>
-        {localFields.length > 0 ? <p role="status" className="mt-3 text-sm text-amber-200">New local elements are not saved yet. Phase 3F2 will add database saving for new elements.</p> : null}
+        {localFields.length > 0 ? <p role="status" className="mt-3 text-sm text-amber-200">New elements will be saved when you click Save Template.</p> : null}
         {hasLocalChanges ? <p className="mt-2 text-sm text-amber-200">Text content and shape appearance edits are local-only. Reset restores the last saved template and removes local elements and local-only edits.</p> : null}
         {saveMessage ? (
           <p className="mt-4 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-200">
@@ -763,18 +770,120 @@ function radiusPixels(radius?: string) {
 }
 
 function buildSaveFields(template: IdTemplate) {
-  return [...template.sides.front.fields, ...template.sides.back.fields].map((field) => ({
-    id: field.id,
-    xPercent: field.xPercent,
-    yPercent: field.yPercent,
-    widthPercent: field.widthPercent,
-    heightPercent: field.heightPercent,
-    zIndex: field.zIndex ?? 0,
-    visible: field.visible !== false,
-    ...(field.type === "text" || field.type === "staticText"
-      ? { styleJson: sanitizeTextStyle(field.style) }
-      : {}),
-  }));
+  return [...template.sides.front.fields, ...template.sides.back.fields]
+    .filter((field) => !field.id.startsWith("local-text-") && !field.id.startsWith("local-shape-"))
+    .map((field) => ({
+      id: field.id,
+      xPercent: field.xPercent,
+      yPercent: field.yPercent,
+      widthPercent: field.widthPercent,
+      heightPercent: field.heightPercent,
+      zIndex: field.zIndex ?? 0,
+      visible: field.visible !== false,
+      ...(field.type === "text" || field.type === "staticText"
+        ? { styleJson: sanitizeTextStyle(field.style) }
+        : {}),
+    }));
+}
+
+function buildCreateFields(template: IdTemplate) {
+  const creates: Array<Record<string, unknown>> = [];
+
+  for (const side of ["front", "back"] as const) {
+    for (const field of template.sides[side].fields) {
+      if (!field.id.startsWith("local-text-") && !field.id.startsWith("local-shape-")) {
+        continue;
+      }
+
+      const type = field.type === "staticText" ? "STATIC_TEXT" : field.type === "shape" ? "SHAPE" : null;
+      if (!type) continue;
+
+      const create: Record<string, unknown> = {
+        tempId: field.id,
+        side: side === "front" ? "FRONT" : "BACK",
+        type,
+        xPercent: field.xPercent,
+        yPercent: field.yPercent,
+        widthPercent: field.widthPercent,
+        heightPercent: field.heightPercent,
+        zIndex: field.zIndex ?? 0,
+        visible: field.visible !== false,
+      };
+
+      if (type === "STATIC_TEXT") {
+        create.staticValue = field.value ?? "";
+        create.label = "Static Text";
+        create.styleJson = sanitizeTextStyle(field.style);
+      }
+
+      if (type === "SHAPE") {
+        create.styleJson = sanitizeShapeStyle(field.style);
+        create.label = "Shape";
+      }
+
+      creates.push(create);
+    }
+  }
+
+  return creates;
+}
+
+function sanitizeShapeStyle(style: IdTemplateField["style"]) {
+  if (!style) return undefined;
+
+  const safeStyle: Record<string, string | number> = {};
+  const typedStyle = style as Record<string, unknown>;
+
+  if (typeof typedStyle.background === "string" && /^#[0-9a-f]{6}$/i.test(String(typedStyle.background))) {
+    safeStyle.backgroundColor = String(typedStyle.background);
+  }
+
+  if (typeof typedStyle.fill === "string" && /^#[0-9a-f]{6}$/i.test(String(typedStyle.fill))) {
+    safeStyle.fill = String(typedStyle.fill);
+  }
+
+  if (typeof typedStyle.color === "string") {
+    safeStyle.color = String(typedStyle.color);
+  }
+
+  if (typeof typedStyle.borderColor === "string") {
+    safeStyle.borderColor = String(typedStyle.borderColor);
+  }
+
+  if (typeof typedStyle.borderWidth === "number" && Number.isFinite(typedStyle.borderWidth)) {
+    safeStyle.borderWidth = clampValue(Number(typedStyle.borderWidth), 0, 20);
+  }
+
+  if (typeof typedStyle.borderRadius === "number" && Number.isFinite(typedStyle.borderRadius)) {
+    safeStyle.borderRadius = clampValue(Number(typedStyle.borderRadius), 0, 100);
+  }
+
+  if (typeof typedStyle.opacity === "number" && Number.isFinite(typedStyle.opacity)) {
+    safeStyle.opacity = clampValue(Number(typedStyle.opacity), 0, 1);
+  }
+
+  return Object.keys(safeStyle).length > 0 ? safeStyle : undefined;
+}
+
+function applyCreatedFieldIds(template: IdTemplate, createdFieldIdMap: Record<string, string>): IdTemplate {
+  const next = cloneTemplate(template);
+
+  for (const side of ["front", "back"] as const) {
+    next.sides[side].fields = next.sides[side].fields.map((field) => {
+      if (!field.id.startsWith("local-text-") && !field.id.startsWith("local-shape-")) {
+        return field;
+      }
+
+      const dbId = createdFieldIdMap[field.id];
+      if (!dbId) {
+        return field;
+      }
+
+      return { ...field, id: dbId };
+    });
+  }
+
+  return next;
 }
 
 const SAFE_FONT_WEIGHTS = new Set([

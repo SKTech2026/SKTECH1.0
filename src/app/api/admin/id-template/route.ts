@@ -18,6 +18,22 @@ type LayoutFieldInput = {
   styleJson?: unknown;
 };
 
+type CreateFieldInput = {
+  tempId?: unknown;
+  side?: unknown;
+  type?: unknown;
+  xPercent?: unknown;
+  yPercent?: unknown;
+  widthPercent?: unknown;
+  heightPercent?: unknown;
+  zIndex?: unknown;
+  visible?: unknown;
+  sourceKey?: unknown;
+  staticValue?: unknown;
+  label?: unknown;
+  styleJson?: unknown;
+};
+
 type ValidatedLayoutField = {
   id: string;
   xPercent: number;
@@ -26,6 +42,22 @@ type ValidatedLayoutField = {
   heightPercent: number;
   zIndex: number;
   visible: boolean;
+  styleJson?: Prisma.InputJsonObject;
+};
+
+type ValidatedCreateField = {
+  tempId: string;
+  side: "FRONT" | "BACK";
+  type: "STATIC_TEXT" | "SHAPE";
+  xPercent: number;
+  yPercent: number;
+  widthPercent: number;
+  heightPercent: number;
+  zIndex: number;
+  visible: boolean;
+  sourceKey?: string | null;
+  staticValue?: string | null;
+  label?: string | null;
   styleJson?: Prisma.InputJsonObject;
 };
 
@@ -143,6 +175,57 @@ function normalizeFontWeight(styleValue: unknown): string {
   }
 
   throw new Error("fontWeight is invalid. Expected one of: normal, bold, lighter, bolder, 100, 200, 300, 400, 500, 600, 700, 800, 900.");
+}
+
+function sanitizeShapeStyleJson(value: unknown): Prisma.InputJsonObject | undefined {
+  if (value === undefined) return undefined;
+  if (!isPlainObject(value)) {
+    throw new Error("shape styleJson must be an object.");
+  }
+
+  const sanitized: Record<string, Prisma.InputJsonValue> = {};
+  const allowed = new Set([
+    "backgroundColor",
+    "fill",
+    "color",
+    "borderColor",
+    "borderWidth",
+    "borderRadius",
+    "opacity",
+  ]);
+
+  for (const [key, layerValue] of Object.entries(value)) {
+    if (!allowed.has(key)) {
+      throw new Error(`shape styleJson contains unsafe key: ${key}.`);
+    }
+
+    if (key === "backgroundColor" || key === "fill" || key === "color" || key === "borderColor") {
+      if (typeof layerValue !== "string" || !isSafeColor(layerValue)) {
+        throw new Error(`${key} is invalid.`);
+      }
+      sanitized[key] = layerValue.trim();
+    }
+
+    if (key === "borderWidth") {
+      if (typeof layerValue !== "number" || !Number.isFinite(layerValue) || layerValue < 0 || layerValue > 20) {
+        throw new Error("borderWidth is invalid.");
+      }
+      sanitized.borderWidth = readFiniteNumber(layerValue, "borderWidth", 0, 20);
+    }
+
+    if (key === "borderRadius") {
+      if (typeof layerValue !== "number" || !Number.isFinite(layerValue) || layerValue < 0 || layerValue > 100) {
+        throw new Error("borderRadius is invalid.");
+      }
+      sanitized.borderRadius = readFiniteNumber(layerValue, "borderRadius", 0, 100);
+    }
+
+    if (key === "opacity") {
+      sanitized.opacity = readFiniteNumber(layerValue, "opacity", 0, 1);
+    }
+  }
+
+  return sanitized as Prisma.InputJsonObject;
 }
 
 function sanitizeStyleJson(value: unknown, dbField: DbIdTemplateField): Prisma.InputJsonObject | undefined {
@@ -272,25 +355,139 @@ function validateFields(payloadFields: unknown, dbFields: DbIdTemplateField[]) {
   });
 }
 
-function validateMergedTemplate(template: DbIdTemplate, updates: ValidatedLayoutField[]) {
+function validateCreateFields(payloadCreates: unknown) {
+  if (payloadCreates === undefined || payloadCreates === null) return [];
+  if (!Array.isArray(payloadCreates)) {
+    throw new Error("creates must be an array.");
+  }
+
+  const creates: ValidatedCreateField[] = [];
+
+  for (const item of payloadCreates) {
+    if (!isPlainObject(item)) {
+      throw new Error("Each create entry must be an object.");
+    }
+
+    const input = item as CreateFieldInput;
+    if (typeof input.tempId !== "string" || !input.tempId.trim()) {
+      throw new Error("Create tempId must be a local id string.");
+    }
+
+    const tempId = input.tempId.trim();
+    if (!/^local-(text|shape)-/.test(tempId)) {
+      throw new Error("Create tempId must start with local-text- or local-shape-.");
+    }
+
+    if (input.side !== "FRONT" && input.side !== "BACK") {
+      throw new Error("Create side must be FRONT or BACK.");
+    }
+
+    if (input.type !== "STATIC_TEXT" && input.type !== "SHAPE") {
+      throw new Error("Create type must be STATIC_TEXT or SHAPE.");
+    }
+
+    if (input.sourceKey !== undefined && input.sourceKey !== null && String(input.sourceKey).trim() !== "") {
+      throw new Error("Create fields must not send sourceKey.");
+    }
+
+    const side = input.side as "FRONT" | "BACK";
+    const type = input.type as "STATIC_TEXT" | "SHAPE";
+
+    const create: ValidatedCreateField = {
+      tempId,
+      side,
+      type,
+      xPercent: readFiniteNumber(input.xPercent, "xPercent", 0, 100),
+      yPercent: readFiniteNumber(input.yPercent, "yPercent", 0, 100),
+      widthPercent: readFiniteNumber(input.widthPercent, "widthPercent", 0.1, 100),
+      heightPercent: readFiniteNumber(input.heightPercent, "heightPercent", 0.1, 100),
+      zIndex: readZIndex(input.zIndex),
+      visible: input.visible === undefined ? true : readVisible(input.visible),
+    };
+
+    if (type === "STATIC_TEXT") {
+      if (input.staticValue !== undefined && input.staticValue !== null) {
+        const value = String(input.staticValue);
+        if (value.length > 120) {
+          throw new Error("staticValue must be plain text with max 120 characters.");
+        }
+        create.staticValue = value;
+      } else {
+        create.staticValue = null;
+      }
+
+      if (input.label !== undefined && input.label !== null) {
+        create.label = String(input.label).slice(0, 80);
+      }
+
+      create.styleJson = sanitizeStyleJson(input.styleJson, {
+        id: "__create_static_text__",
+        type: "STATIC_TEXT",
+      } as unknown as DbIdTemplateField);
+    }
+
+    if (type === "SHAPE") {
+      if (input.staticValue !== undefined && input.staticValue !== null && String(input.staticValue).trim() !== "") {
+        throw new Error("SHAPE staticValue must be omitted or empty.");
+      }
+
+      if (input.label !== undefined && input.label !== null) {
+        create.label = String(input.label).slice(0, 80);
+      }
+
+      create.styleJson = sanitizeShapeStyleJson(input.styleJson);
+    }
+
+    creates.push(create);
+  }
+
+  return creates;
+}
+
+function validateMergedTemplate(template: DbIdTemplate, updates: ValidatedLayoutField[], creates: ValidatedCreateField[]) {
   const updatesById = new Map(updates.map((field) => [field.id, field]));
+  const mergedFields = template.fields.map((field) => {
+    const update = updatesById.get(field.id);
+    if (!update) return field;
+
+    return {
+      ...field,
+      xPercent: update.xPercent,
+      yPercent: update.yPercent,
+      widthPercent: update.widthPercent,
+      heightPercent: update.heightPercent,
+      zIndex: update.zIndex,
+      visible: update.visible,
+      styleJson: update.styleJson ?? field.styleJson,
+    };
+  });
+
+  for (const create of creates) {
+    mergedFields.push({
+      id: create.tempId,
+      templateId: template.id,
+      side: create.side,
+      type: create.type,
+      sourceKey: null,
+      staticValue: create.staticValue ?? null,
+      label: create.label ?? null,
+      xPercent: create.xPercent,
+      yPercent: create.yPercent,
+      widthPercent: create.widthPercent,
+      heightPercent: create.heightPercent,
+      zIndex: create.zIndex,
+      fit: null,
+      radius: null,
+      styleJson: create.styleJson ?? undefined,
+      visible: create.visible,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as unknown as DbIdTemplateField);
+  }
+
   const mergedTemplate: DbIdTemplate = {
     ...template,
-    fields: template.fields.map((field) => {
-      const update = updatesById.get(field.id);
-      if (!update) return field;
-
-      return {
-        ...field,
-        xPercent: update.xPercent,
-        yPercent: update.yPercent,
-        widthPercent: update.widthPercent,
-        heightPercent: update.heightPercent,
-        zIndex: update.zIndex,
-        visible: update.visible,
-        styleJson: update.styleJson ?? field.styleJson,
-      };
-    }),
+    fields: mergedFields,
   };
 
   const rendererTemplate = convertDbTemplateToRendererTemplate(mergedTemplate);
@@ -428,10 +625,11 @@ export async function PATCH(request: Request) {
     }
 
     const updates = validateFields(body.fields, activeTemplate.fields as DbIdTemplateField[]);
-    validateMergedTemplate(activeTemplate as DbIdTemplate, updates);
+    const creates = validateCreateFields(body.creates);
+    validateMergedTemplate(activeTemplate as DbIdTemplate, updates, creates);
 
     const dbFieldMap = new Map(activeTemplate.fields.map((field) => [field.id, field]));
-    const fieldOps: Array<Prisma.PrismaPromise<unknown>> = [];
+    const updateOps: Array<{ fieldId: string; data: Prisma.IdTemplateFieldUpdateInput }> = [];
     const changedIds = new Set<string>();
 
     for (const field of updates) {
@@ -459,42 +657,73 @@ export async function PATCH(request: Request) {
         data.styleJson = field.styleJson;
       }
 
-      fieldOps.push(
-        prisma.idTemplateField.update({
-          where: { id: field.id },
-          data,
-        }),
-      );
+      updateOps.push({ fieldId: field.id, data });
     }
 
-    if (fieldOps.length === 0) {
+    if (updateOps.length === 0 && creates.length === 0) {
       return NextResponse.json({
         success: true,
         updatedFieldCount: 0,
+        createdFieldIdMap: {},
         templateId: activeTemplate.id,
         updatedAt: activeTemplate.updatedAt,
       });
     }
 
-    await Promise.all(fieldOps);
+    const createdFieldIdMap: Record<string, string> = {};
+    const result = await prisma.$transaction(
+      async (tx) => {
+        for (const op of updateOps) {
+          await tx.idTemplateField.update({
+            where: { id: op.fieldId },
+            data: op.data,
+          });
+        }
 
-    const updatedTemplate = await prisma.idTemplate.update({
-      where: { id: activeTemplate.id },
-      data: {
-        updatedById: guard.session.user.id,
-        updatedAt: new Date(),
+        for (const create of creates) {
+          const newField = await tx.idTemplateField.create({
+            data: {
+              templateId: activeTemplate.id,
+              side: create.side,
+              type: create.type,
+              sourceKey: null,
+              staticValue: create.staticValue ?? null,
+              label: create.label ?? null,
+              xPercent: create.xPercent,
+              yPercent: create.yPercent,
+              widthPercent: create.widthPercent,
+              heightPercent: create.heightPercent,
+              zIndex: create.zIndex,
+              fit: null,
+              radius: null,
+              visible: create.visible,
+              styleJson: create.styleJson ?? undefined,
+            },
+          });
+          createdFieldIdMap[create.tempId] = newField.id;
+        }
+
+        return tx.idTemplate.update({
+          where: { id: activeTemplate.id },
+          data: {
+            updatedById: guard.session.user.id,
+            updatedAt: new Date(),
+          },
+          select: {
+            id: true,
+            updatedAt: true,
+          },
+        });
       },
-      select: {
-        id: true,
-        updatedAt: true,
-      },
-    });
+      { timeout: 15000, maxWait: 10000 },
+    );
 
     return NextResponse.json({
       success: true,
       updatedFieldCount: changedIds.size,
-      templateId: updatedTemplate.id,
-      updatedAt: updatedTemplate.updatedAt,
+      createdFieldIdMap,
+      templateId: result.id,
+      updatedAt: result.updatedAt,
     });
   } catch (error) {
     if (error instanceof Error && classifyValidationError(error)) {
