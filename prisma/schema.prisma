@@ -485,6 +485,7 @@ model IdTemplateField {
   templateId    String
   side          IdTemplateSide
   type          IdTemplateFieldType
+  assetId       String?
   sourceKey     String?
   staticValue   String?
   label         String?
@@ -500,9 +501,11 @@ model IdTemplateField {
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
 
-  template IdTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  asset    IdTemplateAsset? @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  template IdTemplate       @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
   @@index([templateId])
+  @@index([assetId])
   @@index([templateId, side])
   @@index([templateId, visible])
   @@index([side])
@@ -523,7 +526,8 @@ model IdTemplateAsset {
   height     Int?
   createdAt  DateTime            @default(now())
 
-  template IdTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  template IdTemplate        @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  fields   IdTemplateField[]
 
   @@index([templateId])
   @@index([templateId, side])
