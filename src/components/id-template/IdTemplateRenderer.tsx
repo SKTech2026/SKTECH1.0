@@ -130,15 +130,29 @@ function renderQrField(field: IdTemplateField, data: OfficialIdTemplateData) {
   );
 }
 
+function clampValue(value: number, min: number, max: number) {
+  if (Number.isNaN(value)) return undefined;
+  return Math.min(Math.max(value, min), max);
+}
+
 function renderShapeField(field: IdTemplateField) {
+  const rawStyle = (field.style ?? {}) as Record<string, unknown>;
+  const fill = typeof rawStyle.fill === "string" ? rawStyle.fill : typeof rawStyle.backgroundColor === "string" ? rawStyle.backgroundColor : typeof rawStyle.background === "string" ? rawStyle.background : undefined;
+  const border = typeof rawStyle.border === "string" ? rawStyle.border : undefined;
+  const borderColor = typeof rawStyle.borderColor === "string" ? rawStyle.borderColor : undefined;
+  const borderWidth = typeof rawStyle.borderWidth === "number" ? clampValue(rawStyle.borderWidth as number, 0, 20) : undefined;
+  const borderRadius = typeof rawStyle.borderRadius === "number" ? clampValue(rawStyle.borderRadius as number, 0, 100) : undefined;
+  const opacity = typeof rawStyle.opacity === "number" ? clampValue(rawStyle.opacity as number, 0, 1) : undefined;
   return (
     <div
       className="h-full w-full"
       style={{
-        background: field.style?.background,
-        border: field.style?.border,
-        borderRadius: field.radius,
-        opacity: field.style?.opacity,
+        background: fill,
+        border,
+        borderColor,
+        borderWidth: borderWidth !== undefined ? `${borderWidth}px` : undefined,
+        borderRadius: field.radius ?? (borderRadius !== undefined ? `${borderRadius}px` : undefined),
+        opacity,
       }}
     />
   );

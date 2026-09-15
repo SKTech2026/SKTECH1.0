@@ -45,20 +45,28 @@ function mapDbSide(dbSide: string): IdTemplateSide {
 }
 
 /**
- * Convert DB field's styleJson to code's style object
+ * Convert a DB field's styleJson to code's style object
  */
-function parseStyleJson(styleJson: Record<string, unknown> | null): IdTemplateTextStyle | undefined {
+function parseStyleJson(styleJson: Record<string, unknown> | null): IdTemplateTextStyle & { background?: string; backgroundColor?: string; fill?: string; color?: string; borderColor?: string; borderWidth?: number; borderRadius?: number; border?: string; opacity?: number } | undefined {
   if (!styleJson || typeof styleJson !== "object") {
     return undefined;
   }
 
-  const style: IdTemplateTextStyle & { background?: string; border?: string; opacity?: number } = {};
+  const style: IdTemplateTextStyle & { background?: string; backgroundColor?: string; fill?: string; color?: string; borderColor?: string; borderWidth?: number; borderRadius?: number; border?: string; opacity?: number } = {};
 
   if ("fontSize" in styleJson && typeof styleJson.fontSize === "number") {
     style.fontSize = styleJson.fontSize;
   }
-  if ("fontWeight" in styleJson && typeof styleJson.fontWeight === "number") {
-    style.fontWeight = styleJson.fontWeight;
+  if ("fontWeight" in styleJson) {
+    const weight = styleJson.fontWeight;
+    if (typeof weight === "number" && Number.isFinite(weight) && Number.isInteger(weight) && weight >= 100 && weight <= 900 && weight % 100 === 0) {
+      style.fontWeight = String(weight);
+    } else if (typeof weight === "string") {
+      const trimmed = weight.trim();
+      if (["normal", "bold", "lighter", "bolder", "100", "200", "300", "400", "500", "600", "700", "800", "900"].includes(trimmed)) {
+        style.fontWeight = trimmed;
+      }
+    }
   }
   if ("color" in styleJson && typeof styleJson.color === "string") {
     style.color = styleJson.color;
@@ -89,6 +97,26 @@ function parseStyleJson(styleJson: Record<string, unknown> | null): IdTemplateTe
   }
   if ("background" in styleJson && typeof styleJson.background === "string") {
     style.background = styleJson.background;
+  }
+  if ("backgroundColor" in styleJson && typeof styleJson.backgroundColor === "string") {
+    style.backgroundColor = styleJson.backgroundColor;
+    style.background = styleJson.backgroundColor;
+  }
+  if ("fill" in styleJson && typeof styleJson.fill === "string") {
+    style.fill = styleJson.fill;
+    style.background = styleJson.fill;
+  }
+  if ("color" in styleJson && typeof styleJson.color === "string") {
+    style.color = styleJson.color;
+  }
+  if ("borderColor" in styleJson && typeof styleJson.borderColor === "string") {
+    style.borderColor = styleJson.borderColor;
+  }
+  if ("borderWidth" in styleJson && typeof styleJson.borderWidth === "number") {
+    style.borderWidth = styleJson.borderWidth;
+  }
+  if ("borderRadius" in styleJson && typeof styleJson.borderRadius === "number") {
+    style.borderRadius = styleJson.borderRadius;
   }
   if ("border" in styleJson && typeof styleJson.border === "string") {
     style.border = styleJson.border;

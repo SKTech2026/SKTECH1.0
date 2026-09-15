@@ -15,6 +15,8 @@ type LayoutFieldInput = {
   heightPercent?: unknown;
   zIndex?: unknown;
   visible?: unknown;
+  radius?: unknown;
+  staticValue?: unknown;
   styleJson?: unknown;
 };
 
@@ -28,6 +30,7 @@ type CreateFieldInput = {
   heightPercent?: unknown;
   zIndex?: unknown;
   visible?: unknown;
+  radius?: unknown;
   sourceKey?: unknown;
   staticValue?: unknown;
   label?: unknown;
@@ -42,6 +45,8 @@ type ValidatedLayoutField = {
   heightPercent: number;
   zIndex: number;
   visible: boolean;
+  radius?: number | null;
+  staticValue?: string | null;
   styleJson?: Prisma.InputJsonObject;
 };
 
@@ -55,6 +60,7 @@ type ValidatedCreateField = {
   heightPercent: number;
   zIndex: number;
   visible: boolean;
+  radius?: number | null;
   sourceKey?: string | null;
   staticValue?: string | null;
   label?: string | null;
@@ -185,9 +191,11 @@ function sanitizeShapeStyleJson(value: unknown): Prisma.InputJsonObject | undefi
 
   const sanitized: Record<string, Prisma.InputJsonValue> = {};
   const allowed = new Set([
+    "background",
     "backgroundColor",
     "fill",
     "color",
+    "border",
     "borderColor",
     "borderWidth",
     "borderRadius",
@@ -199,11 +207,27 @@ function sanitizeShapeStyleJson(value: unknown): Prisma.InputJsonObject | undefi
       throw new Error(`shape styleJson contains unsafe key: ${key}.`);
     }
 
-    if (key === "backgroundColor" || key === "fill" || key === "color" || key === "borderColor") {
+    if (key === "background" || key === "backgroundColor" || key === "fill" || key === "color" || key === "borderColor") {
       if (typeof layerValue !== "string" || !isSafeColor(layerValue)) {
         throw new Error(`${key} is invalid.`);
       }
-      sanitized[key] = layerValue.trim();
+      const color = layerValue.trim();
+      if (key === "background") {
+        sanitized.background = color;
+      } else {
+        sanitized[key] = color;
+      }
+    }
+
+    if (key === "border") {
+      if (typeof layerValue !== "string") {
+        throw new Error("border is invalid.");
+      }
+      const border = layerValue.trim();
+      if (!/^\d+(?:\.\d+)?px\s+solid\s+#[0-9a-fA-F]{3,6}$/.test(border)) {
+        throw new Error("border is invalid.");
+      }
+      sanitized.border = border;
     }
 
     if (key === "borderWidth") {
@@ -342,7 +366,7 @@ function validateFields(payloadFields: unknown, dbFields: DbIdTemplateField[]) {
       throw new Error("Submitted field does not belong to the active template.");
     }
 
-    return {
+    const base: ValidatedLayoutField = {
       id,
       xPercent: readFiniteNumber(input.xPercent, "xPercent", 0, 100),
       yPercent: readFiniteNumber(input.yPercent, "yPercent", 0, 100),
@@ -350,8 +374,43 @@ function validateFields(payloadFields: unknown, dbFields: DbIdTemplateField[]) {
       heightPercent: readFiniteNumber(input.heightPercent, "heightPercent", 0.1, 100),
       zIndex: readZIndex(input.zIndex),
       visible: readVisible(input.visible),
-      styleJson: sanitizeStyleJson(input.styleJson, dbField),
     };
+
+    if (dbField.type === "STATIC_TEXT") {
+      if (input.staticValue !== undefined && input.staticValue !== null) {
+        const staticValue = String(input.staticValue);
+        if (staticValue.length > 120) {
+          throw new Error("staticValue must be plain text with max 120 characters.");
+        }
+        base.staticValue = staticValue;
+      }
+    } else if (input.staticValue !== undefined && input.staticValue !== null) {
+      throw new Error("Only STATIC_TEXT fields may update staticValue.");
+    }
+
+    if (dbField.type === "SHAPE") {
+      if (input.radius !== undefined && input.radius !== null) {
+        base.radius = readFiniteNumber(input.radius, "radius", 0, 100);
+      }
+      const shapeStyle = sanitizeShapeStyleJson(input.styleJson);
+      return {
+        ...base,
+        styleJson: shapeStyle,
+      } as ValidatedLayoutField;
+    }
+
+    if (dbField.type === "TEXT" || dbField.type === "STATIC_TEXT") {
+      return {
+        ...base,
+        styleJson: sanitizeStyleJson(input.styleJson, dbField),
+        staticValue: base.staticValue,
+      } as ValidatedLayoutField;
+    }
+
+    return {
+      ...base,
+      styleJson: sanitizeStyleJson(input.styleJson, dbField),
+    } as ValidatedLayoutField;
   });
 }
 
@@ -386,6 +445,10 @@ function validateCreateFields(payloadCreates: unknown) {
       throw new Error("Create type must be STATIC_TEXT or SHAPE.");
     }
 
+    if (input.radius !== undefined && input.radius !== null) {
+      readFiniteNumber(input.radius, "radius", 0, 100);
+    }
+
     if (input.sourceKey !== undefined && input.sourceKey !== null && String(input.sourceKey).trim() !== "") {
       throw new Error("Create fields must not send sourceKey.");
     }
@@ -403,6 +466,7 @@ function validateCreateFields(payloadCreates: unknown) {
       heightPercent: readFiniteNumber(input.heightPercent, "heightPercent", 0.1, 100),
       zIndex: readZIndex(input.zIndex),
       visible: input.visible === undefined ? true : readVisible(input.visible),
+      radius: input.radius === undefined || input.radius === null ? null : readFiniteNumber(input.radius, "radius", 0, 100),
     };
 
     if (type === "STATIC_TEXT") {
@@ -477,7 +541,7 @@ function validateMergedTemplate(template: DbIdTemplate, updates: ValidatedLayout
       heightPercent: create.heightPercent,
       zIndex: create.zIndex,
       fit: null,
-      radius: null,
+      radius: create.radius ?? null,
       styleJson: create.styleJson ?? undefined,
       visible: create.visible,
       createdAt: new Date(),
@@ -503,16 +567,18 @@ function normalizeJsonPrimitive(value: unknown) {
   return JSON.stringify(value);
 }
 
-function valuesChanged(existing: { xPercent: number; yPercent: number; widthPercent: number; heightPercent: number; zIndex: number; visible: boolean; styleJson?: unknown }, incoming: ValidatedLayoutField) {
+function valuesChanged(existing: { xPercent: number; yPercent: number; widthPercent: number; heightPercent: number; zIndex: number; visible: boolean; radius?: number | null; staticValue?: string | null; styleJson?: unknown }, incoming: ValidatedLayoutField) {
   if (existing.xPercent !== incoming.xPercent) return true;
   if (existing.yPercent !== incoming.yPercent) return true;
   if (existing.widthPercent !== incoming.widthPercent) return true;
   if (existing.heightPercent !== incoming.heightPercent) return true;
   if (existing.zIndex !== incoming.zIndex) return true;
   if (existing.visible !== incoming.visible) return true;
+  if (existing.radius !== incoming.radius) return true;
+  if ((existing.staticValue ?? null) !== (incoming.staticValue ?? null)) return true;
 
   if (incoming.styleJson === undefined) {
-    return false;
+    return normalizeJsonPrimitive(existing.styleJson) !== normalizeJsonPrimitive(undefined);
   }
 
   return normalizeJsonPrimitive(existing.styleJson) !== normalizeJsonPrimitive(incoming.styleJson);
@@ -653,6 +719,14 @@ export async function PATCH(request: Request) {
         visible: field.visible,
       };
 
+      if (field.radius !== undefined) {
+        data.radius = field.radius;
+      }
+
+      if (field.staticValue !== undefined) {
+        data.staticValue = field.staticValue;
+      }
+
       if (field.styleJson !== undefined) {
         data.styleJson = field.styleJson;
       }
@@ -695,7 +769,7 @@ export async function PATCH(request: Request) {
               heightPercent: create.heightPercent,
               zIndex: create.zIndex,
               fit: null,
-              radius: null,
+              radius: create.radius ?? null,
               visible: create.visible,
               styleJson: create.styleJson ?? undefined,
             },

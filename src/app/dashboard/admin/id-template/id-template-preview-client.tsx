@@ -113,10 +113,8 @@ export default function IdTemplatePreviewClient({
   const [isLoading, setIsLoading] = useState(true);
 
   const savedIds = new Set([...savedTemplateState.sides.front.fields, ...savedTemplateState.sides.back.fields].map((field) => field.id));
-  const localFields = [...templateState.sides.front.fields, ...templateState.sides.back.fields].filter((field) => !savedIds.has(field.id));
-  const saveableTemplate = persistedLayout(templateState, savedTemplateState);
-  const hasSaveableChanges = JSON.stringify(buildSaveFields(saveableTemplate)) !== JSON.stringify(buildSaveFields(savedTemplateState));
-  const hasLocalChanges = serializeTemplate(templateState) !== serializeTemplate(saveableTemplate);
+  const localFields = [...templateState.sides.front.fields, ...templateState.sides.back.fields].filter((field) => isLocalElementId(field.id));
+  const hasSaveableChanges = localFields.length > 0 || JSON.stringify(buildSaveFields(templateState)) !== JSON.stringify(buildSaveFields(savedTemplateState));
 
   const currentFields = templateState.sides[side].fields;
   const selectedField = currentFields.find((field) => field.id === selectedId) ?? currentFields[0] ?? null;
@@ -283,6 +281,7 @@ export default function IdTemplatePreviewClient({
     setSaveMessage(null);
     setSaveError(null);
 
+    const submittedTemplate = cloneTemplate(templateState);
     try {
       const response = await fetch("/api/admin/id-template", {
         method: "PATCH",
@@ -290,8 +289,8 @@ export default function IdTemplatePreviewClient({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          fields: buildSaveFields(saveableTemplate),
-          creates: buildCreateFields(templateState),
+          fields: buildSaveFields(submittedTemplate),
+          creates: buildCreateFields(submittedTemplate),
         }),
       });
 
@@ -302,16 +301,16 @@ export default function IdTemplatePreviewClient({
       }
 
       const createdFieldIdMap = result?.createdFieldIdMap ?? {};
-      const savedTemplate = cloneTemplate(saveableTemplate);
+      const savedTemplate = applyCreatedFieldIds(submittedTemplate, createdFieldIdMap);
       const nextSnapshot = serializeTemplate(savedTemplate);
-      setSavedTemplateState(applyCreatedFieldIds(savedTemplate, createdFieldIdMap));
+      setSavedTemplateState(cloneTemplate(savedTemplate));
       setSavedSnapshot(nextSnapshot);
-      setTemplateState((current) => applyCreatedFieldIds(current, createdFieldIdMap));
+      setTemplateState(savedTemplate);
       setSelectedId((current) => {
         if (!current) return null;
         return createdFieldIdMap[current] ?? current;
       });
-      setSaveMessage(hasLocalChanges ? "Existing field layout saved. Local-only edits remain unsaved." : "Template saved.");
+      setSaveMessage("Template saved.");
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "Unable to save ID template.");
     } finally {
@@ -396,7 +395,7 @@ export default function IdTemplatePreviewClient({
           </div>
         </div>
         {localFields.length > 0 ? <p role="status" className="mt-3 text-sm text-amber-200">New elements will be saved when you click Save Template.</p> : null}
-        {hasLocalChanges ? <p className="mt-2 text-sm text-amber-200">Text content and shape appearance edits are local-only. Reset restores the last saved template and removes local elements and local-only edits.</p> : null}
+        {isDirty ? <p className="mt-2 text-sm text-amber-200">Reset discards unsaved changes and restores the latest saved template.</p> : null}
         {saveMessage ? (
           <p className="mt-4 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-200">
             {saveMessage}
@@ -567,19 +566,19 @@ export default function IdTemplatePreviewClient({
                 <div className="space-y-3">
                   {selectedField.type === "staticText" ? (
                     <label className="block text-xs font-semibold text-muted">
-                      Text content (local only)
+                      Text content
                       <textarea maxLength={120} rows={3} value={selectedField.value ?? ""} onChange={(event) => updateSelectedField({ value: event.target.value.slice(0, 120) })} className="mt-1 w-full resize-y rounded-lg border border-glass-border bg-surface-elevated p-2 text-sm text-foreground" />
                     </label>
                   ) : null}
                   {selectedField.type === "shape" ? (
                     <div className="space-y-3">
-                      <label className="block text-xs font-semibold text-muted">Fill (local only)
+                      <label className="block text-xs font-semibold text-muted">Fill
                         <input type="color" value={/^#[0-9a-f]{6}$/i.test(selectedField.style?.background ?? "") ? selectedField.style!.background : "#2563eb"} onChange={(event) => { if (/^#[0-9a-f]{6}$/i.test(event.target.value)) updateSelectedStyle({ background: event.target.value }); }} className="mt-1 h-10 w-full" />
                       </label>
-                      <label className="block text-xs font-semibold text-muted">Radius (px, local only)
+                      <label className="block text-xs font-semibold text-muted">Radius (px)
                         <input type="number" min={0} max={100} value={radiusPixels(selectedField.radius)} onChange={(event) => updateSelectedField({ radius: `${clampValue(event.target.valueAsNumber, 0, 100)}px` })} className="mt-1 w-full rounded-lg border border-glass-border bg-surface-elevated p-2" />
                       </label>
-                      <label className="block text-xs font-semibold text-muted">Opacity (local only)
+                      <label className="block text-xs font-semibold text-muted">Opacity
                         <input type="range" min={0} max={1} step={0.05} value={selectedField.style?.opacity ?? 1} onChange={(event) => updateSelectedStyle({ opacity: clampValue(event.target.valueAsNumber, 0, 1) })} className="mt-1 w-full" />
                       </label>
                     </div>
@@ -746,22 +745,8 @@ function serializeTemplate(template: IdTemplate) {
   return JSON.stringify(template);
 }
 
-// Only API-supported changes to known server fields enter the save baseline.
-function persistedLayout(current: IdTemplate, saved: IdTemplate): IdTemplate {
-  const next = cloneTemplate(saved);
-  for (const side of ["front", "back"] as const) {
-    next.sides[side].fields = next.sides[side].fields.map((original) => {
-      const field = current.sides[side].fields.find((item) => item.id === original.id);
-      if (!field) return original;
-      return { ...original, xPercent: field.xPercent, yPercent: field.yPercent,
-        widthPercent: field.widthPercent, heightPercent: field.heightPercent,
-        ...(field.zIndex !== undefined ? { zIndex: field.zIndex } : {}),
-        ...(field.visible !== undefined ? { visible: field.visible } : {}),
-        ...(["text", "staticText"].includes(field.type) && field.style ? { style: field.style } : {}),
-      };
-    });
-  }
-  return next;
+function isLocalElementId(id: string) {
+  return id.startsWith("local-text-") || id.startsWith("local-shape-");
 }
 
 function radiusPixels(radius?: string) {
@@ -780,6 +765,8 @@ function buildSaveFields(template: IdTemplate) {
       heightPercent: field.heightPercent,
       zIndex: field.zIndex ?? 0,
       visible: field.visible !== false,
+      ...(field.type === "staticText" ? { staticValue: field.value ?? "" } : {}),
+      ...(field.type === "shape" ? { radius: radiusPixels(field.radius) / 16, styleJson: sanitizeShapeStyle(field) } : {}),
       ...(field.type === "text" || field.type === "staticText"
         ? { styleJson: sanitizeTextStyle(field.style) }
         : {}),
@@ -817,7 +804,8 @@ function buildCreateFields(template: IdTemplate) {
       }
 
       if (type === "SHAPE") {
-        create.styleJson = sanitizeShapeStyle(field.style);
+        create.radius = radiusPixels(field.radius) / 16;
+        create.styleJson = sanitizeShapeStyle(field);
         create.label = "Shape";
       }
 
@@ -828,18 +816,29 @@ function buildCreateFields(template: IdTemplate) {
   return creates;
 }
 
-function sanitizeShapeStyle(style: IdTemplateField["style"]) {
-  if (!style) return undefined;
+function sanitizeShapeStyle(field: IdTemplateField) {
+  const style = field.style ?? {};
 
   const safeStyle: Record<string, string | number> = {};
   const typedStyle = style as Record<string, unknown>;
 
+  if (typeof style.border === "string") {
+    safeStyle.border = style.border;
+  }
+
   if (typeof typedStyle.background === "string" && /^#[0-9a-f]{6}$/i.test(String(typedStyle.background))) {
+    safeStyle.background = String(typedStyle.background);
     safeStyle.backgroundColor = String(typedStyle.background);
+  }
+
+  if (typeof typedStyle.backgroundColor === "string" && /^#[0-9a-f]{6}$/i.test(String(typedStyle.backgroundColor))) {
+    safeStyle.backgroundColor = String(typedStyle.backgroundColor);
+    safeStyle.background = String(typedStyle.backgroundColor);
   }
 
   if (typeof typedStyle.fill === "string" && /^#[0-9a-f]{6}$/i.test(String(typedStyle.fill))) {
     safeStyle.fill = String(typedStyle.fill);
+    safeStyle.background = String(typedStyle.fill);
   }
 
   if (typeof typedStyle.color === "string") {
@@ -856,6 +855,13 @@ function sanitizeShapeStyle(style: IdTemplateField["style"]) {
 
   if (typeof typedStyle.borderRadius === "number" && Number.isFinite(typedStyle.borderRadius)) {
     safeStyle.borderRadius = clampValue(Number(typedStyle.borderRadius), 0, 100);
+  }
+
+  if (typeof field.radius === "string") {
+    const radiusValue = radiusPixels(field.radius);
+    if (Number.isFinite(radiusValue)) {
+      safeStyle.borderRadius = clampValue(radiusValue, 0, 100);
+    }
   }
 
   if (typeof typedStyle.opacity === "number" && Number.isFinite(typedStyle.opacity)) {
@@ -876,7 +882,7 @@ function applyCreatedFieldIds(template: IdTemplate, createdFieldIdMap: Record<st
 
       const dbId = createdFieldIdMap[field.id];
       if (!dbId) {
-        return field;
+        throw new Error("Save response is missing a created field ID. Reload the template before retrying.");
       }
 
       return { ...field, id: dbId };
