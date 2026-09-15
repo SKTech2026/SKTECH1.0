@@ -111,6 +111,10 @@ export default function IdTemplatePreviewClient({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [backgroundDrafts, setBackgroundDrafts] = useState<Record<IdTemplateSide, string>>({
+    front: "",
+    back: "",
+  });
 
   const savedIds = new Set([...savedTemplateState.sides.front.fields, ...savedTemplateState.sides.back.fields].map((field) => field.id));
   const localFields = [...templateState.sides.front.fields, ...templateState.sides.back.fields].filter((field) => isLocalElementId(field.id));
@@ -122,6 +126,13 @@ export default function IdTemplatePreviewClient({
   const currentBackFields = templateState.sides.back.fields;
   const currentTotalFields = currentFrontFields.length + currentBackFields.length;
   const currentHasQr = [...currentFrontFields, ...currentBackFields].some((field) => field.type === "qr");
+  const backgroundField = findBackgroundField(templateState, side);
+  const backgroundColor = backgroundField ? resolveShapeBackgroundColor(backgroundField) : "";
+  const backgroundInputValue = backgroundDrafts[side] || backgroundColor;
+  const backgroundError =
+    backgroundInputValue && !isSafeHexColor(backgroundInputValue)
+      ? "Use #RGB or #RRGGBB."
+      : null;
 
   const printableSide = useMemo(() => side, [side]);
   const currentSnapshot = useMemo(() => serializeTemplate(templateState), [templateState]);
@@ -143,6 +154,10 @@ export default function IdTemplatePreviewClient({
         setSavedTemplateState(cloneTemplate(editableTemplate));
         setSavedSnapshot(serializeTemplate(editableTemplate));
         setSelectedId(editableTemplate.sides.front.fields[0]?.id ?? null);
+        setBackgroundDrafts({
+          front: resolveShapeBackgroundColor(findBackgroundField(editableTemplate, "front") ?? undefined),
+          back: resolveShapeBackgroundColor(findBackgroundField(editableTemplate, "back") ?? undefined),
+        });
         setSide("front");
       } catch {
         if (isMounted) {
@@ -267,6 +282,10 @@ export default function IdTemplatePreviewClient({
     setDragState(null);
     const savedTemplate = cloneTemplate(savedTemplateState);
     setTemplateState(savedTemplate);
+    setBackgroundDrafts({
+      front: resolveShapeBackgroundColor(findBackgroundField(savedTemplate, "front") ?? undefined),
+      back: resolveShapeBackgroundColor(findBackgroundField(savedTemplate, "back") ?? undefined),
+    });
     setSelectedId(savedTemplate.sides.front.fields[0]?.id ?? null);
     setSide("front");
     setSaveMessage(null);
@@ -306,6 +325,10 @@ export default function IdTemplatePreviewClient({
       setSavedTemplateState(cloneTemplate(savedTemplate));
       setSavedSnapshot(nextSnapshot);
       setTemplateState(savedTemplate);
+      setBackgroundDrafts({
+        front: resolveShapeBackgroundColor(findBackgroundField(savedTemplate, "front") ?? undefined),
+        back: resolveShapeBackgroundColor(findBackgroundField(savedTemplate, "back") ?? undefined),
+      });
       setSelectedId((current) => {
         if (!current) return null;
         return createdFieldIdMap[current] ?? current;
@@ -344,6 +367,32 @@ export default function IdTemplatePreviewClient({
     setSelectedId(fields[0]?.id ?? null);
     setSaveMessage(null);
     setSaveError(null);
+  };
+
+  const updateBackgroundColor = (value: string) => {
+    const color = value.trim();
+    setBackgroundDrafts((current) => ({ ...current, [side]: color }));
+    setSaveMessage(null);
+    setSaveError(null);
+
+    if (!backgroundField || !isSafeHexColor(color)) {
+      return;
+    }
+
+    setTemplateState((current) => {
+      const next = cloneTemplate(current);
+      const field = findBackgroundField(next, side);
+      if (!field) return next;
+
+      field.style = {
+        ...(field.style ?? {}),
+        background: color,
+        backgroundColor: color,
+        fill: color,
+      } as IdTemplateField["style"];
+      field.zIndex = Math.min(field.zIndex ?? 0, 0);
+      return next;
+    });
   };
 
   return (
@@ -534,6 +583,42 @@ export default function IdTemplatePreviewClient({
                   <span className="font-semibold text-foreground">{currentHasQr || hasQr ? "Yes" : "No"}</span>
                 </div>
               </div>
+            </div>
+
+            <div className="mt-4 rounded-lg border border-glass-border bg-surface-elevated/30 p-3">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+                {side === "front" ? "Front Background" : "Back Background"}
+              </div>
+              {backgroundField ? (
+                <div className="mt-3 grid grid-cols-[44px_minmax(0,1fr)] items-center gap-3">
+                  <input
+                    type="color"
+                    value={toColorInputValue(backgroundColor)}
+                    onChange={(event) => updateBackgroundColor(event.target.value)}
+                    className="h-10 w-11 rounded border border-glass-border bg-transparent"
+                    aria-label={`${side === "front" ? "Front" : "Back"} background color`}
+                  />
+                  <label className="min-w-0 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
+                    Hex
+                    <input
+                      type="text"
+                      inputMode="text"
+                      value={backgroundInputValue}
+                      onChange={(event) => updateBackgroundColor(event.target.value)}
+                      maxLength={7}
+                      className="mt-1 w-full rounded-lg border border-glass-border bg-surface-elevated px-2 py-2 text-sm text-foreground"
+                      placeholder="#d9d9d9"
+                    />
+                  </label>
+                  {backgroundError ? (
+                    <p className="col-span-2 text-xs font-semibold text-amber-200">{backgroundError}</p>
+                  ) : null}
+                </div>
+              ) : (
+                <p className="mt-2 text-xs text-amber-200">
+                  No full-canvas background shape was found for this side.
+                </p>
+              )}
             </div>
 
             <div className="mt-4 flex items-center justify-between gap-2">
@@ -749,6 +834,47 @@ function isLocalElementId(id: string) {
   return id.startsWith("local-text-") || id.startsWith("local-shape-");
 }
 
+function findBackgroundField(template: IdTemplate, side: IdTemplateSide) {
+  const fields = template.sides[side].fields;
+  const exactId = `${side}-background`;
+  const exact = fields.find((field) => field.id === exactId && field.type === "shape");
+  if (exact) return exact;
+
+  return fields
+    .filter(
+      (field) =>
+        field.type === "shape" &&
+        field.xPercent === 0 &&
+        field.yPercent === 0 &&
+        field.widthPercent === 100 &&
+        field.heightPercent === 100,
+    )
+    .sort((first, second) => (first.zIndex ?? 0) - (second.zIndex ?? 0))[0];
+}
+
+function resolveShapeBackgroundColor(field?: IdTemplateField) {
+  if (!field?.style) return "";
+  const style = field.style as Record<string, unknown>;
+  const color = [style.background, style.backgroundColor, style.fill].find(
+    (value): value is string => typeof value === "string" && isSafeHexColor(value),
+  );
+  return color ?? "";
+}
+
+function isSafeHexColor(value: string) {
+  return /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(value.trim());
+}
+
+function toColorInputValue(value: string) {
+  const color = value.trim();
+  if (/^#[0-9a-f]{6}$/i.test(color)) return color;
+  if (/^#[0-9a-f]{3}$/i.test(color)) {
+    const [, red, green, blue] = color;
+    return `#${red}${red}${green}${green}${blue}${blue}`;
+  }
+  return "#d9d9d9";
+}
+
 function radiusPixels(radius?: string) {
   const match = radius?.match(/^(\d+(?:\.\d+)?)(px|rem)$/);
   return match ? clampValue(Number(match[1]) * (match[2] === "rem" ? 16 : 1), 0, 100) : 0;
@@ -826,17 +952,17 @@ function sanitizeShapeStyle(field: IdTemplateField) {
     safeStyle.border = style.border;
   }
 
-  if (typeof typedStyle.background === "string" && /^#[0-9a-f]{6}$/i.test(String(typedStyle.background))) {
+  if (typeof typedStyle.background === "string" && isSafeHexColor(String(typedStyle.background))) {
     safeStyle.background = String(typedStyle.background);
     safeStyle.backgroundColor = String(typedStyle.background);
   }
 
-  if (typeof typedStyle.backgroundColor === "string" && /^#[0-9a-f]{6}$/i.test(String(typedStyle.backgroundColor))) {
+  if (typeof typedStyle.backgroundColor === "string" && isSafeHexColor(String(typedStyle.backgroundColor))) {
     safeStyle.backgroundColor = String(typedStyle.backgroundColor);
     safeStyle.background = String(typedStyle.backgroundColor);
   }
 
-  if (typeof typedStyle.fill === "string" && /^#[0-9a-f]{6}$/i.test(String(typedStyle.fill))) {
+  if (typeof typedStyle.fill === "string" && isSafeHexColor(String(typedStyle.fill))) {
     safeStyle.fill = String(typedStyle.fill);
     safeStyle.background = String(typedStyle.fill);
   }
