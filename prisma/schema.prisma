@@ -92,6 +92,15 @@ enum FeedReactionType {
   SUPPORT
 }
 
+enum AttendanceLocationSource {
+  STAFF_QR_SCAN
+  STAFF_FACE_VERIFY
+  EVENT_KIOSK
+  MOBILE_SCANNER
+  EVENT_CHECK_IN
+  VOLUNTARY_SHARE
+}
+
 enum IdTemplateStatus {
   DRAFT
   ACTIVE
@@ -350,6 +359,27 @@ model OfficialAttendance {
 
   official SKOfficial @relation(fields: [officialId], references: [id], onDelete: Cascade)
   event    Event?     @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  locations AttendanceLocation[]
+}
+
+model AttendanceLocation {
+  id             String                   @id @default(cuid())
+  attendanceId   String
+  latitude       Decimal                  @db.Decimal(9, 6)
+  longitude      Decimal                  @db.Decimal(9, 6)
+  accuracy       Float?
+  source         AttendanceLocationSource
+  consentGiven   Boolean                  @default(true)
+  consentText    String?
+  consentVersion String?
+  capturedAt     DateTime
+  createdAt      DateTime                 @default(now())
+
+  attendance OfficialAttendance @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
+
+  @@index([attendanceId])
+  @@index([source])
+  @@index([capturedAt])
 }
 
 model YouthProfile {
