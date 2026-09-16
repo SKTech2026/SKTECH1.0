@@ -11,6 +11,7 @@ import {
 
 import { authOptions } from "@/lib/auth";
 import { orientalMindoroMunicipalitiesGeoJson } from "@/data/oriental-mindoro-municipalities";
+import { getOrientalMindoroLgus } from "@/data/oriental-mindoro-locations";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/roleGuard";
 
@@ -39,6 +40,7 @@ type MunicipalityName = (typeof ORIENTAL_MINDORO_MUNICIPALITIES)[number];
 type MunicipalityAnalytics = {
   name: MunicipalityName;
   databaseId: string | null;
+  barangayCount: number;
   registeredOfficials: number;
   approvedOfficials: number;
   pendingOfficials: number;
@@ -170,6 +172,10 @@ const canonicalBoundaryName = (name: string) =>
 
 const toPercent = (value: number | null) => (value === null ? "N/A" : `${value}%`);
 
+const barangayCountByMunicipality = new Map(
+  getOrientalMindoroLgus().map((lgu) => [lgu.name, lgu.barangayCount]),
+);
+
 const getIntensityClass = (count: number, max: number) => {
   if (max === 0 || count === 0) {
     return "border-glass-border bg-surface-elevated/40 text-muted";
@@ -299,6 +305,7 @@ async function getMunicipalityAnalytics() {
     analyticsByName.set(name, {
       name,
       databaseId: municipality?.id ?? null,
+      barangayCount: barangayCountByMunicipality.get(name) ?? 0,
       registeredOfficials: 0,
       approvedOfficials: 0,
       pendingOfficials: 0,
@@ -415,6 +422,13 @@ export default async function AdminAnalyticsPage() {
   const mostActiveMunicipalities = [...municipalities]
     .sort((a, b) => b.activityCount - a.activityCount || a.name.localeCompare(b.name))
     .slice(0, 5);
+  const totalBarangays = municipalities.reduce(
+    (total, municipality) => total + municipality.barangayCount,
+    0,
+  );
+  const mappedMunicipalities = municipalities.filter(
+    (municipality) => municipality.databaseId !== null,
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -496,29 +510,58 @@ export default async function AdminAnalyticsPage() {
         ))}
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.6fr)]">
-        <article className="rounded-2xl border border-glass-border bg-surface p-5 shadow-[0_18px_36px_-26px_var(--shadow-color)]">
-          <div className="flex flex-wrap items-start justify-between gap-3">
+      <section className="grid gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.55fr)]">
+        <article className="overflow-hidden rounded-2xl border border-sky-300/15 bg-[#071427] shadow-[0_24px_60px_-32px_rgba(8,47,73,0.85)]">
+          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-sky-200/10 bg-[linear-gradient(120deg,rgba(14,165,233,0.16),rgba(15,23,42,0.34)_42%,rgba(20,184,166,0.08))] p-5">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
-                Map Style
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-sky-200">
+                GeoMap Overview
               </p>
-              <h3 className="mt-2 text-lg font-semibold text-foreground">
-                Oriental Mindoro municipality coverage
+              <h3 className="mt-2 text-lg font-semibold text-white">
+                Oriental Mindoro command center
               </h3>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-sky-100/70">
+                Satellite-style overview of municipality-level governance coverage,
+                official admissions, and system activity.
+              </p>
             </div>
-            <MapPinned className="h-5 w-5 text-accent" />
+            <div className="flex items-center gap-2 rounded-full border border-sky-200/20 bg-sky-400/10 px-3 py-1 text-xs font-semibold text-sky-100">
+              <MapPinned className="h-4 w-4" />
+              CSS-only map
+            </div>
           </div>
 
-          <div className="mt-5 rounded-[2rem] border border-glass-border bg-surface-elevated/35 p-4">
-            <div className="overflow-x-auto rounded-[1.5rem] border border-glass-border bg-[linear-gradient(160deg,color-mix(in_oklab,var(--color-accent)_12%,transparent),transparent_42%),linear-gradient(180deg,var(--color-surface),var(--color-surface-elevated))] p-3 sm:p-5">
+          <div className="grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_220px]">
+            <div className="relative overflow-hidden rounded-2xl border border-sky-200/15 bg-[radial-gradient(circle_at_18%_16%,rgba(56,189,248,0.24),transparent_24%),radial-gradient(circle_at_80%_78%,rgba(20,184,166,0.18),transparent_28%),linear-gradient(145deg,#020617,#082f49_48%,#031525)] p-3 shadow-inner sm:p-5">
+              <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(125,211,252,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(125,211,252,0.06)_1px,transparent_1px)] bg-[size:48px_48px]" />
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_52%,rgba(2,6,23,0.74))]" />
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-cyan-200/10 to-transparent" />
+              <div className="relative overflow-x-auto">
               <svg
                 viewBox="0 0 1000 700"
                 role="img"
                 aria-label="Oriental Mindoro municipal boundary map with registered official counts"
-                className="mx-auto min-w-[620px] w-full max-w-[980px]"
+                className="mx-auto min-w-[620px] w-full max-w-[980px] drop-shadow-[0_0_20px_rgba(56,189,248,0.16)]"
               >
                 <title>Oriental Mindoro municipal analytics map</title>
+                <defs>
+                  <filter id="municipalityGlow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="3" result="blur" />
+                    <feMerge>
+                      <feMergeNode in="blur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                  <pattern id="terrainLines" width="36" height="36" patternUnits="userSpaceOnUse">
+                    <path
+                      d="M 0 18 C 8 12, 16 24, 24 18 S 36 12, 36 18"
+                      fill="none"
+                      stroke="rgba(186,230,253,0.12)"
+                      strokeWidth="1"
+                    />
+                  </pattern>
+                </defs>
+                <rect width="1000" height="700" fill="url(#terrainLines)" opacity="0.7" />
                 {orientalMindoroMunicipalitiesGeoJson.features.map((feature) => {
                   const municipalityName = canonicalBoundaryName(feature.properties.name);
                   const municipality = municipalities.find((item) => item.name === municipalityName);
@@ -527,40 +570,104 @@ export default async function AdminAnalyticsPage() {
                   const center = geometryCenter(feature);
                   if (rings.length === 0 || !center) return null;
                   const [labelX, labelY] = center;
+                  const fillOpacity =
+                    maxRegistered === 0
+                      ? 0.18
+                      : Math.max(0.18, municipality.registeredOfficials / maxRegistered);
                   return (
                     <a
                       key={feature.properties.sourceId}
                       href={`#municipality-${municipality.name.replaceAll(" ", "-").toLowerCase()}`}
+                      className="group outline-none"
                     >
                       <path
                         d={geometryPath(feature)}
-                        className="stroke-accent/70 transition hover:brightness-125"
-                        fill="var(--color-accent)"
-                        fillOpacity={maxRegistered === 0 ? 0.08 : Math.max(0.08, municipality.registeredOfficials / maxRegistered)}
-                        strokeWidth="1.5"
+                        className="stroke-cyan-200/75 transition duration-200 group-hover:stroke-white group-hover:brightness-125 group-focus:stroke-white"
+                        fill="rgb(14 165 233)"
+                        fillOpacity={fillOpacity}
+                        strokeWidth="1.8"
                         vectorEffect="non-scaling-stroke"
+                        filter="url(#municipalityGlow)"
                         aria-label={`${municipality.name}: ${formatNumber(municipality.registeredOfficials)} registered officials`}
                       >
-                        <title>{`${municipality.name}: ${formatNumber(municipality.registeredOfficials)} registered, ${formatNumber(municipality.activityCount)} activity records`}</title>
+                        <title>{`${municipality.name}: ${formatNumber(municipality.registeredOfficials)} registered, ${formatNumber(municipality.approvedOfficials)} approved, ${formatNumber(municipality.pendingOfficials)} pending, ${formatNumber(municipality.barangayCount)} barangays`}</title>
                       </path>
+                      <circle
+                        cx={labelX}
+                        cy={labelY - 15}
+                        r={Math.max(4, Math.min(14, municipality.activityCount + municipality.approvedOfficials))}
+                        className="fill-emerald-300/80 stroke-white/70 transition group-hover:fill-white"
+                        strokeWidth="1"
+                      />
                       <text
                         x={labelX}
                         y={labelY}
                         textAnchor="middle"
-                        className="pointer-events-none fill-foreground text-[13px] font-semibold"
+                        className="pointer-events-none fill-white text-[12px] font-semibold drop-shadow-[0_1px_2px_rgba(2,6,23,0.95)]"
                       >
                         {municipality.name.replace(" City", "")}
+                      </text>
+                      <text
+                        x={labelX}
+                        y={labelY + 15}
+                        textAnchor="middle"
+                        className="pointer-events-none fill-sky-100/80 text-[10px] font-medium"
+                      >
+                        {formatNumber(municipality.barangayCount)} brgys
                       </text>
                     </a>
                   );
                 })}
               </svg>
-              <p className="mt-2 text-center text-xs text-muted">
-                Real municipal boundaries from geoBoundaries ADM3 data. Fill intensity reflects live registered official counts.
-              </p>
-              <p className="mt-1 text-center text-xs text-muted">
-                Map boundaries are based on geoBoundaries ADM3 data. Activity indicators use SKTECH system records only, not GPS tracking, and are not a claim of exact legal GIS boundary accuracy.
-              </p>
+              </div>
+              <div className="relative mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-sky-100/75">
+                <span>Satellite-style overview using CSS gradients and SVG boundaries.</span>
+                <span>Map shows municipality-level governance data only. No live GPS tracking is active.</span>
+              </div>
+            </div>
+
+            <div className="grid gap-3 text-sm">
+              <div className="rounded-xl border border-sky-200/15 bg-white/[0.06] p-3">
+                <p className="text-xs uppercase tracking-[0.12em] text-sky-200/70">
+                  LGU Coverage
+                </p>
+                <p className="mt-2 text-2xl font-bold text-white">
+                  {mappedMunicipalities}/{municipalities.length}
+                </p>
+                <p className="mt-1 text-xs text-sky-100/65">
+                  database matched municipalities
+                </p>
+              </div>
+              <div className="rounded-xl border border-sky-200/15 bg-white/[0.06] p-3">
+                <p className="text-xs uppercase tracking-[0.12em] text-sky-200/70">
+                  Barangays
+                </p>
+                <p className="mt-2 text-2xl font-bold text-white">
+                  {formatNumber(totalBarangays)}
+                </p>
+                <p className="mt-1 text-xs text-sky-100/65">
+                  shown from Oriental Mindoro reference data
+                </p>
+              </div>
+              <div className="rounded-xl border border-sky-200/15 bg-white/[0.06] p-3">
+                <p className="text-xs uppercase tracking-[0.12em] text-sky-200/70">
+                  Legend
+                </p>
+                <div className="mt-3 space-y-2 text-xs text-sky-100/75">
+                  <div className="flex items-center gap-2">
+                    <span className="h-3 w-8 rounded-full bg-sky-400/25 ring-1 ring-sky-200/50" />
+                    Lower official count
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="h-3 w-8 rounded-full bg-sky-400/80 ring-1 ring-sky-100/80" />
+                    Higher official count
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="h-3 w-3 rounded-full bg-emerald-300 ring-1 ring-white/70" />
+                    Activity and approved official signal
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </article>
@@ -687,6 +794,12 @@ export default async function AdminAnalyticsPage() {
                 </span>
               </div>
               <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <dt className="text-xs text-muted">Barangays</dt>
+                  <dd className="font-semibold text-foreground">
+                    {formatNumber(municipality.barangayCount)}
+                  </dd>
+                </div>
                 <div>
                   <dt className="text-xs text-muted">Registered</dt>
                   <dd className="font-semibold text-foreground">
