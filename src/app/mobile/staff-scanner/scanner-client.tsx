@@ -8,6 +8,7 @@ import {
   CameraOff,
   CheckCircle2,
   Loader2,
+  MapPin,
   RefreshCcw,
   ScanFace,
   Smartphone,
@@ -62,6 +63,8 @@ type QueueItem = {
 };
 type EventOption = { id: string; title: string; eventDate: string };
 type AttendanceType = "TIME_IN" | "TIME_OUT";
+type LocationShareState = "off" | "requesting" | "ready" | "denied" | "unavailable";
+type CapturedLocation = { latitude: number; longitude: number; accuracy: number | null };
 
 const SCAN_INTERVAL_MS = 500;
 const SCAN_COOLDOWN_MS = 1000;
@@ -171,6 +174,38 @@ export default function MobileStaffScannerClient() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [livenessScore, setLivenessScore] = useState<number | null>(null);
+  const [locationShareState, setLocationShareState] = useState<LocationShareState>("off");
+  const [capturedLocation, setCapturedLocation] = useState<CapturedLocation | null>(null);
+
+  const requestLocationShare = () => {
+    if (locationShareState === "ready") {
+      setCapturedLocation(null);
+      setLocationShareState("off");
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      setLocationShareState("unavailable");
+      return;
+    }
+
+    setLocationShareState("requesting");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setCapturedLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: Number.isFinite(position.coords.accuracy) ? position.coords.accuracy : null,
+        });
+        setLocationShareState("ready");
+      },
+      (positionError) => {
+        setCapturedLocation(null);
+        setLocationShareState(positionError.code === positionError.PERMISSION_DENIED ? "denied" : "unavailable");
+      },
+      { enableHighAccuracy: false, maximumAge: 60_000, timeout: 10_000 },
+    );
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -660,6 +695,25 @@ export default function MobileStaffScannerClient() {
           </div>
           {cameraCount < 2 ? <p className="text-xs text-slate-400">Only one camera is available on this device.</p> : null}
           {!events.length && !eventsLoading ? <p className="text-xs text-amber-300">No events available. Create one in Event Management before scanning.</p> : null}
+          <div className="rounded-xl border border-cyan-300/25 bg-cyan-500/5 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-xs font-semibold text-slate-100">Share check-in location</p>
+                <p className="mt-1 text-[11px] leading-5 text-slate-300">Location sharing is optional and used only to record where this attendance/check-in was made. SKTECH does not track your live movement or collect location in the background.</p>
+              </div>
+              <button type="button" onClick={requestLocationShare} disabled={locationShareState === "requesting"} className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-cyan-300/40 px-2.5 py-2 text-[11px] font-semibold text-slate-100 disabled:cursor-wait disabled:opacity-60">
+                <MapPin className="h-3.5 w-3.5" />
+                {locationShareState === "ready" ? "Turn off" : locationShareState === "requesting" ? "Requesting..." : "Share"}
+              </button>
+            </div>
+            <p className="mt-2 text-[11px] text-slate-400">
+              {locationShareState === "off" ? "Off / not shared" : null}
+              {locationShareState === "requesting" ? "Requesting permission" : null}
+              {locationShareState === "ready" ? `Location ready${capturedLocation?.accuracy ? ` (accuracy ${Math.round(capturedLocation.accuracy)}m)` : ""}` : null}
+              {locationShareState === "denied" ? "Permission denied. Location was not shared." : null}
+              {locationShareState === "unavailable" ? "Location unavailable on this device or browser." : null}
+            </p>
+          </div>
         </div>
 
         {message ? (

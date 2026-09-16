@@ -7,6 +7,7 @@ import {
   Expand,
   Loader2,
   Minimize,
+  MapPin,
   ScanFace,
   ShieldAlert,
   UserCircle2,
@@ -77,6 +78,9 @@ type TrackedFace = {
   box: { top: number; right: number; bottom: number; left: number };
   target: { top: number; right: number; bottom: number; left: number };
 };
+
+type LocationShareState = "off" | "requesting" | "ready" | "denied" | "unavailable";
+type CapturedLocation = { latitude: number; longitude: number; accuracy: number | null };
 
 const KIOSK_INTERVAL_MS = 350;
 const VERIFICATION_FRAME_COUNT = 4;
@@ -203,6 +207,38 @@ export default function EventKioskClient() {
   const [frameSize, setFrameSize] = useState<{ width: number; height: number } | null>(null);
   const [latestMatch, setLatestMatch] = useState<FaceResult | null>(null);
   const [queue, setQueue] = useState<VerificationQueueItem[]>([]);
+  const [locationShareState, setLocationShareState] = useState<LocationShareState>("off");
+  const [capturedLocation, setCapturedLocation] = useState<CapturedLocation | null>(null);
+
+  const requestLocationShare = () => {
+    if (locationShareState === "ready") {
+      setCapturedLocation(null);
+      setLocationShareState("off");
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      setLocationShareState("unavailable");
+      return;
+    }
+
+    setLocationShareState("requesting");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setCapturedLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: Number.isFinite(position.coords.accuracy) ? position.coords.accuracy : null,
+        });
+        setLocationShareState("ready");
+      },
+      (positionError) => {
+        setCapturedLocation(null);
+        setLocationShareState(positionError.code === positionError.PERMISSION_DENIED ? "denied" : "unavailable");
+      },
+      { enableHighAccuracy: false, maximumAge: 60_000, timeout: 10_000 },
+    );
+  };
 
   const drawDetections = useCallback(() => {
     const video = videoRef.current;
@@ -661,6 +697,28 @@ export default function EventKioskClient() {
               placeholder="Optional Event ID"
               className="min-w-[220px] flex-1 rounded-lg border border-glass-border bg-surface-elevated/60 px-3 py-2 text-sm text-foreground outline-none focus:border-accent"
             />
+          </div>
+
+          <div className="mt-4 rounded-xl border border-cyan-300/25 bg-cyan-500/5 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Share check-in location</p>
+                <p className="mt-1 max-w-2xl text-xs leading-5 text-muted">
+                  Location sharing is optional and used only to record where this attendance/check-in was made. SKTECH does not track your live movement or collect location in the background.
+                </p>
+              </div>
+              <button type="button" onClick={requestLocationShare} disabled={locationShareState === "requesting"} className="inline-flex items-center gap-2 rounded-lg border border-cyan-300/40 px-3 py-2 text-xs font-semibold text-foreground disabled:cursor-wait disabled:opacity-60">
+                <MapPin className="h-4 w-4" />
+                {locationShareState === "ready" ? "Turn off" : locationShareState === "requesting" ? "Requesting..." : "Share location"}
+              </button>
+            </div>
+            <p className="mt-2 text-xs text-muted">
+              {locationShareState === "off" ? "Off / not shared" : null}
+              {locationShareState === "requesting" ? "Requesting permission" : null}
+              {locationShareState === "ready" ? `Location ready${capturedLocation?.accuracy ? ` (accuracy ${Math.round(capturedLocation.accuracy)}m)` : ""}` : null}
+              {locationShareState === "denied" ? "Permission denied. Location was not shared." : null}
+              {locationShareState === "unavailable" ? "Location unavailable on this device or browser." : null}
+            </p>
           </div>
 
           {message ? (

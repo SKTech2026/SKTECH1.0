@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Html5Qrcode, type CameraDevice } from "html5-qrcode";
-import { Camera } from "lucide-react";
+import { Camera, MapPin } from "lucide-react";
 
 type ScanResult = {
   success: boolean;
@@ -20,6 +20,8 @@ type EventOption = {
   eventDate: string;
 };
 type AttendanceType = "TIME_IN" | "TIME_OUT";
+type LocationShareState = "off" | "requesting" | "ready" | "denied" | "unavailable";
+type CapturedLocation = { latitude: number; longitude: number; accuracy: number | null };
 
 type RecentAttendanceItem = {
   id: string;
@@ -83,6 +85,38 @@ export default function ScanPage() {
   const [selectedCameraId, setSelectedCameraId] = useState("");
   const selectedCameraIdRef = useRef("");
   const [recentAttendance, setRecentAttendance] = useState<RecentAttendanceItem[]>([]);
+  const [locationShareState, setLocationShareState] = useState<LocationShareState>("off");
+  const [capturedLocation, setCapturedLocation] = useState<CapturedLocation | null>(null);
+
+  const requestLocationShare = () => {
+    if (locationShareState === "ready") {
+      setCapturedLocation(null);
+      setLocationShareState("off");
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      setLocationShareState("unavailable");
+      return;
+    }
+
+    setLocationShareState("requesting");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setCapturedLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: Number.isFinite(position.coords.accuracy) ? position.coords.accuracy : null,
+        });
+        setLocationShareState("ready");
+      },
+      (positionError) => {
+        setCapturedLocation(null);
+        setLocationShareState(positionError.code === positionError.PERMISSION_DENIED ? "denied" : "unavailable");
+      },
+      { enableHighAccuracy: false, maximumAge: 60_000, timeout: 10_000 },
+    );
+  };
 
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const processingRef = useRef(false);
@@ -446,6 +480,25 @@ export default function ScanPage() {
                 {cameras.length < 2 ? <span>Only one camera available</span> : null}
               </div>
               {!selectedEventId ? <p className="mt-2 text-xs text-amber-300">Select an event before scanning.</p> : null}
+              <div className="mt-3 rounded-xl border border-accent/30 bg-accent/5 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-xs font-semibold text-foreground">Share check-in location</p>
+                    <p className="mt-1 text-[11px] leading-5 text-muted">Location sharing is optional and used only to record where this attendance/check-in was made. SKTECH does not track your live movement or collect location in the background.</p>
+                  </div>
+                  <button type="button" onClick={requestLocationShare} disabled={locationShareState === "requesting"} className="inline-flex shrink-0 items-center gap-1 rounded-md border border-accent/40 px-2.5 py-2 text-[11px] font-semibold text-foreground disabled:cursor-wait disabled:opacity-60">
+                    <MapPin className="h-3.5 w-3.5" />
+                    {locationShareState === "ready" ? "Turn off" : locationShareState === "requesting" ? "Requesting..." : "Share"}
+                  </button>
+                </div>
+                <p className="mt-2 text-[11px] text-muted">
+                  {locationShareState === "off" ? "Off / not shared" : null}
+                  {locationShareState === "requesting" ? "Requesting permission" : null}
+                  {locationShareState === "ready" ? `Location ready${capturedLocation?.accuracy ? ` (accuracy ${Math.round(capturedLocation.accuracy)}m)` : ""}` : null}
+                  {locationShareState === "denied" ? "Permission denied. Location was not shared." : null}
+                  {locationShareState === "unavailable" ? "Location unavailable on this device or browser." : null}
+                </p>
+              </div>
             </div>
 
             <div className="bg-black rounded-lg p-3 border-2 border-glass-border">
