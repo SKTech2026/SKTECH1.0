@@ -1,4 +1,4 @@
-import { Prisma, Role } from "@prisma/client";
+import { IdTemplateAssetKind, Prisma, Role } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 import { requireApiRole } from "@/lib/api-auth";
@@ -34,6 +34,8 @@ type CreateFieldInput = {
   sourceKey?: unknown;
   staticValue?: unknown;
   label?: unknown;
+  assetId?: unknown;
+  fit?: unknown;
   styleJson?: unknown;
 };
 
@@ -53,7 +55,8 @@ type ValidatedLayoutField = {
 type ValidatedCreateField = {
   tempId: string;
   side: "FRONT" | "BACK";
-  type: "STATIC_TEXT" | "SHAPE";
+  type: "STATIC_TEXT" | "SHAPE" | "IMAGE";
+  assetId?: string | null;
   xPercent: number;
   yPercent: number;
   widthPercent: number;
@@ -64,6 +67,7 @@ type ValidatedCreateField = {
   sourceKey?: string | null;
   staticValue?: string | null;
   label?: string | null;
+  fit?: "cover" | "contain" | null;
   styleJson?: Prisma.InputJsonObject;
 };
 
@@ -252,6 +256,15 @@ function sanitizeShapeStyleJson(value: unknown): Prisma.InputJsonObject | undefi
   return sanitized as Prisma.InputJsonObject;
 }
 
+function sanitizeImageStyleJson(value: unknown): Prisma.InputJsonObject | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (!isPlainObject(value) || Object.keys(value).length > 0) {
+    throw new Error("IMAGE styleJson must be omitted or empty.");
+  }
+
+  return undefined;
+}
+
 function sanitizeStyleJson(value: unknown, dbField: DbIdTemplateField): Prisma.InputJsonObject | undefined {
   if (value === undefined) return undefined;
   if (!TEXT_FIELD_TYPES.has(dbField.type)) return undefined;
@@ -414,13 +427,14 @@ function validateFields(payloadFields: unknown, dbFields: DbIdTemplateField[]) {
   });
 }
 
-function validateCreateFields(payloadCreates: unknown) {
+function validateCreateFields(payloadCreates: unknown, template: DbIdTemplate) {
   if (payloadCreates === undefined || payloadCreates === null) return [];
   if (!Array.isArray(payloadCreates)) {
     throw new Error("creates must be an array.");
   }
 
   const creates: ValidatedCreateField[] = [];
+  const assetsById = new Map(template.assets.map((asset) => [asset.id, asset]));
 
   for (const item of payloadCreates) {
     if (!isPlainObject(item)) {
@@ -433,16 +447,16 @@ function validateCreateFields(payloadCreates: unknown) {
     }
 
     const tempId = input.tempId.trim();
-    if (!/^local-(text|shape)-/.test(tempId)) {
-      throw new Error("Create tempId must start with local-text- or local-shape-.");
+    if (!/^local-(text|shape|image)-/.test(tempId)) {
+      throw new Error("Create tempId must start with local-text-, local-shape-, or local-image-.");
     }
 
     if (input.side !== "FRONT" && input.side !== "BACK") {
       throw new Error("Create side must be FRONT or BACK.");
     }
 
-    if (input.type !== "STATIC_TEXT" && input.type !== "SHAPE") {
-      throw new Error("Create type must be STATIC_TEXT or SHAPE.");
+    if (input.type !== "STATIC_TEXT" && input.type !== "SHAPE" && input.type !== "IMAGE") {
+      throw new Error("Create type must be STATIC_TEXT, SHAPE, or IMAGE.");
     }
 
     if (input.radius !== undefined && input.radius !== null) {
@@ -454,7 +468,11 @@ function validateCreateFields(payloadCreates: unknown) {
     }
 
     const side = input.side as "FRONT" | "BACK";
-    const type = input.type as "STATIC_TEXT" | "SHAPE";
+    const type = input.type as "STATIC_TEXT" | "SHAPE" | "IMAGE";
+
+    if ((type === "STATIC_TEXT" && !tempId.startsWith("local-text-")) || (type === "SHAPE" && !tempId.startsWith("local-shape-")) || (type === "IMAGE" && !tempId.startsWith("local-image-"))) {
+      throw new Error("Create tempId prefix does not match create type.");
+    }
 
     const create: ValidatedCreateField = {
       tempId,
@@ -502,6 +520,41 @@ function validateCreateFields(payloadCreates: unknown) {
       create.styleJson = sanitizeShapeStyleJson(input.styleJson);
     }
 
+    if (type === "IMAGE") {
+      const itemRecord = item as Record<string, unknown>;
+      for (const unsafeKey of ["url", "src", "imageUrl", "publicUrl", "dataUrl", "base64"]) {
+        if (itemRecord[unsafeKey] !== undefined && itemRecord[unsafeKey] !== null && String(itemRecord[unsafeKey]).trim() !== "") {
+          throw new Error("IMAGE create must not send URLs or raw image data.");
+        }
+      }
+
+      if (input.staticValue !== undefined && input.staticValue !== null && String(input.staticValue).trim() !== "") {
+        throw new Error("IMAGE staticValue must be omitted or empty.");
+      }
+
+      if (typeof input.assetId !== "string" || !input.assetId.trim()) {
+        throw new Error("IMAGE create requires assetId.");
+      }
+
+      const assetId = input.assetId.trim();
+      const asset = assetsById.get(assetId);
+      if (!asset || asset.templateId !== template.id || asset.kind !== IdTemplateAssetKind.IMAGE) {
+        throw new Error("IMAGE asset must belong to the active template.");
+      }
+      if (asset.side && asset.side !== side) {
+        throw new Error("IMAGE asset side must match field side.");
+      }
+      if (!asset.objectPath || asset.publicUrl) {
+        throw new Error("IMAGE asset must be a private uploaded image.");
+      }
+
+      create.assetId = assetId;
+      create.staticValue = null;
+      create.label = input.label === undefined || input.label === null ? "Image" : String(input.label).slice(0, 80);
+      create.fit = input.fit === "cover" || input.fit === "contain" ? input.fit : "contain";
+      create.styleJson = sanitizeImageStyleJson(input.styleJson);
+    }
+
     creates.push(create);
   }
 
@@ -532,6 +585,7 @@ function validateMergedTemplate(template: DbIdTemplate, updates: ValidatedLayout
       templateId: template.id,
       side: create.side,
       type: create.type,
+      assetId: create.assetId ?? null,
       sourceKey: null,
       staticValue: create.staticValue ?? null,
       label: create.label ?? null,
@@ -540,7 +594,7 @@ function validateMergedTemplate(template: DbIdTemplate, updates: ValidatedLayout
       widthPercent: create.widthPercent,
       heightPercent: create.heightPercent,
       zIndex: create.zIndex,
-      fit: null,
+      fit: create.fit ?? null,
       radius: create.radius ?? null,
       styleJson: create.styleJson ?? undefined,
       visible: create.visible,
@@ -691,7 +745,7 @@ export async function PATCH(request: Request) {
     }
 
     const updates = validateFields(body.fields, activeTemplate.fields as DbIdTemplateField[]);
-    const creates = validateCreateFields(body.creates);
+    const creates = validateCreateFields(body.creates, activeTemplate as DbIdTemplate);
     validateMergedTemplate(activeTemplate as DbIdTemplate, updates, creates);
 
     const dbFieldMap = new Map(activeTemplate.fields.map((field) => [field.id, field]));
@@ -760,6 +814,7 @@ export async function PATCH(request: Request) {
               templateId: activeTemplate.id,
               side: create.side,
               type: create.type,
+              assetId: create.assetId ?? null,
               sourceKey: null,
               staticValue: create.staticValue ?? null,
               label: create.label ?? null,
@@ -768,7 +823,7 @@ export async function PATCH(request: Request) {
               widthPercent: create.widthPercent,
               heightPercent: create.heightPercent,
               zIndex: create.zIndex,
-              fit: null,
+              fit: create.fit ?? null,
               radius: create.radius ?? null,
               visible: create.visible,
               styleJson: create.styleJson ?? undefined,

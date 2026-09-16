@@ -16,7 +16,9 @@ export type IdTemplateTextStyle = {
 export type IdTemplateField = {
   id: string;
   type: IdTemplateFieldType;
+  assetId?: string;
   sourceKey?: string;
+  imageUrl?: string;
   value?: string;
   xPercent: number;
   yPercent: number;

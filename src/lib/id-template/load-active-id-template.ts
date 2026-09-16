@@ -30,6 +30,8 @@ export interface DbIdTemplateField {
   templateId: string;
   side: string;
   type: string;
+  assetId: string | null;
+  asset: DbIdTemplateAsset | null;
   sourceKey: string | null;
   staticValue: string | null;
   label: string | null;
@@ -81,6 +83,9 @@ export async function loadActiveIdTemplate(): Promise<DbIdTemplate | null> {
       include: {
         fields: {
           where: { visible: true },
+          include: {
+            asset: true,
+          },
           orderBy: [{ side: "asc" }, { zIndex: "asc" }, { createdAt: "asc" }],
         },
         assets: {

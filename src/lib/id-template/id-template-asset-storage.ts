@@ -15,7 +15,7 @@ const ID_TEMPLATE_ASSET_MIME_TYPES: Readonly<Record<string, string>> = {
 };
 
 const TEMPLATE_ASSET_PATH_PATTERN =
-  /^id-templates\/[a-zA-Z0-9_-]{1,64}\/[a-zA-Z0-9_-]{1,64}\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{12}\.(jpg|png|webp)$/i;
+  /^id-templates\/[a-zA-Z0-9_-]{1,64}\/[a-zA-Z0-9_-]{1,64}\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png|webp)$/i;
 
 type BucketError = {
   status?: number;

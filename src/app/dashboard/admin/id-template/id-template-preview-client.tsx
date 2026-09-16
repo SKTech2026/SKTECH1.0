@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Square, Trash2, Type } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { ImageIcon, Square, Trash2, Type } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 
 import IdTemplateRenderer from "@/components/id-template/IdTemplateRenderer";
@@ -49,6 +49,9 @@ const DEMO_DATA: OfficialIdTemplateData = {
   skfedPosition: "SK CHAIRPERSON",
 };
 
+const MAX_IMAGE_UPLOAD_BYTES = 2 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+
 type IdTemplatePreviewClientProps = {
   template: IdTemplate;
   templateName: string;
@@ -64,6 +67,15 @@ type AdminTemplateResponse = {
   success?: boolean;
   template?: IdTemplate;
   templateName?: string;
+};
+
+type AssetUploadResponse = {
+  success?: boolean;
+  error?: string;
+  asset?: {
+    id?: string;
+    url?: string;
+  };
 };
 
 type DragState = {
@@ -109,8 +121,11 @@ export default function IdTemplatePreviewClient({
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
   const [backgroundDrafts, setBackgroundDrafts] = useState<Record<IdTemplateSide, string>>({
     front: "",
     back: "",
@@ -342,7 +357,7 @@ export default function IdTemplatePreviewClient({
   };
 
   const addElement = (type: "staticText" | "shape") => {
-    if (isLoading || isSaving) return;
+    if (isLoading || isSaving || isUploadingImage) return;
     const id = `local-${type === "staticText" ? "text" : "shape"}-${crypto.randomUUID()}`;
     const field: IdTemplateField = {
       id, type, xPercent: 38, yPercent: 40, widthPercent: 24,
@@ -359,8 +374,74 @@ export default function IdTemplatePreviewClient({
     setSaveError(null);
   };
 
+  const uploadImageAsset = async (file: File) => {
+    if (isLoading || isSaving || isUploadingImage) return;
+
+    setUploadError(null);
+    setSaveMessage(null);
+    setSaveError(null);
+
+    if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+      setUploadError("Only PNG, JPG, or WebP images can be uploaded.");
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_UPLOAD_BYTES) {
+      setUploadError("Image is too large. Maximum size is 2MB.");
+      return;
+    }
+
+    setIsUploadingImage(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("side", side === "front" ? "FRONT" : "BACK");
+
+      const response = await fetch("/api/admin/id-template/assets", {
+        method: "POST",
+        body: formData,
+      });
+      const result = (await response.json().catch(() => null)) as AssetUploadResponse | null;
+
+      if (!response.ok || !result?.asset?.id || !result.asset.url) {
+        throw new Error(result?.error ?? "Unable to upload image.");
+      }
+
+      const id = `local-image-${Date.now()}-${crypto.randomUUID()}`;
+      const field: IdTemplateField = {
+        id,
+        type: "image",
+        assetId: result.asset.id,
+        imageUrl: result.asset.url,
+        xPercent: 34,
+        yPercent: 34,
+        widthPercent: 24,
+        heightPercent: 24,
+        zIndex: Math.min(1000, Math.max(0, ...currentFields.map((item) => item.zIndex ?? 0)) + 1),
+        visible: true,
+        fit: "contain",
+      };
+
+      setTemplateState((current) => ({
+        ...current,
+        sides: {
+          ...current.sides,
+          [side]: {
+            fields: [...current.sides[side].fields, field],
+          },
+        },
+      }));
+      setSelectedId(id);
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : "Unable to upload image.");
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
   const removeLocalElement = () => {
-    if (!selectedField || savedIds.has(selectedField.id) || !["staticText", "shape"].includes(selectedField.type)) return;
+    if (!selectedField || savedIds.has(selectedField.id) || !["staticText", "shape", "image"].includes(selectedField.type)) return;
     setDragState(null);
     const fields = currentFields.filter((field) => field.id !== selectedField.id);
     setTemplateState((current) => ({ ...current, sides: { ...current.sides, [side]: { fields } } }));
@@ -415,6 +496,25 @@ export default function IdTemplatePreviewClient({
             <button type="button" onClick={() => addElement("shape")} className="inline-flex items-center gap-2 rounded-lg border border-glass-border px-3 py-2 text-sm font-semibold">
               <Square size={16} aria-hidden="true" /> Add Shape
             </button>
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="sr-only"
+              onChange={(event) => {
+                const file = event.target.files?.[0] ?? null;
+                event.target.value = "";
+                if (file) void uploadImageAsset(file);
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => imageInputRef.current?.click()}
+              disabled={isLoading || isSaving || isUploadingImage}
+              className="inline-flex items-center gap-2 rounded-lg border border-glass-border px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <ImageIcon size={16} aria-hidden="true" /> {isUploadingImage ? "Uploading..." : "Add Image"}
+            </button>
             {isDirty ? (
               <span className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-200">
                 Unsaved changes
@@ -443,7 +543,12 @@ export default function IdTemplatePreviewClient({
             </Link>
           </div>
         </div>
-        {localFields.length > 0 ? <p role="status" className="mt-3 text-sm text-amber-200">New elements will be saved when you click Save Template.</p> : null}
+        {localFields.length > 0 ? <p role="status" className="mt-3 text-sm text-amber-200">New elements, including uploaded images, will be saved when you click Save Template.</p> : null}
+        {uploadError ? (
+          <p className="mt-4 rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm font-semibold text-rose-200">
+            {uploadError}
+          </p>
+        ) : null}
         {isDirty ? <p className="mt-2 text-sm text-amber-200">Reset discards unsaved changes and restores the latest saved template.</p> : null}
         {saveMessage ? (
           <p className="mt-4 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-200">
@@ -831,7 +936,7 @@ function serializeTemplate(template: IdTemplate) {
 }
 
 function isLocalElementId(id: string) {
-  return id.startsWith("local-text-") || id.startsWith("local-shape-");
+  return id.startsWith("local-text-") || id.startsWith("local-shape-") || id.startsWith("local-image-");
 }
 
 function findBackgroundField(template: IdTemplate, side: IdTemplateSide) {
@@ -882,7 +987,7 @@ function radiusPixels(radius?: string) {
 
 function buildSaveFields(template: IdTemplate) {
   return [...template.sides.front.fields, ...template.sides.back.fields]
-    .filter((field) => !field.id.startsWith("local-text-") && !field.id.startsWith("local-shape-"))
+    .filter((field) => !isLocalElementId(field.id))
     .map((field) => ({
       id: field.id,
       xPercent: field.xPercent,
@@ -904,11 +1009,11 @@ function buildCreateFields(template: IdTemplate) {
 
   for (const side of ["front", "back"] as const) {
     for (const field of template.sides[side].fields) {
-      if (!field.id.startsWith("local-text-") && !field.id.startsWith("local-shape-")) {
+      if (!isLocalElementId(field.id)) {
         continue;
       }
 
-      const type = field.type === "staticText" ? "STATIC_TEXT" : field.type === "shape" ? "SHAPE" : null;
+      const type = field.type === "staticText" ? "STATIC_TEXT" : field.type === "shape" ? "SHAPE" : field.type === "image" ? "IMAGE" : null;
       if (!type) continue;
 
       const create: Record<string, unknown> = {
@@ -933,6 +1038,12 @@ function buildCreateFields(template: IdTemplate) {
         create.radius = radiusPixels(field.radius) / 16;
         create.styleJson = sanitizeShapeStyle(field);
         create.label = "Shape";
+      }
+
+      if (type === "IMAGE") {
+        create.assetId = field.assetId;
+        create.fit = field.fit === "cover" ? "cover" : "contain";
+        create.label = "Image";
       }
 
       creates.push(create);
@@ -1002,7 +1113,7 @@ function applyCreatedFieldIds(template: IdTemplate, createdFieldIdMap: Record<st
 
   for (const side of ["front", "back"] as const) {
     next.sides[side].fields = next.sides[side].fields.map((field) => {
-      if (!field.id.startsWith("local-text-") && !field.id.startsWith("local-shape-")) {
+      if (!isLocalElementId(field.id)) {
         return field;
       }
 

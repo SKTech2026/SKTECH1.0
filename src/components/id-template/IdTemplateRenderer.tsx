@@ -42,6 +42,23 @@ function resolveFieldText(field: IdTemplateField, data: OfficialIdTemplateData) 
   return safeValue(data[field.sourceKey]);
 }
 
+function resolveImageSource(field: IdTemplateField, data: OfficialIdTemplateData) {
+  if (field.assetId) {
+    return `/api/id-template/assets/${encodeURIComponent(field.assetId)}`;
+  }
+
+  if (field.sourceKey) {
+    return safeValue(data[field.sourceKey], DEFAULT_IMAGE_URL);
+  }
+
+  const imageUrl = safeValue(field.imageUrl, DEFAULT_IMAGE_URL);
+  if (imageUrl.startsWith("/api/id-template/assets/")) {
+    return imageUrl;
+  }
+
+  return DEFAULT_IMAGE_URL;
+}
+
 function boxStyle(field: IdTemplateField): CSSProperties {
   return {
     position: "absolute",
@@ -88,7 +105,7 @@ function renderImageField(
   data: OfficialIdTemplateData,
   onImageError?: (source: string) => void,
 ) {
-  const source = field.sourceKey ? safeValue(data[field.sourceKey], DEFAULT_IMAGE_URL) : DEFAULT_IMAGE_URL;
+  const source = resolveImageSource(field, data);
   const fit = field.fit ?? "contain";
 
   return (
@@ -106,7 +123,7 @@ function renderImageField(
         fill
         className={fit === "cover" ? "object-cover" : "object-contain"}
         sizes="220px"
-        unoptimized={source.startsWith("/api/official/photo")}
+        unoptimized={source.startsWith("/api/official/photo") || source.startsWith("/api/id-template/assets/")}
         onError={() => onImageError?.(source)}
       />
     </div>

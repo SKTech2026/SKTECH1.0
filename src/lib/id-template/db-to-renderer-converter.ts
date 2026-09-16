@@ -12,7 +12,8 @@ import type {
   IdTemplateFieldType,
   IdTemplateTextStyle,
 } from "@/components/id-template/default-template";
-import type { DbIdTemplate, DbIdTemplateField } from "@/lib/id-template/load-active-id-template";
+import { buildIdTemplateAssetUrl } from "@/lib/id-template/id-template-asset-storage";
+import type { DbIdTemplate, DbIdTemplateAsset, DbIdTemplateField } from "@/lib/id-template/load-active-id-template";
 
 /**
  * Map database field type enum to code type string
@@ -128,10 +129,24 @@ function parseStyleJson(styleJson: Record<string, unknown> | null): IdTemplateTe
   return Object.keys(style).length > 0 ? style : undefined;
 }
 
+function resolveImageAsset(dbField: DbIdTemplateField, assetsById: Map<string, DbIdTemplateAsset>) {
+  if (dbField.type !== "IMAGE" || !dbField.assetId) return null;
+
+  const asset = dbField.asset ?? assetsById.get(dbField.assetId) ?? null;
+  if (!asset) return null;
+  if (asset.id !== dbField.assetId) return null;
+  if (asset.templateId !== dbField.templateId) return null;
+  if (asset.kind !== "IMAGE") return null;
+  if (asset.side !== dbField.side) return null;
+  if (!asset.objectPath || asset.publicUrl) return null;
+
+  return asset;
+}
+
 /**
  * Convert a DB field to the code renderer field format
  */
-function convertDbFieldToRenderer(dbField: DbIdTemplateField): IdTemplateField {
+function convertDbFieldToRenderer(dbField: DbIdTemplateField, assetsById: Map<string, DbIdTemplateAsset>): IdTemplateField {
   const field: IdTemplateField = {
     id: dbField.id,
     type: mapDbFieldType(dbField.type),
@@ -148,6 +163,12 @@ function convertDbFieldToRenderer(dbField: DbIdTemplateField): IdTemplateField {
 
   if (dbField.sourceKey) {
     field.sourceKey = dbField.sourceKey;
+  }
+
+  const imageAsset = resolveImageAsset(dbField, assetsById);
+  if (imageAsset) {
+    field.assetId = imageAsset.id;
+    field.imageUrl = buildIdTemplateAssetUrl(imageAsset.id);
   }
 
   if (dbField.staticValue) {
@@ -193,13 +214,14 @@ export function convertDbTemplateToRendererTemplate(dbTemplate: DbIdTemplate | n
     }
 
     // Separate fields by side
+    const assetsById = new Map(dbTemplate.assets.map((asset) => [asset.id, asset]));
     const frontFields = dbTemplate.fields
       .filter((f) => mapDbSide(f.side) === "front")
-      .map((f) => convertDbFieldToRenderer(f));
+      .map((f) => convertDbFieldToRenderer(f, assetsById));
 
     const backFields = dbTemplate.fields
       .filter((f) => mapDbSide(f.side) === "back")
-      .map((f) => convertDbFieldToRenderer(f));
+      .map((f) => convertDbFieldToRenderer(f, assetsById));
 
     // Reconstruct the renderer template
     const rendererTemplate: IdTemplate = {
