@@ -426,8 +426,13 @@ export default async function AdminAnalyticsPage() {
     (total, municipality) => total + municipality.barangayCount,
     0,
   );
-  const mappedMunicipalities = municipalities.filter(
-    (municipality) => municipality.databaseId !== null,
+  const representedMunicipalities = orientalMindoroMunicipalitiesGeoJson.features.filter(
+    (feature) =>
+      Boolean(
+        municipalities.find(
+          (municipality) => municipality.name === canonicalBoundaryName(feature.properties.name),
+        ),
+      ),
   ).length;
 
   return (
@@ -510,7 +515,7 @@ export default async function AdminAnalyticsPage() {
         ))}
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.55fr)]">
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(340px,0.5fr)]">
         <article className="overflow-hidden rounded-2xl border border-sky-300/15 bg-[#071427] shadow-[0_24px_60px_-32px_rgba(8,47,73,0.85)]">
           <div className="flex flex-wrap items-start justify-between gap-3 border-b border-sky-200/10 bg-[linear-gradient(120deg,rgba(14,165,233,0.16),rgba(15,23,42,0.34)_42%,rgba(20,184,166,0.08))] p-5">
             <div>
@@ -531,18 +536,18 @@ export default async function AdminAnalyticsPage() {
             </div>
           </div>
 
-          <div className="grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_220px]">
+          <div className="grid gap-5 p-4 sm:p-5 2xl:grid-cols-[minmax(0,1fr)_minmax(210px,240px)]">
             <div className="relative overflow-hidden rounded-2xl border border-sky-200/15 bg-[radial-gradient(circle_at_18%_16%,rgba(56,189,248,0.24),transparent_24%),radial-gradient(circle_at_80%_78%,rgba(20,184,166,0.18),transparent_28%),linear-gradient(145deg,#020617,#082f49_48%,#031525)] p-3 shadow-inner sm:p-5">
               <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(125,211,252,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(125,211,252,0.06)_1px,transparent_1px)] bg-[size:48px_48px]" />
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_52%,rgba(2,6,23,0.74))]" />
               <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-cyan-200/10 to-transparent" />
-              <div className="relative overflow-x-auto">
-              <svg
-                viewBox="0 0 1000 700"
-                role="img"
-                aria-label="Oriental Mindoro municipal boundary map with registered official counts"
-                className="mx-auto min-w-[620px] w-full max-w-[980px] drop-shadow-[0_0_20px_rgba(56,189,248,0.16)]"
-              >
+              <div className="relative overflow-hidden">
+                <svg
+                  viewBox="0 0 1000 700"
+                  role="img"
+                  aria-label="Oriental Mindoro municipal boundary map with registered official counts"
+                  className="mx-auto aspect-[10/7] h-auto w-full max-w-[1040px] drop-shadow-[0_0_20px_rgba(56,189,248,0.16)]"
+                >
                 <title>Oriental Mindoro municipal analytics map</title>
                 <defs>
                   <filter id="municipalityGlow" x="-20%" y="-20%" width="140%" height="140%">
@@ -618,7 +623,7 @@ export default async function AdminAnalyticsPage() {
                     </a>
                   );
                 })}
-              </svg>
+                </svg>
               </div>
               <div className="relative mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-sky-100/75">
                 <span>Satellite-style overview using CSS gradients and SVG boundaries.</span>
@@ -626,16 +631,16 @@ export default async function AdminAnalyticsPage() {
               </div>
             </div>
 
-            <div className="grid gap-3 text-sm">
+            <div className="grid gap-3 text-sm sm:grid-cols-3 2xl:grid-cols-1">
               <div className="rounded-xl border border-sky-200/15 bg-white/[0.06] p-3">
                 <p className="text-xs uppercase tracking-[0.12em] text-sky-200/70">
                   LGU Coverage
                 </p>
                 <p className="mt-2 text-2xl font-bold text-white">
-                  {mappedMunicipalities}/{municipalities.length}
+                  {representedMunicipalities}/{municipalities.length}
                 </p>
                 <p className="mt-1 text-xs text-sky-100/65">
-                  database matched municipalities
+                  municipality boundaries represented
                 </p>
               </div>
               <div className="rounded-xl border border-sky-200/15 bg-white/[0.06] p-3">
