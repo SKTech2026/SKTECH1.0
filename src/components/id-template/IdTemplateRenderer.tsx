@@ -106,7 +106,10 @@ function renderImageField(
   onImageError?: (source: string) => void,
 ) {
   const source = resolveImageSource(field, data);
-  const fit = field.fit ?? "contain";
+  const fit = field.fit === "cover" || field.fit === "fill" ? field.fit : "contain";
+  const imageZoom = clampValue(field.style?.imageZoom ?? 1, 1, 3) ?? 1;
+  const objectPositionX = clampValue(field.style?.objectPositionX ?? 50, 0, 100) ?? 50;
+  const objectPositionY = clampValue(field.style?.objectPositionY ?? 50, 0, 100) ?? 50;
 
   return (
     <div
@@ -121,7 +124,13 @@ function renderImageField(
         src={source}
         alt=""
         fill
-        className={fit === "cover" ? "object-cover" : "object-contain"}
+        className=""
+        style={{
+          objectFit: fit,
+          objectPosition: `${objectPositionX}% ${objectPositionY}%`,
+          transform: `scale(${imageZoom})`,
+          transformOrigin: `${objectPositionX}% ${objectPositionY}%`,
+        }}
         sizes="220px"
         unoptimized={source.startsWith("/api/official/photo") || source.startsWith("/api/id-template/assets/")}
         onError={() => onImageError?.(source)}

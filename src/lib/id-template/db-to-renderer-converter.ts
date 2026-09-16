@@ -48,12 +48,12 @@ function mapDbSide(dbSide: string): IdTemplateSide {
 /**
  * Convert a DB field's styleJson to code's style object
  */
-function parseStyleJson(styleJson: Record<string, unknown> | null): IdTemplateTextStyle & { background?: string; backgroundColor?: string; fill?: string; color?: string; borderColor?: string; borderWidth?: number; borderRadius?: number; border?: string; opacity?: number } | undefined {
+function parseStyleJson(styleJson: Record<string, unknown> | null): IdTemplateTextStyle & { background?: string; backgroundColor?: string; fill?: string; color?: string; borderColor?: string; borderWidth?: number; borderRadius?: number; border?: string; opacity?: number; imageZoom?: number; objectPositionX?: number; objectPositionY?: number } | undefined {
   if (!styleJson || typeof styleJson !== "object") {
     return undefined;
   }
 
-  const style: IdTemplateTextStyle & { background?: string; backgroundColor?: string; fill?: string; color?: string; borderColor?: string; borderWidth?: number; borderRadius?: number; border?: string; opacity?: number } = {};
+  const style: IdTemplateTextStyle & { background?: string; backgroundColor?: string; fill?: string; color?: string; borderColor?: string; borderWidth?: number; borderRadius?: number; border?: string; opacity?: number; imageZoom?: number; objectPositionX?: number; objectPositionY?: number } = {};
 
   if ("fontSize" in styleJson && typeof styleJson.fontSize === "number") {
     style.fontSize = styleJson.fontSize;
@@ -125,6 +125,15 @@ function parseStyleJson(styleJson: Record<string, unknown> | null): IdTemplateTe
   if ("opacity" in styleJson && typeof styleJson.opacity === "number") {
     style.opacity = styleJson.opacity;
   }
+  if ("imageZoom" in styleJson && typeof styleJson.imageZoom === "number" && Number.isFinite(styleJson.imageZoom)) {
+    style.imageZoom = Math.min(Math.max(styleJson.imageZoom, 1), 3);
+  }
+  if ("objectPositionX" in styleJson && typeof styleJson.objectPositionX === "number" && Number.isFinite(styleJson.objectPositionX)) {
+    style.objectPositionX = Math.min(Math.max(styleJson.objectPositionX, 0), 100);
+  }
+  if ("objectPositionY" in styleJson && typeof styleJson.objectPositionY === "number" && Number.isFinite(styleJson.objectPositionY)) {
+    style.objectPositionY = Math.min(Math.max(styleJson.objectPositionY, 0), 100);
+  }
 
   return Object.keys(style).length > 0 ? style : undefined;
 }
@@ -176,7 +185,9 @@ function convertDbFieldToRenderer(dbField: DbIdTemplateField, assetsById: Map<st
   }
 
   if (dbField.fit) {
-    field.fit = dbField.fit as "cover" | "contain";
+    if (dbField.fit === "cover" || dbField.fit === "contain" || dbField.fit === "fill") {
+      field.fit = dbField.fit;
+    }
   }
 
   if (dbField.radius !== null && dbField.radius !== undefined) {

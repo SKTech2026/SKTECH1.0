@@ -773,6 +773,35 @@ export default function IdTemplatePreviewClient({
                       </label>
                     </div>
                   ) : null}
+                  {selectedField.type === "image" ? (
+                    <div className="space-y-3 rounded-xl border border-glass-border bg-surface-elevated/30 p-3">
+                      <label className="block text-xs font-semibold text-muted">
+                        Fit
+                        <select className="mt-1 w-full rounded-lg border border-glass-border bg-surface-elevated p-2 text-sm text-foreground" value={selectedField.fit ?? "contain"} onChange={(event) => updateSelectedField({ fit: event.target.value as "cover" | "contain" | "fill" })}>
+                          <option value="cover">Cover</option>
+                          <option value="contain">Contain</option>
+                          <option value="fill">Fill</option>
+                        </select>
+                      </label>
+                      <label className="block text-xs font-semibold text-muted">Zoom: {(selectedField.style?.imageZoom ?? 1).toFixed(2)}x
+                        <input type="range" min={1} max={3} step={0.05} value={selectedField.style?.imageZoom ?? 1} onChange={(event) => updateSelectedStyle({ imageZoom: clampValue(event.target.valueAsNumber, 1, 3) })} className="mt-1 w-full" />
+                      </label>
+                      <label className="block text-xs font-semibold text-muted">Position X: {Math.round(selectedField.style?.objectPositionX ?? 50)}%
+                        <input type="range" min={0} max={100} step={1} value={selectedField.style?.objectPositionX ?? 50} onChange={(event) => updateSelectedStyle({ objectPositionX: clampValue(event.target.valueAsNumber, 0, 100) })} className="mt-1 w-full" />
+                      </label>
+                      <label className="block text-xs font-semibold text-muted">Position Y: {Math.round(selectedField.style?.objectPositionY ?? 50)}%
+                        <input type="range" min={0} max={100} step={1} value={selectedField.style?.objectPositionY ?? 50} onChange={(event) => updateSelectedStyle({ objectPositionY: clampValue(event.target.valueAsNumber, 0, 100) })} className="mt-1 w-full" />
+                      </label>
+                      <label className="block text-xs font-semibold text-muted">Radius: {Math.round(radiusPixels(selectedField.radius))}
+                        <input type="range" min={0} max={100} step={1} value={radiusPixels(selectedField.radius)} onChange={(event) => updateSelectedField({ radius: `${clampValue(event.target.valueAsNumber, 0, 100)}px` })} className="mt-1 w-full" />
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <button type="button" className="rounded-lg border border-glass-border px-2 py-2 text-xs font-semibold" onClick={() => updateSelectedField({ radius: "0px" })}>Square</button>
+                        <button type="button" className="rounded-lg border border-glass-border px-2 py-2 text-xs font-semibold" onClick={() => updateSelectedField({ radius: "12px" })}>Rounded</button>
+                        <button type="button" className="rounded-lg border border-glass-border px-2 py-2 text-xs font-semibold" onClick={() => updateSelectedField({ radius: "100px" })}>Circle</button>
+                      </div>
+                    </div>
+                  ) : null}
                   <button type="button" onClick={removeLocalElement} disabled={savedIds.has(selectedField.id)} className="inline-flex items-center gap-2 rounded-lg border border-glass-border px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50">
                     <Trash2 size={16} aria-hidden="true" /> Remove element
                   </button>
@@ -998,6 +1027,11 @@ function buildSaveFields(template: IdTemplate) {
       visible: field.visible !== false,
       ...(field.type === "staticText" ? { staticValue: field.value ?? "" } : {}),
       ...(field.type === "shape" ? { radius: radiusPixels(field.radius) / 16, styleJson: sanitizeShapeStyle(field) } : {}),
+      ...(field.type === "image" ? {
+        fit: field.fit === "cover" || field.fit === "fill" ? field.fit : "contain",
+        radius: radiusPixels(field.radius) / 16,
+        styleJson: sanitizeImageStyle(field),
+      } : {}),
       ...(field.type === "text" || field.type === "staticText"
         ? { styleJson: sanitizeTextStyle(field.style) }
         : {}),
@@ -1042,7 +1076,9 @@ function buildCreateFields(template: IdTemplate) {
 
       if (type === "IMAGE") {
         create.assetId = field.assetId;
-        create.fit = field.fit === "cover" ? "cover" : "contain";
+        create.fit = field.fit === "cover" || field.fit === "fill" ? field.fit : "contain";
+        create.radius = radiusPixels(field.radius) / 16;
+        create.styleJson = sanitizeImageStyle(field);
         create.label = "Image";
       }
 
@@ -1103,6 +1139,23 @@ function sanitizeShapeStyle(field: IdTemplateField) {
 
   if (typeof typedStyle.opacity === "number" && Number.isFinite(typedStyle.opacity)) {
     safeStyle.opacity = clampValue(Number(typedStyle.opacity), 0, 1);
+  }
+
+  return Object.keys(safeStyle).length > 0 ? safeStyle : undefined;
+}
+
+function sanitizeImageStyle(field: IdTemplateField) {
+  const style = field.style as Record<string, unknown> | undefined;
+  const safeStyle: Record<string, number> = {};
+
+  if (typeof style?.imageZoom === "number" && Number.isFinite(style.imageZoom)) {
+    safeStyle.imageZoom = clampValue(style.imageZoom, 1, 3);
+  }
+  if (typeof style?.objectPositionX === "number" && Number.isFinite(style.objectPositionX)) {
+    safeStyle.objectPositionX = clampValue(style.objectPositionX, 0, 100);
+  }
+  if (typeof style?.objectPositionY === "number" && Number.isFinite(style.objectPositionY)) {
+    safeStyle.objectPositionY = clampValue(style.objectPositionY, 0, 100);
   }
 
   return Object.keys(safeStyle).length > 0 ? safeStyle : undefined;

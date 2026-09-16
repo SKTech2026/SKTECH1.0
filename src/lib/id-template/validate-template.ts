@@ -94,7 +94,27 @@ function validateField(field: IdTemplateField): IdTemplateField | null {
     return sanitized;
   }
 
-  return field;
+  if (field.type !== "image") return field;
+
+  const sanitized = { ...field };
+  if (sanitized.fit !== undefined && sanitized.fit !== "cover" && sanitized.fit !== "contain" && sanitized.fit !== "fill") {
+    delete sanitized.fit;
+  }
+  if (sanitized.style) {
+    const style = { ...sanitized.style };
+    for (const key of ["imageZoom", "objectPositionX", "objectPositionY"] as const) {
+      const value = style[key];
+      if (typeof value !== "number" || !Number.isFinite(value)) {
+        delete style[key];
+      } else if (key === "imageZoom") {
+        style[key] = Math.min(Math.max(value, 1), 3);
+      } else {
+        style[key] = Math.min(Math.max(value, 0), 100);
+      }
+    }
+    sanitized.style = style;
+  }
+  return sanitized;
 }
 
 /**

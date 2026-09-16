@@ -16,6 +16,7 @@ type LayoutFieldInput = {
   zIndex?: unknown;
   visible?: unknown;
   radius?: unknown;
+  fit?: unknown;
   staticValue?: unknown;
   styleJson?: unknown;
 };
@@ -48,6 +49,7 @@ type ValidatedLayoutField = {
   zIndex: number;
   visible: boolean;
   radius?: number | null;
+  fit?: "cover" | "contain" | "fill" | null;
   staticValue?: string | null;
   styleJson?: Prisma.InputJsonObject;
 };
@@ -67,7 +69,7 @@ type ValidatedCreateField = {
   sourceKey?: string | null;
   staticValue?: string | null;
   label?: string | null;
-  fit?: "cover" | "contain" | null;
+  fit?: "cover" | "contain" | "fill" | null;
   styleJson?: Prisma.InputJsonObject;
 };
 
@@ -258,11 +260,21 @@ function sanitizeShapeStyleJson(value: unknown): Prisma.InputJsonObject | undefi
 
 function sanitizeImageStyleJson(value: unknown): Prisma.InputJsonObject | undefined {
   if (value === undefined || value === null) return undefined;
-  if (!isPlainObject(value) || Object.keys(value).length > 0) {
-    throw new Error("IMAGE styleJson must be omitted or empty.");
+  if (!isPlainObject(value)) {
+    throw new Error("IMAGE styleJson must be an object.");
   }
 
-  return undefined;
+  const sanitized: Record<string, Prisma.InputJsonValue> = {};
+  for (const [key, styleValue] of Object.entries(value)) {
+    if (key !== "imageZoom" && key !== "objectPositionX" && key !== "objectPositionY") {
+      throw new Error(`IMAGE styleJson contains unsafe key: ${key}.`);
+    }
+
+    const range = key === "imageZoom" ? [1, 3] : [0, 100];
+    sanitized[key] = readFiniteNumber(styleValue, key, range[0], range[1]);
+  }
+
+  return Object.keys(sanitized).length > 0 ? (sanitized as Prisma.InputJsonObject) : undefined;
 }
 
 function sanitizeStyleJson(value: unknown, dbField: DbIdTemplateField): Prisma.InputJsonObject | undefined {
@@ -402,6 +414,9 @@ function validateFields(payloadFields: unknown, dbFields: DbIdTemplateField[]) {
     }
 
     if (dbField.type === "SHAPE") {
+      if (input.fit !== undefined) {
+        throw new Error("Only IMAGE fields may update fit.");
+      }
       if (input.radius !== undefined && input.radius !== null) {
         base.radius = readFiniteNumber(input.radius, "radius", 0, 100);
       }
@@ -413,11 +428,32 @@ function validateFields(payloadFields: unknown, dbFields: DbIdTemplateField[]) {
     }
 
     if (dbField.type === "TEXT" || dbField.type === "STATIC_TEXT") {
+      if (input.fit !== undefined) {
+        throw new Error("Only IMAGE fields may update fit.");
+      }
       return {
         ...base,
         styleJson: sanitizeStyleJson(input.styleJson, dbField),
         staticValue: base.staticValue,
       } as ValidatedLayoutField;
+    }
+
+    if (dbField.type === "IMAGE") {
+      if (input.fit !== "cover" && input.fit !== "contain" && input.fit !== "fill") {
+        throw new Error("IMAGE fit must be cover, contain, or fill.");
+      }
+      if (input.radius !== undefined && input.radius !== null) {
+        base.radius = readFiniteNumber(input.radius, "radius", 0, 100);
+      }
+      return {
+        ...base,
+        fit: input.fit,
+        styleJson: sanitizeImageStyleJson(input.styleJson),
+      } as ValidatedLayoutField;
+    }
+
+    if (input.fit !== undefined) {
+      throw new Error("Only IMAGE fields may update fit.");
     }
 
     return {
@@ -551,7 +587,10 @@ function validateCreateFields(payloadCreates: unknown, template: DbIdTemplate) {
       create.assetId = assetId;
       create.staticValue = null;
       create.label = input.label === undefined || input.label === null ? "Image" : String(input.label).slice(0, 80);
-      create.fit = input.fit === "cover" || input.fit === "contain" ? input.fit : "contain";
+      if (input.fit !== undefined && input.fit !== "cover" && input.fit !== "contain" && input.fit !== "fill") {
+        throw new Error("IMAGE fit must be cover, contain, or fill.");
+      }
+      create.fit = input.fit === "cover" || input.fit === "contain" || input.fit === "fill" ? input.fit : "contain";
       create.styleJson = sanitizeImageStyleJson(input.styleJson);
     }
 
@@ -576,6 +615,8 @@ function validateMergedTemplate(template: DbIdTemplate, updates: ValidatedLayout
       zIndex: update.zIndex,
       visible: update.visible,
       styleJson: update.styleJson ?? field.styleJson,
+      fit: update.fit ?? field.fit,
+      radius: update.radius !== undefined ? update.radius : field.radius,
     };
   });
 
@@ -621,7 +662,7 @@ function normalizeJsonPrimitive(value: unknown) {
   return JSON.stringify(value);
 }
 
-function valuesChanged(existing: { xPercent: number; yPercent: number; widthPercent: number; heightPercent: number; zIndex: number; visible: boolean; radius?: number | null; staticValue?: string | null; styleJson?: unknown }, incoming: ValidatedLayoutField) {
+function valuesChanged(existing: { xPercent: number; yPercent: number; widthPercent: number; heightPercent: number; zIndex: number; visible: boolean; radius?: number | null; fit?: string | null; staticValue?: string | null; styleJson?: unknown }, incoming: ValidatedLayoutField) {
   if (existing.xPercent !== incoming.xPercent) return true;
   if (existing.yPercent !== incoming.yPercent) return true;
   if (existing.widthPercent !== incoming.widthPercent) return true;
@@ -629,6 +670,7 @@ function valuesChanged(existing: { xPercent: number; yPercent: number; widthPerc
   if (existing.zIndex !== incoming.zIndex) return true;
   if (existing.visible !== incoming.visible) return true;
   if (existing.radius !== incoming.radius) return true;
+  if (existing.fit !== incoming.fit) return true;
   if ((existing.staticValue ?? null) !== (incoming.staticValue ?? null)) return true;
 
   if (incoming.styleJson === undefined) {
@@ -775,6 +817,10 @@ export async function PATCH(request: Request) {
 
       if (field.radius !== undefined) {
         data.radius = field.radius;
+      }
+
+      if (field.fit !== undefined) {
+        data.fit = field.fit;
       }
 
       if (field.staticValue !== undefined) {

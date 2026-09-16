@@ -25,13 +25,16 @@ export type IdTemplateField = {
   widthPercent: number;
   heightPercent: number;
   zIndex?: number;
-  fit?: "cover" | "contain";
+  fit?: "cover" | "contain" | "fill";
   radius?: string;
   visible?: boolean;
   style?: IdTemplateTextStyle & {
     background?: string;
     border?: string;
     opacity?: number;
+    imageZoom?: number;
+    objectPositionX?: number;
+    objectPositionY?: number;
   };
 };
 
