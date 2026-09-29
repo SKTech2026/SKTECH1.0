@@ -125,6 +125,12 @@ export default async function AdminDashboardHomePage() {
       Icon: BarChart3,
     },
     {
+      href: "/dashboard/admin/compliance",
+      title: "Performance Monitoring",
+      description: "Review recorded operational indicators.",
+      Icon: ShieldCheck,
+    },
+    {
       href: "/dashboard/admin/events",
       title: "Event Management",
       description: "Coordinate official SKTECH events.",

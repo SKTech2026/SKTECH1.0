@@ -50,6 +50,12 @@ const adminItems: RoleShellItem[] = [
     icon: "barChart3",
   },
   {
+    href: "/dashboard/admin/compliance",
+    label: "Performance Monitoring",
+    description: "Recorded operational indicators",
+    icon: "barChart3",
+  },
+  {
     href: "/dashboard/admin/events",
     label: "Event Management",
     description: "Configure provincial events",
