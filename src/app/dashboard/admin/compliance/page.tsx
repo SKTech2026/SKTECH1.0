@@ -48,6 +48,7 @@ export default async function AdminCompliancePage() {
             <p className="mt-2 max-w-3xl text-sm text-muted">Operational indicators for Oriental Mindoro, generated {new Date(generatedAt).toLocaleString("en-PH", { timeZone: "Asia/Manila" })} PHT.</p>
           </div>
           <Link href="/api/admin/compliance/export" className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white hover:opacity-90">Export aggregate CSV</Link>
+          <Link href="/dashboard/admin/compliance/reports" className="rounded-xl border border-glass-border px-4 py-2 text-sm font-semibold text-foreground">Open printable reports</Link>
         </div>
         <p className="mt-5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-foreground">{COMPLIANCE_LIMITATION}</p>
       </section>
