@@ -700,19 +700,19 @@ export default function EventKioskClient() {
           </div>
 
           <div className="mt-4 rounded-xl border border-cyan-300/25 bg-cyan-500/5 p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div className="min-w-0">
                 <p className="text-sm font-semibold text-foreground">Share check-in location</p>
                 <p className="mt-1 max-w-2xl text-xs leading-5 text-muted">
-                  Location sharing is optional and used only to record where this attendance/check-in was made. SKTECH does not track your live movement or collect location in the background.
+                  Optional. Used only to record where this attendance/check-in was made. SKTECH does not track live movement or collect location in the background.
                 </p>
               </div>
-              <button type="button" onClick={requestLocationShare} disabled={locationShareState === "requesting"} className="inline-flex items-center gap-2 rounded-lg border border-cyan-300/40 px-3 py-2 text-xs font-semibold text-foreground disabled:cursor-wait disabled:opacity-60">
+              <button type="button" onClick={requestLocationShare} disabled={locationShareState === "requesting"} className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-lg border border-cyan-300/40 px-3 py-2 text-xs font-semibold text-foreground disabled:cursor-wait disabled:opacity-60 sm:w-auto">
                 <MapPin className="h-4 w-4" />
                 {locationShareState === "ready" ? "Turn off" : locationShareState === "requesting" ? "Requesting..." : "Share location"}
               </button>
             </div>
-            <p className="mt-2 text-xs text-muted">
+            <p className="mt-3 text-xs text-muted">
               {locationShareState === "off" ? "Off / not shared" : null}
               {locationShareState === "requesting" ? "Requesting permission" : null}
               {locationShareState === "ready" ? `Location ready${capturedLocation?.accuracy ? ` (accuracy ${Math.round(capturedLocation.accuracy)}m)` : ""}` : null}
