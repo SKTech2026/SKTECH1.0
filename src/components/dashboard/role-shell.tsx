@@ -119,7 +119,7 @@ const getCollapseServerSnapshot = () => false;
 const ADMIN_GROUPS = [
   {
     label: "OVERVIEW",
-    items: ["System Overview", "Overall Analytics", "Compliance Dashboard"],
+    items: ["System Overview", "Overall Analytics", "Compliance Dashboard", "Audit Trail"],
   },
   {
     label: "GOVERNANCE",
@@ -163,7 +163,7 @@ const ADMIN_DROPDOWN_GROUPS = [
   {
     label: "Management",
     icon: "userCog",
-    items: ["Overall Analytics", "Compliance Dashboard", "Municipalities", "Staff Admission", "Staff Access", "Archive Bin", "SK Profiling"],
+    items: ["Overall Analytics", "Compliance Dashboard", "Audit Trail", "Municipalities", "Staff Admission", "Staff Access", "Archive Bin", "SK Profiling"],
   },
   {
     label: "Services",

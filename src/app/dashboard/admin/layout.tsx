@@ -56,6 +56,12 @@ const adminItems: RoleShellItem[] = [
     icon: "barChart3",
   },
   {
+    href: "/dashboard/admin/audit-trail",
+    label: "Audit Trail",
+    description: "Accountability and recorded actions",
+    icon: "shieldCheck",
+  },
+  {
     href: "/dashboard/admin/events",
     label: "Event Management",
     description: "Configure provincial events",
