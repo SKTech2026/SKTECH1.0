@@ -51,8 +51,8 @@ const adminItems: RoleShellItem[] = [
   },
   {
     href: "/dashboard/admin/compliance",
-    label: "Performance Monitoring",
-    description: "Recorded operational indicators",
+    label: "Compliance Dashboard",
+    description: "Reports and operational indicators",
     icon: "barChart3",
   },
   {
