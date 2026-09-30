@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import AuthLayout from "@/components/layouts/AuthLayout";
+import AuthRoleNav from "@/components/auth/AuthRoleNav";
+import PasswordInput from "@/components/auth/PasswordInput";
 
 export default function OfficialAuthPage() {
   const router = useRouter();
@@ -54,8 +56,9 @@ export default function OfficialAuthPage() {
       illustrationSubtitle="Digital ID • Attendance • Announcements • SK Services"
       cardClassName="max-w-[500px]"
     >
+      <AuthRoleNav activeRole="OFFICIAL" />
       {error ? (
-        <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {error}
         </p>
       ) : null}
@@ -73,11 +76,12 @@ export default function OfficialAuthPage() {
         Secure official access
       </div>
 
-      <form onSubmit={onPasswordSubmit} className="space-y-5">
+      <form onSubmit={onPasswordSubmit} className="space-y-5" aria-busy={passwordLoading}>
         <div>
-          <label className="text-sm font-semibold text-slate-700">User Account</label>
+          <label htmlFor="official-email" className="text-sm font-semibold text-slate-700">Email address</label>
           <p className="mt-1 text-xs text-slate-500">Use the Gmail/email address you registered with.</p>
           <input
+            id="official-email"
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
@@ -89,19 +93,18 @@ export default function OfficialAuthPage() {
         </div>
         <div>
           <div className="flex items-center justify-between gap-3">
-            <label className="text-sm font-semibold text-slate-700">Password</label>
+            <label htmlFor="official-password" className="text-sm font-semibold text-slate-700">Password</label>
             <Link href="/forgot-password" className="text-xs font-semibold text-[#1452d9] hover:text-[#0f43b5]">
               Forgot Password?
             </Link>
           </div>
-          <input
-            type="password"
+          <PasswordInput
+            id="official-password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             placeholder="Enter your password"
             autoComplete="current-password"
             required
-            className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#1452d9] focus:ring-4 focus:ring-[#1452d9]/10"
           />
         </div>
 
@@ -128,7 +131,7 @@ export default function OfficialAuthPage() {
         </Link>
       </p>
 
-      <p className="mt-5 text-center text-[11px] leading-5 text-slate-400">
+      <p className="mt-5 text-center text-[11px] leading-5 text-slate-500">
         SKTECH is a capstone project prototype system and not an official government-issued system.
       </p>
 

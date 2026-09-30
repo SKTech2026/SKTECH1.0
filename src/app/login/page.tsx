@@ -6,6 +6,8 @@ import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import AuthLayout from "@/components/layouts/AuthLayout";
+import AuthRoleNav from "@/components/auth/AuthRoleNav";
+import PasswordInput from "@/components/auth/PasswordInput";
 import type { CredentialRole } from "@/components/LoginCard";
 
 function formatAuthError(errorCode: string | null): string | null {
@@ -126,8 +128,9 @@ function LoginContent() {
           : "Municipal staff access for daily operations."
       }
     >
+      <AuthRoleNav activeRole={loginRole} />
       {formError ? (
-        <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {formError}
         </p>
       ) : null}
@@ -136,10 +139,12 @@ function LoginContent() {
         onSubmit={(event) =>
           submitCredentials(event, loginRole, userId, password)
         }
-        className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4"
+        className="space-y-3"
+        aria-busy={submittingRole !== null}
       >
-        <label className="block text-xs font-medium text-slate-700">User ID</label>
+        <label htmlFor="credential-user-id" className="block text-sm font-semibold text-slate-700">User ID</label>
         <input
+          id="credential-user-id"
           value={userId}
           onChange={(event) =>
             isAdminView
@@ -151,16 +156,15 @@ function LoginContent() {
           autoComplete="username"
           required
         />
-        <label className="mt-3 block text-xs font-medium text-slate-700">Password</label>
-        <input
-          type="password"
+        <label htmlFor="credential-password" className="block pt-2 text-sm font-semibold text-slate-700">Password</label>
+        <PasswordInput
+          id="credential-password"
           value={password}
           onChange={(event) =>
             isAdminView
               ? setAdminPassword(event.target.value)
               : setStaffPassword(event.target.value)
           }
-          className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
           placeholder="••••••••"
           autoComplete="current-password"
           required
@@ -168,9 +172,9 @@ function LoginContent() {
         <button
           type="submit"
           disabled={submittingRole !== null}
-          className="mt-4 w-full rounded-md bg-[#b03333] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#9f2b2b] disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-5 w-full rounded-xl bg-blue-700 px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {submittingRole ? "Signing in..." : "Sign in"}
+          {submittingRole ? "Signing in..." : `Sign in as ${isAdminView ? "Admin" : "Staff"}`}
         </button>
       </form>
     </AuthLayout>

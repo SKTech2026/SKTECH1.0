@@ -1,13 +1,11 @@
-"use client";
+﻿"use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useTheme } from "next-themes";
-import { House } from "lucide-react";
+import { ArrowUpRight, Fingerprint, HeartHandshake, House, Landmark, ShieldCheck, Sparkles, Users } from "lucide-react";
 
 import ThemeToggle from "@/components/ThemeToggle";
-import InteractiveLogo from "@/components/ui/InteractiveLogo";
+import styles from "./AuthLayout.module.css";
 
 type AuthLayoutProps = {
   title: string;
@@ -26,128 +24,60 @@ export default function AuthLayout({
   subtitle,
   children,
   footer,
-  illustrationTitle = "SKTech Access Portal",
-  illustrationSubtitle = "Role-based secure access for provincial governance operations.",
-  cardClassName = "max-w-[440px]",
+  illustrationTitle = "Your community. Connected.",
+  illustrationSubtitle = "A shared digital space for youth leadership and public service.",
+  cardClassName = "max-w-[460px]",
   showIllustrationLogo = true,
-  illustrationLogoSize = "lg",
 }: AuthLayoutProps) {
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => setMounted(true));
-    return () => cancelAnimationFrame(frame);
-  }, []);
-
-  const isDarkTheme = mounted ? resolvedTheme === "dark" : false;
-
   return (
-    <main className="relative min-h-screen overflow-hidden px-4 py-6 sm:px-6 sm:py-8">
-      <div className="pointer-events-none absolute inset-0">
-        <div
-          className={`absolute inset-0 transition-[opacity,transform,filter] duration-[1100ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
-            isDarkTheme
-              ? "opacity-0 scale-[1.03] blur-[1.1px] bg-[radial-gradient(circle_at_14%_18%,rgba(255,255,255,0.12),transparent_40%),linear-gradient(145deg,#dbe2ec,#c8d4e8)]"
-              : "opacity-100 scale-100 blur-0 bg-[radial-gradient(circle_at_14%_18%,rgba(255,255,255,0.16),transparent_42%),linear-gradient(145deg,#dbe2ec,#c8d4e8)]"
-          }`}
-        />
-        <div
-          className={`absolute inset-0 transition-[opacity,transform,filter] duration-[1100ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
-            isDarkTheme
-              ? "opacity-100 scale-100 blur-0 bg-[radial-gradient(circle_at_16%_16%,rgba(56,189,248,0.15),transparent_35%),radial-gradient(circle_at_80%_20%,rgba(59,130,246,0.14),transparent_40%),linear-gradient(160deg,#060f24,#0b1735)]"
-              : "opacity-0 scale-[1.03] blur-[1.1px] bg-[radial-gradient(circle_at_16%_16%,rgba(56,189,248,0.12),transparent_35%),linear-gradient(160deg,#060f24,#0b1735)]"
-          }`}
-        />
-        <div
-          className={`absolute inset-0 transition-opacity duration-[1100ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
-            isDarkTheme
-              ? "opacity-100 bg-[radial-gradient(ellipse_at_center,transparent_34%,rgba(2,6,23,0.62)_100%)]"
-              : "opacity-100 bg-[radial-gradient(ellipse_at_center,transparent_34%,rgba(100,116,139,0.22)_100%)]"
-          }`}
-        />
-      </div>
-      <section
-        className={`auth-fade-in relative mx-auto grid min-h-[calc(100vh-3rem)] w-full max-w-[1500px] grid-cols-1 overflow-hidden rounded-[26px] border transition-[background-color,border-color,box-shadow] duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] lg:grid-cols-[1.15fr_0.85fr] ${
-          isDarkTheme
-            ? "border-cyan-300/20 bg-slate-900/70 shadow-[0_28px_90px_-45px_rgba(56,189,248,0.45)]"
-            : "border-slate-200 bg-[#eef2f8] shadow-[0_24px_64px_-40px_rgba(15,23,42,0.35)]"
-        }`}
-      >
-        <Link
-          href="/"
-          aria-label="Go to home page"
-          className={`absolute right-3 top-3 z-30 inline-flex h-8 w-8 items-center justify-center rounded-full border transition-all duration-500 ${
-            isDarkTheme
-              ? "border-cyan-300/35 bg-slate-900/85 text-slate-100 hover:border-cyan-300/50 hover:bg-slate-800"
-              : "border-slate-300 bg-white/90 text-slate-700 hover:border-blue-400 hover:bg-white"
-          }`}
-        >
-          <House className="h-3 w-3" />
+    <main className={styles.root}>
+      <a href="#auth-panel" className={styles.skipLink}>Skip to form</a>
+      <div className={styles.background} aria-hidden="true"><span /><span /></div>
+      <header className={styles.header}>
+        <Link href="/" className={styles.brand} aria-label="SKTECH home">
+          <span className={styles.brandMark}><Landmark size={24} aria-hidden="true" /></span>
+          <span>SK<span className={styles.brandAccent}>TECH</span><small>GOVERNANCE, REIMAGINED.</small></span>
         </Link>
+        <div className={styles.wordmark}><span>ORIENTAL</span><strong>MINDORO<span aria-hidden="true">.</span></strong></div>
+        <div className={styles.headerActions}>
+          <ThemeToggle />
+          <Link href="/" className={styles.homeLink}><House size={16} aria-hidden="true" /><span>Back to home</span></Link>
+        </div>
+      </header>
 
-        <aside
-          className={`relative flex flex-col items-center justify-center border-b px-6 py-10 transition-[background-color,border-color] duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] lg:border-b-0 lg:border-r lg:px-10 ${
-            isDarkTheme
-              ? "border-cyan-300/15 bg-[linear-gradient(165deg,#071126,#0f2247)]"
-              : "border-slate-200 bg-[#c7d4e8]"
-          }`}
-        >
-          <div className="text-center">
-            <p
-              className={`text-3xl font-extrabold uppercase tracking-tight sm:text-4xl ${
-                isDarkTheme ? "text-slate-100" : "text-slate-900"
-              }`}
-            >
-              {illustrationTitle}
-            </p>
-            <p
-              className={`mx-auto mt-3 max-w-xl text-sm leading-relaxed sm:text-base ${
-                isDarkTheme ? "text-slate-300" : "text-slate-600"
-              }`}
-            >
-              {illustrationSubtitle}
-            </p>
-            {showIllustrationLogo ? (
-              <div
-                className={`logo-fade-in relative mx-auto mt-8 ${
-                  illustrationLogoSize === "sm"
-                    ? "max-w-[240px]"
-                    : illustrationLogoSize === "md"
-                      ? "max-w-[320px]"
-                      : "max-w-[560px] lg:max-w-[620px]"
-                } w-full`}
-              >
-                <InteractiveLogo
-                  darkMode={isDarkTheme}
-                  src="/login-logo.png"
-                  className="w-full"
-                />
-              </div>
-            ) : null}
-          </div>
+      <div className={styles.layout}>
+        <aside className={styles.hero} aria-label="SKTECH youth governance platform">
+          <div className={styles.eyebrow}><span /> THE NEXT GENERATION OF PUBLIC SERVICE</div>
+          <h2>Youth-led today.{" "}<br />A brighter <span>Mindoro</span><br /> tomorrow.</h2>
+          <p className={styles.intro}>Integrated E-Governance and Emerging Technology Platform for SK Councils.</p>
+          {showIllustrationLogo ? (
+            <div className={styles.scene} aria-hidden="true">
+              <div className={styles.orbit} /><div className={styles.orbitInner} />
+              <div className={styles.connection} />
+              <div className={styles.core}><Landmark size={42} strokeWidth={1.3} /><strong>SKTECH</strong><span>CONNECTED GOVERNANCE</span></div>
+              <div className={`${styles.floatCard} ${styles.youth}`}><span className={styles.goldIcon}><Users size={21} /></span><div><strong>Youth leadership</strong><small>Ideas into impact</small></div></div>
+              <div className={`${styles.floatCard} ${styles.service}`}><span className={styles.blueIcon}><HeartHandshake size={21} /></span><div><strong>Public service</strong><small>People at the heart</small></div></div>
+              <div className={`${styles.floatCard} ${styles.transparency}`}><span className={styles.greenIcon}><ShieldCheck size={21} /></span><div><strong>Transparency</strong><small>Progress you can see</small></div></div>
+              <span className={styles.spark}><Sparkles size={20} /></span>
+              <span className={styles.redDot} /><span className={styles.goldDot} />
+            </div>
+          ) : null}
+          <div className={styles.heroFoot}><span className={styles.footNumber}>01 /</span><div><strong>{illustrationTitle}</strong><p>{illustrationSubtitle}</p></div><ArrowUpRight size={22} aria-hidden="true" /></div>
         </aside>
 
-        <div
-          className={`flex items-center justify-center px-5 py-8 transition-[background-color] duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] sm:px-8 lg:px-12 ${
-            isDarkTheme ? "bg-slate-950/45" : "bg-[#f3f4f6]"
-          }`}
-        >
-          <section
-            className={`auth-slide-up w-full rounded-2xl border border-slate-200 bg-white p-8 shadow-lg transition-all duration-700 ${cardClassName}`}
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">{title}</h1>
-                {subtitle ? <p className="mt-2 text-sm text-slate-500">{subtitle}</p> : null}
-              </div>
-              <ThemeToggle className="shrink-0" />
-            </div>
-            <div className="mt-6">{children}</div>
-            {footer ? <div className="mt-6">{footer}</div> : null}
+        <div className={styles.formColumn}>
+          <section id="auth-panel" tabIndex={-1} className={`${styles.card} ${cardClassName}`} aria-labelledby="auth-title">
+            <div className={styles.cardAccent} aria-hidden="true"><span /><span /><span /></div>
+            <div className={styles.cardEyebrow}><Fingerprint size={18} aria-hidden="true" /> YOUR SKTECH WORKSPACE</div>
+            <h1 id="auth-title">{title}</h1>
+            {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
+            <div className={styles.formContent}>{children}</div>
+            {footer ? <div className={styles.footer}>{footer}</div> : null}
           </section>
+          <p className={styles.formCaption}><ShieldCheck size={14} aria-hidden="true" /> Built for leadership. Designed for connection.</p>
         </div>
-      </section>
+      </div>
+      <footer className={styles.pageFooter}><span>SANGGUNIANG KABATAAN · ORIENTAL MINDORO</span><span>Youth. Service. Innovation.</span></footer>
     </main>
   );
 }
