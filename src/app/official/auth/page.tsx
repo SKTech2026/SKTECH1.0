@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import AuthLayout from "@/components/layouts/AuthLayout";
-import AuthRoleNav from "@/components/auth/AuthRoleNav";
 import PasswordInput from "@/components/auth/PasswordInput";
 
 export default function OfficialAuthPage() {
@@ -50,13 +49,9 @@ export default function OfficialAuthPage() {
 
   return (
     <AuthLayout
-      title="SKTECH Official Portal"
-      subtitle="Secure access for SK Officials"
-      illustrationTitle="Integrated E-Governance Platform"
-      illustrationSubtitle="Digital ID • Attendance • Announcements • SK Services"
-      cardClassName="max-w-[500px]"
+      title="Official sign in"
+      subtitle="Use your registered SK official email."
     >
-      <AuthRoleNav activeRole="OFFICIAL" />
       {error ? (
         <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {error}
@@ -69,17 +64,9 @@ export default function OfficialAuthPage() {
         </p>
       ) : null}
 
-      <div className="mb-5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-blue-700">
-        <span className="h-1.5 w-8 rounded-full bg-[#1452d9]" />
-        <span className="h-1.5 w-4 rounded-full bg-[#cf2638]" />
-        <span className="h-1.5 w-4 rounded-full bg-[#f3c72b]" />
-        Secure official access
-      </div>
-
-      <form onSubmit={onPasswordSubmit} className="space-y-5" aria-busy={passwordLoading}>
+      <form onSubmit={onPasswordSubmit} className="space-y-4" aria-busy={passwordLoading}>
         <div>
-          <label htmlFor="official-email" className="text-sm font-semibold text-slate-700">Email address</label>
-          <p className="mt-1 text-xs text-slate-500">Use the Gmail/email address you registered with.</p>
+          <label htmlFor="official-email" className="text-sm font-semibold text-slate-700">Email</label>
           <input
             id="official-email"
             type="email"
@@ -117,12 +104,8 @@ export default function OfficialAuthPage() {
         </button>
       </form>
 
-      <div className="mt-5 rounded-xl border border-[#f3c72b]/40 bg-[#fff9df] px-4 py-3 text-xs leading-5 text-slate-600">
-        Need access? Register as an SK Official and wait for Staff/Admin approval before using dashboard services.
-      </div>
-
-      <p className="mt-6 text-sm text-slate-600">
-        Don&apos;t have an account?{" "}
+      <p className="mt-4 text-sm text-slate-600">
+        New here?{" "}
         <Link
           href="/official/auth/register"
           className="font-semibold text-[#1452d9] hover:text-[#0f43b5]"
@@ -131,8 +114,8 @@ export default function OfficialAuthPage() {
         </Link>
       </p>
 
-      <p className="mt-5 text-center text-[11px] leading-5 text-slate-500">
-        SKTECH is a capstone project prototype system and not an official government-issued system.
+      <p className="mt-4 border-t border-slate-100 pt-3 text-[11px] leading-4 text-slate-500">
+        Capstone prototype. Not a government-issued system.
       </p>
 
     </AuthLayout>

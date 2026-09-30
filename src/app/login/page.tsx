@@ -58,8 +58,8 @@ function LoginContent() {
   const isAdminView = loginRole === "ADMIN";
   const loginTitle = isAdminView ? "Admin Login" : "Staff Login";
   const loginSubtitle = isAdminView
-    ? "Administrator access is restricted to approved admin accounts."
-    : "Municipal staff access is restricted to approved staff accounts.";
+    ? "Sign in with your administrator account."
+    : "Sign in with your municipal staff account.";
 
   const callbackUrl = useMemo(
     () =>
@@ -121,12 +121,6 @@ function LoginContent() {
     <AuthLayout
       title={loginTitle}
       subtitle={loginSubtitle}
-      illustrationTitle="SKTech Access Portal"
-      illustrationSubtitle={
-        isAdminView
-          ? "Provincial administrator access for system governance."
-          : "Municipal staff access for daily operations."
-      }
     >
       <AuthRoleNav activeRole={loginRole} />
       {formError ? (
