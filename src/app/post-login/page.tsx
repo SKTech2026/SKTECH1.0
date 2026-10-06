@@ -12,6 +12,10 @@ function redirectByRole(role: string | undefined) {
     redirect("/dashboard/staff");
   }
 
+  if (role === "KK_MEMBER") {
+    redirect("/dashboard/kk-member");
+  }
+
   redirect("/dashboard/official");
 }
 

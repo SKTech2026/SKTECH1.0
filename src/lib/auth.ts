@@ -351,6 +351,15 @@ export const authOptions: NextAuthOptions = {
               return null;
             }
 
+            if (roleInput === Role.KK_MEMBER) {
+              const member = await prisma.user.findUnique({
+                where: { email: userId.toLowerCase() },
+                select: { id: true, name: true, email: true, password: true, emailVerified: true, role: true, status: true },
+              });
+              if (!member || member.role !== Role.KK_MEMBER || member.status !== UserStatus.APPROVED || !member.emailVerified || !member.password || !await compare(password, member.password)) return null;
+              return { id: member.id, name: member.name, email: member.email, role: member.role, status: member.status };
+            }
+
             let user = await getUserByEmployeeIdSafe(userId);
             if (!user && userId.includes("@")) {
               user = await getUserByEmailSafe(userId.toLowerCase());
@@ -445,6 +454,9 @@ export const authOptions: NextAuthOptions = {
         }
 
         const role = credentialUser?.role;
+        if (role === Role.KK_MEMBER) {
+          return credentialUser?.status === UserStatus.APPROVED;
+        }
         if (!role || !CREDENTIAL_ROLES.has(role)) {
           return false;
         }

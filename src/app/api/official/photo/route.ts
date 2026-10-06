@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
       ) {
         return imageErrorResponse("Unauthenticated photo request is not for an active public credential.");
       }
-    } else if (![Role.ADMIN, Role.STAFF, Role.OFFICIAL].includes(session.user.role)) {
+    } else if (session.user.role !== Role.ADMIN && session.user.role !== Role.STAFF && session.user.role !== Role.OFFICIAL) {
       return imageErrorResponse("Photo request role is forbidden.", 403);
     } else if (
       (session.user.role === Role.ADMIN || session.user.role === Role.STAFF) &&

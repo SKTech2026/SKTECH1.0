@@ -10,6 +10,17 @@ enum Role {
   ADMIN
   STAFF
   OFFICIAL
+  KK_MEMBER
+}
+
+enum KKProfileStatus {
+  DRAFT
+  PENDING_EMAIL_VERIFICATION
+  PENDING_VERIFICATION
+  VERIFIED
+  NEEDS_CORRECTION
+  REJECTED
+  ARCHIVED
 }
 
 enum UserStatus {
@@ -167,6 +178,8 @@ model User {
   accounts            Account[]
   sessions            Session[]
   passwordResetTokens PasswordResetToken[]
+  kkProfile          KKMemberProfile?
+  kkInvitations      KKInvitation[]
 
   @@index([municipalityOfficerId])
   @@index([faceRegistered])
@@ -332,6 +345,8 @@ model Municipality {
   chatConversations     ChatConversation[]
   feedPosts             FeedPost[]
   profileChangeRequests OfficialProfileChangeRequest[]
+  kkInvitations         KKInvitation[]
+  kkProfiles            KKMemberProfile[]
   events                Event[]                        @relation("MunicipalityEvents")
 }
 
@@ -343,9 +358,95 @@ model Barangay {
   municipality    Municipality        @relation(fields: [municipalityId], references: [id], onDelete: Cascade)
   admissions      OfficialAdmission[]
   officialRecords SKOfficial[]        @relation("BarangayOfficialsRecords")
+  kkInvitations   KKInvitation[]
+  kkProfiles      KKMemberProfile[]
 
   @@unique([name, municipalityId])
   @@index([municipalityId])
+}
+
+model KKInvitation {
+  id             String   @id @default(cuid())
+  code           String   @unique
+  municipalityId String
+  barangayId     String
+  createdById    String
+  active         Boolean  @default(true)
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+  municipality   Municipality @relation(fields: [municipalityId], references: [id])
+  barangay       Barangay @relation(fields: [barangayId], references: [id])
+  createdBy      User @relation(fields: [createdById], references: [id])
+  profiles       KKMemberProfile[]
+  otps           KKRegistrationOTP[]
+
+  @@index([barangayId, active, expiresAt])
+  @@index([createdById])
+}
+
+model KKRegistrationOTP {
+  id           String   @id @default(cuid())
+  invitationId String
+  email        String
+  codeHash     String
+  passwordHash String
+  firstName    String
+  lastName     String
+  attempts     Int      @default(0)
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  invitation   KKInvitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+
+  @@unique([invitationId, email])
+  @@index([expiresAt])
+}
+
+model KKMemberProfile {
+  id                            String @id @default(cuid())
+  userId                        String @unique
+  invitationId                  String
+  municipalityId                String
+  barangayId                    String
+  status                        KKProfileStatus @default(DRAFT)
+  lastName                      String
+  firstName                     String
+  middleName                    String?
+  suffix                        String?
+  region                        String?
+  province                      String?
+  purokZone                     String?
+  sexAssignedAtBirth            String?
+  birthdate                     DateTime?
+  age                           Int?
+  email                         String
+  contactNumber                 String?
+  civilStatus                   String?
+  youthAgeGroup                 String?
+  educationalBackground         String?
+  youthClassification           String?
+  specificNeedsCategory         String?
+  workStatus                    String?
+  registeredSkVoter             Boolean?
+  registeredNationalVoter       Boolean?
+  votedLastElection             Boolean?
+  attendedKkAssembly            Boolean?
+  kkAssemblyAttendanceFrequency String?
+  noKkAssemblyReason            String?
+  dataPrivacyConsent            Boolean @default(false)
+  profilingConsent              Boolean @default(false)
+  aggregateReportingConsent     Boolean @default(false)
+  communicationConsent          Boolean @default(false)
+  consentedAt                   DateTime?
+  reviewedAt                    DateTime?
+  createdAt                     DateTime @default(now())
+  updatedAt                     DateTime @updatedAt
+  user                          User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invitation                    KKInvitation @relation(fields: [invitationId], references: [id])
+  municipality                  Municipality @relation(fields: [municipalityId], references: [id])
+  barangay                      Barangay @relation(fields: [barangayId], references: [id])
+
+  @@index([barangayId, status, createdAt])
+  @@index([barangayId, lastName, firstName, birthdate])
 }
 
 model OfficialAttendance {

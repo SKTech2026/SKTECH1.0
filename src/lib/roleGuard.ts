@@ -35,6 +35,7 @@ const dashboardPathByRole: Record<Role, string> = {
   [Role.ADMIN]: "/dashboard/admin",
   [Role.STAFF]: "/dashboard/staff",
   [Role.OFFICIAL]: "/dashboard/official",
+  [Role.KK_MEMBER]: "/dashboard/kk-member",
 };
 
 type DashboardRoleOptions = {

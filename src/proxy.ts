@@ -6,7 +6,7 @@ import type { NextRequest } from "next/server";
 
 import { createClient as createSupabaseMiddlewareClient } from "@/utils/supabase/middleware";
 
-type AppRole = "ADMIN" | "STAFF" | "OFFICIAL";
+type AppRole = "ADMIN" | "STAFF" | "OFFICIAL" | "KK_MEMBER";
 type AppStatus = "PENDING" | "APPROVED" | "REJECTED" | "INACTIVE" | "TERMINATED";
 type RoleRule = {
   prefix:
@@ -14,6 +14,7 @@ type RoleRule = {
     | "/dashboard/staff"
     | "/dashboard/official"
     | "/dashboard/officials"
+    | "/dashboard/kk-member"
     | "/dashboard/events"
     | "/dashboard/scan"
     | "/mobile/staff"
@@ -25,6 +26,7 @@ type RoleRule = {
 };
 
 const ROLE_RULES: RoleRule[] = [
+  { prefix: "/dashboard/kk-member", allowed: ["KK_MEMBER"], requiresApproved: true },
   { prefix: "/dashboard/admin", allowed: ["ADMIN"], requiresApproved: true },
   { prefix: "/dashboard/staff", allowed: ["STAFF"], requiresApproved: true },
   {
@@ -78,7 +80,7 @@ export async function proxy(request: NextRequest) {
 
   if (!token) {
     const signInUrl = new URL(
-      roleRule.prefix === "/dashboard/official" ? "/official/auth" : "/login",
+      roleRule.prefix === "/dashboard/official" ? "/official/auth" : roleRule.prefix === "/dashboard/kk-member" ? "/kk/login" : "/login",
       request.url,
     );
     if (
@@ -142,6 +144,7 @@ export const config = {
     "/dashboard/staff/:path*",
     "/dashboard/official/:path*",
     "/dashboard/officials/:path*",
+    "/dashboard/kk-member/:path*",
     "/dashboard/events/:path*",
     "/dashboard/scan/:path*",
     "/mobile/staff/:path*",

@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { authOptions } from "@/lib/auth";
 import { requireDashboardRole } from "@/lib/roleGuard";
 import RoleShell, { RoleShellItem } from "@/components/dashboard/role-shell";
+import { getChairScope } from "@/lib/kk";
 
 const officialItems: RoleShellItem[] = [
   {
@@ -79,13 +80,14 @@ export default async function OfficialDashboardLayout({
     unauthenticatedRedirect: "/official/auth",
     requireApproved: false,
   });
+  const chairScope = await getChairScope();
 
   return (
     <RoleShell
       roleLabel="SK Official"
       heading="Official Access Dashboard"
       subheading="Read-only portal for announcements, identity, attendance, and accomplishments."
-      items={officialItems}
+      items={chairScope ? [...officialItems, { href: "/dashboard/official/kk-registry", label: "KK Registry", description: "Barangay youth profiles", icon: "users" }] : officialItems}
       logoutCallbackUrl="/official/auth"
       variant="officialCn"
       account={{
