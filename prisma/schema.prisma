@@ -97,6 +97,18 @@ enum OfficialOtpPurpose {
   REGISTER
 }
 
+enum KKCertificateType {
+  PARTICIPATION
+  ATTENDANCE
+  APPRECIATION
+  VOLUNTEER_SERVICE
+}
+
+enum KKCertificateStatus {
+  ISSUED
+  REVOKED
+}
+
 enum FeedReactionType {
   LIKE
   HEART
@@ -180,6 +192,7 @@ model User {
   passwordResetTokens PasswordResetToken[]
   kkProfile          KKMemberProfile?
   kkInvitations      KKInvitation[]
+  issuedCertificates KKCertificate[] @relation("IssuedCertificates")
 
   @@index([municipalityOfficerId])
   @@index([faceRegistered])
@@ -444,9 +457,34 @@ model KKMemberProfile {
   invitation                    KKInvitation @relation(fields: [invitationId], references: [id])
   municipality                  Municipality @relation(fields: [municipalityId], references: [id])
   barangay                      Barangay @relation(fields: [barangayId], references: [id])
+  certificates                  KKCertificate[]
 
   @@index([barangayId, status, createdAt])
   @@index([barangayId, lastName, firstName, birthdate])
+}
+
+model KKCertificate {
+  id                String             @id @default(cuid())
+  certificateNumber String             @unique
+  kkMemberProfileId String
+  eventId           String?
+  title             String
+  certificateType   KKCertificateType
+  description       String?
+  issuedByUserId    String
+  issuedAt          DateTime           @default(now())
+  status            KKCertificateStatus @default(ISSUED)
+  verificationCode  String             @unique
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  kkMemberProfile KKMemberProfile @relation(fields: [kkMemberProfileId], references: [id], onDelete: Cascade)
+  event           Event?          @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  issuedBy        User            @relation("IssuedCertificates", fields: [issuedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([kkMemberProfileId, issuedAt])
+  @@index([status, issuedAt])
+  @@index([eventId])
 }
 
 model OfficialAttendance {
@@ -511,6 +549,7 @@ model Event {
 
   attendances         Attendance[]
   officialAttendances OfficialAttendance[]
+  kkCertificates      KKCertificate[]
   municipality        Municipality?        @relation("MunicipalityEvents", fields: [municipalityId], references: [id], onDelete: SetNull)
   createdBy           User?                @relation("EventCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 

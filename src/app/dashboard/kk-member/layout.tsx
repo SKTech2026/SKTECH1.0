@@ -7,6 +7,7 @@ const items: RoleShellItem[] = [
   { href: "/dashboard/kk-member", label: "My dashboard", description: "Profile and YouthPass", icon: "layoutDashboard" },
   { href: "/dashboard/kk-member/profile", label: "KK Survey / Profiling", description: "Complete your registry profile", icon: "clipboardList" },
   { href: "/dashboard/kk-member/youthpass", label: "YouthPass", description: "Your verified digital ID", icon: "badgeCheck" },
+  { href: "/dashboard/kk-member/certificates", label: "My Certificates", description: "Digital event achievements", icon: "badgeCheck" },
 ];
 
 export default async function KKLayout({ children }: { children: ReactNode }) {

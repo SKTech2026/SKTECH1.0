@@ -25,5 +25,17 @@ export default async function KKProfilePage() {
     dataPrivacyConsent: profile.dataPrivacyConsent, profilingConsent: profile.profilingConsent,
     aggregateReportingConsent: profile.aggregateReportingConsent, communicationConsent: profile.communicationConsent,
   };
-  return <section className="rounded-3xl border border-border bg-surface p-6 sm:p-9"><p className="text-sm font-bold uppercase tracking-widest text-accent">KK Survey / Profiling</p><h1 className="mt-3 text-3xl font-bold">Your barangay profile</h1><p className="mt-3 text-muted">Status: {profile.status.replaceAll("_", " ")}. Municipality and barangay are locked to your invitation.</p><div className="mt-8"><ProfileForm initial={initial} email={member.email ?? ""} municipality={profile.municipality.name} barangay={profile.barangay.name} editable={editable} /></div></section>;
+  return (
+    <section className="rounded-[30px] border border-sky-200 bg-surface p-6 shadow-[0_24px_60px_-30px_rgba(15,23,42,0.42)] sm:p-9">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-sm font-bold uppercase tracking-[0.18em] text-accent">KK Survey / Profiling</p>
+          <h1 className="mt-3 text-3xl font-bold text-foreground">Your barangay profile</h1>
+        </div>
+        <span className="inline-flex rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-700">Status: {profile.status.replaceAll("_", " ")}</span>
+      </div>
+      <p className="mt-3 text-muted">Municipality and barangay are locked to your invitation. Keep your information complete to unlock your YouthPass and certificate access.</p>
+      <div className="mt-8"><ProfileForm initial={initial} email={member.email ?? ""} municipality={profile.municipality.name} barangay={profile.barangay.name} editable={editable} /></div>
+    </section>
+  );
 }
