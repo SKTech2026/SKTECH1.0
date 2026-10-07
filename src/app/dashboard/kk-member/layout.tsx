@@ -30,6 +30,7 @@ export default async function KKLayout({ children }: { children: ReactNode }) {
       heading="KK Youth Portal"
       subheading="Your barangay profile and participation"
       items={items}
+      assistantRole="KK_MEMBER"
       account={{ name: authorizedSession.user.name ?? member.email, email: member.email }}
       logoutCallbackUrl="/kk/login"
     >

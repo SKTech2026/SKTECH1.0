@@ -4,10 +4,13 @@ import { getServerSession } from "next-auth";
 import MobileOfflineNotice from "@/components/mobile/MobileOfflineNotice";
 import MobileTopBar from "@/components/mobile/MobileTopBar";
 import { authOptions } from "@/lib/auth";
+import SKTechAssistant from "@/components/assistant/SKTechAssistant";
+import { normalizeRole } from "@/lib/assistant/sktech-help";
 
 export default async function MobileLayout({ children }: { children: ReactNode }) {
   const session = await getServerSession(authOptions);
   const isOfficial = session?.user?.role === "OFFICIAL";
+  const role = normalizeRole(session?.user?.role ? String(session.user.role) : null);
 
   return (
     <div
@@ -27,6 +30,7 @@ export default async function MobileLayout({ children }: { children: ReactNode }
       />
       <MobileOfflineNotice />
       <main className="mx-auto w-full max-w-md px-3 pb-6 pt-3">{children}</main>
+      {role ? <SKTechAssistant role={role} /> : null}
     </div>
   );
 }

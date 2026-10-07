@@ -147,6 +147,7 @@ export default async function AdminDashboardLayout({
       items={adminItems}
       desktopItems={desktopItems}
       variant="adminCn"
+      assistantRole="ADMIN"
       account={{
         name: authorizedSession.user.name,
         email: authorizedSession.user.email,

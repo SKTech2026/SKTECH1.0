@@ -30,9 +30,11 @@ import {
 } from "lucide-react";
 
 import ThemeToggle from "@/components/ThemeToggle";
+import SKTechAssistant from "@/components/assistant/SKTechAssistant";
 import LogoutConfirmButton from "@/components/auth/LogoutConfirmButton";
 import NotificationBell from "@/components/notifications/NotificationBell";
 import Logo from "@/components/ui/Logo";
+import type { DashboardRole } from "@/lib/assistant/sktech-help";
 
 export type IconName =
   | "activity"
@@ -91,6 +93,7 @@ type RoleShellProps = {
     name?: string | null;
     email?: string | null;
   };
+  assistantRole?: DashboardRole;
   children: ReactNode;
 };
 
@@ -232,6 +235,7 @@ export default function RoleShell({
   logoutCallbackUrl = "/login",
   variant = "default",
   account,
+  assistantRole,
   children,
 }: RoleShellProps) {
   const pathname = usePathname();
@@ -527,6 +531,7 @@ export default function RoleShell({
 
     return (
       <div className="min-h-screen bg-[linear-gradient(135deg,var(--color-gradient-start),var(--color-gradient-end))] text-foreground">
+        <SKTechAssistant role={assistantRole ?? (isAdminCn ? "ADMIN" : isStaffCn ? "STAFF" : "OFFICIAL")} />
         <div className="pointer-events-none fixed inset-0 bg-[linear-gradient(to_right,color-mix(in_oklab,var(--color-accent)_8%,transparent)_1px,transparent_1px),linear-gradient(to_bottom,color-mix(in_oklab,var(--color-accent)_6%,transparent)_1px,transparent_1px)] bg-[size:64px_64px]" />
 
         <div className="relative flex min-h-screen">
@@ -615,6 +620,7 @@ export default function RoleShell({
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[linear-gradient(135deg,var(--color-gradient-start),var(--color-gradient-end))] text-foreground">
+      <SKTechAssistant role={assistantRole ?? (isAdminCn ? "ADMIN" : isStaffCn ? "STAFF" : "OFFICIAL")} />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_color-mix(in_oklab,var(--color-accent)_24%,transparent),_transparent_45%)]" />
       <div className="pointer-events-none absolute -left-24 top-12 h-72 w-72 rounded-full bg-accent/20 blur-3xl" />
       <div className="pointer-events-none absolute -right-20 bottom-0 h-72 w-72 rounded-full bg-accent/15 blur-3xl" />

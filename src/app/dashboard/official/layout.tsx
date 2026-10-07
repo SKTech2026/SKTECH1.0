@@ -100,6 +100,7 @@ export default async function OfficialDashboardLayout({
       desktopItems={chairScope ? [desktopItems[0], desktopItems[1], { href: "/dashboard/official/kk-management", label: "KK Management", description: "Registry and reviews", icon: "users", activePaths: ["/dashboard/official/kk-registry"] }, ...desktopItems.slice(2)] : desktopItems}
       logoutCallbackUrl="/official/auth"
       variant="officialCn"
+      assistantRole="OFFICIAL"
       account={{
         name: authorizedSession.user.name,
         email: authorizedSession.user.email,

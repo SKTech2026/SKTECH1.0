@@ -103,6 +103,7 @@ export default async function StaffDashboardLayout({
       items={staffItems}
       desktopItems={desktopItems}
       variant="staffCn"
+      assistantRole="STAFF"
       account={{
         name: authorizedSession.user.name,
         email: authorizedSession.user.email,
