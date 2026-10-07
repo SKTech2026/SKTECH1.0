@@ -10,6 +10,10 @@ export default async function RoleSelectionPage() {
     redirect("/login?callbackUrl=%2Fpost-login");
   }
 
+  if (session.user.role === "KK_MEMBER") {
+    redirect("/dashboard/kk-member");
+  }
+
   if (session.user.role === "ADMIN") {
     redirect("/dashboard/admin");
   }
@@ -18,9 +22,13 @@ export default async function RoleSelectionPage() {
     redirect("/dashboard/staff");
   }
 
-  if (session.user.status === "APPROVED") {
-    redirect("/dashboard/official");
+  if (session.user.role === "OFFICIAL") {
+    if (session.user.status === "APPROVED") {
+      redirect("/dashboard/official");
+    }
+
+    redirect("/join-official?status=pending");
   }
 
-  redirect("/join-official?status=pending");
+  redirect("/unauthorized");
 }
