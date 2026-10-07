@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getChairScope } from "@/lib/kk";
+import { kkAnalyticsStart, type KkAnalyticsRange } from "@/lib/kk/analytics-range";
 
 export type KkAnalyticsScope = {
   role: "ADMIN" | "STAFF" | "OFFICIAL";
@@ -27,6 +28,12 @@ export type KkAnalyticsInsight = {
 
 export type KkAnalyticsPayload = {
   scopeLabel: string;
+  period: {
+    range: KkAnalyticsRange;
+    newRegistrations: number;
+    certificatesIssued: number;
+    certificateTypes: DistributionBucket[];
+  };
   totals: {
     totalMembers: number;
     verifiedMembers: number;
@@ -149,7 +156,7 @@ export async function resolveKkAnalyticsScope(): Promise<KkAnalyticsScope | null
   return null;
 }
 
-export async function getKkAnalyticsData(scope: KkAnalyticsScope): Promise<KkAnalyticsPayload> {
+export async function getKkAnalyticsData(scope: KkAnalyticsScope, range: KkAnalyticsRange = "all"): Promise<KkAnalyticsPayload> {
   const baseWhere = scope.role === Role.ADMIN
     ? {}
     : scope.role === Role.STAFF
@@ -194,6 +201,10 @@ export async function getKkAnalyticsData(scope: KkAnalyticsScope): Promise<KkAna
   const monthStart = new Date();
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
+  const periodStart = kkAnalyticsStart(range);
+  const periodEnd = new Date();
+  const inPeriod = (date: Date) => (!periodStart || date >= periodStart) && date <= periodEnd;
+  const periodProfiles = profiles.filter((profile) => inPeriod(profile.createdAt));
 
   const totalMembers = profiles.length;
   const statusMap = resolveStatuses(profiles);
@@ -301,7 +312,9 @@ export async function getKkAnalyticsData(scope: KkAnalyticsScope): Promise<KkAna
   const barangayRecords = await prisma.barangay.findMany({
     where: scope.role === Role.ADMIN
       ? {}
-      : { municipalityId: scope.municipalityId ?? "__none__" },
+      : scope.role === Role.OFFICIAL
+        ? { id: scope.barangayId ?? "__none__", municipalityId: scope.municipalityId ?? "__none__" }
+        : { municipalityId: scope.municipalityId ?? "__none__" },
     select: { id: true, name: true, municipalityId: true },
   });
 
@@ -365,6 +378,12 @@ export async function getKkAnalyticsData(scope: KkAnalyticsScope): Promise<KkAna
   }
 
   const certificatesThisMonth = certificates.filter((certificate) => certificate.issuedAt >= monthStart).length;
+  const periodCertificates = certificates.filter((certificate) => inPeriod(certificate.issuedAt));
+  const periodCertificateTypeMap = new Map<string, number>();
+  for (const certificate of periodCertificates) {
+    const key = certificate.certificateType ?? "UNKNOWN";
+    periodCertificateTypeMap.set(key, (periodCertificateTypeMap.get(key) ?? 0) + 1);
+  }
   const revokedCertificates = certificates.filter((certificate) => certificate.status === KKCertificateStatus.REVOKED).length;
 
   const missingOptionalFields = profiles.filter((profile) => {
@@ -409,8 +428,8 @@ export async function getKkAnalyticsData(scope: KkAnalyticsScope): Promise<KkAna
   if (lookingForJobCount > 0) {
     insights.push({ title: "Many youth currently looking for a job", value: `${lookingForJobCount}`, detail: "Coordinate with LGU employment or skills programs for follow-up." });
   }
-  if (certificatesThisMonth > 0) {
-    insights.push({ title: "Certificates issued this month", value: `${certificatesThisMonth}`, detail: "This month’s certificate output is above zero and should be reviewed." });
+  if (periodCertificates.length > 0) {
+    insights.push({ title: "Certificates issued in selected period", value: `${periodCertificates.length}`, detail: "Certificate output during the selected period is ready for review." });
   }
 
   const scopeLabel = scope.role === Role.ADMIN
@@ -421,6 +440,12 @@ export async function getKkAnalyticsData(scope: KkAnalyticsScope): Promise<KkAna
 
   return {
     scopeLabel,
+    period: {
+      range,
+      newRegistrations: periodProfiles.length,
+      certificatesIssued: periodCertificates.length,
+      certificateTypes: buildDistribution(periodCertificateTypeMap, periodCertificates.length),
+    },
     totals: {
       totalMembers,
       verifiedMembers,

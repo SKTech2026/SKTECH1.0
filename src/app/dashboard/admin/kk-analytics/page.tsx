@@ -6,10 +6,12 @@ import KkAnalyticsDashboard from "@/components/kk/kk-analytics-dashboard";
 import { authOptions } from "@/lib/auth";
 import { requireDashboardRole } from "@/lib/roleGuard";
 import { getKkAnalyticsData, resolveKkAnalyticsScope } from "@/lib/kk/analytics";
+import { parseKkAnalyticsRange } from "@/lib/kk/analytics-range";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminKkAnalyticsPage() {
+export default async function AdminKkAnalyticsPage({ searchParams }: { searchParams: Promise<{ range?: string | string[] }> }) {
+  const range = parseKkAnalyticsRange((await searchParams).range);
   const session = await getServerSession(authOptions);
   requireDashboardRole(session, [Role.ADMIN], {
     unauthenticatedRedirect: "/login?role=ADMIN",
@@ -20,11 +22,16 @@ export default async function AdminKkAnalyticsPage() {
     redirect("/unauthorized");
   }
 
-  const analytics = await getKkAnalyticsData(scope);
+  const analytics = await getKkAnalyticsData(scope, range);
 
   return (
     <main className="space-y-7">
       <KkAnalyticsDashboard
+        range={range}
+        pathname="/dashboard/admin/kk-analytics"
+        periodRegistrations={analytics.period.newRegistrations}
+        periodCertificates={analytics.period.certificatesIssued}
+        periodCertificateTypes={analytics.period.certificateTypes}
         title="Province KK Analytics"
         subtitle="Province-wide overview of registrations, demographics, participation, and data quality across Oriental Mindoro."
         workStatus={analytics.demographics.workStatus}

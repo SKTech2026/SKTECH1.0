@@ -6,10 +6,12 @@ import KkAnalyticsDashboard from "@/components/kk/kk-analytics-dashboard";
 import { authOptions } from "@/lib/auth";
 import { requireDashboardRole } from "@/lib/roleGuard";
 import { getKkAnalyticsData, resolveKkAnalyticsScope } from "@/lib/kk/analytics";
+import { parseKkAnalyticsRange } from "@/lib/kk/analytics-range";
 
 export const dynamic = "force-dynamic";
 
-export default async function StaffKkAnalyticsPage() {
+export default async function StaffKkAnalyticsPage({ searchParams }: { searchParams: Promise<{ range?: string | string[] }> }) {
+  const range = parseKkAnalyticsRange((await searchParams).range);
   const session = await getServerSession(authOptions);
   requireDashboardRole(session, [Role.STAFF], {
     unauthenticatedRedirect: "/login?role=STAFF",
@@ -20,11 +22,16 @@ export default async function StaffKkAnalyticsPage() {
     redirect("/unauthorized");
   }
 
-  const analytics = await getKkAnalyticsData(scope);
+  const analytics = await getKkAnalyticsData(scope, range);
 
   return (
     <main className="space-y-7">
       <KkAnalyticsDashboard
+        range={range}
+        pathname="/dashboard/staff/kk-analytics"
+        periodRegistrations={analytics.period.newRegistrations}
+        periodCertificates={analytics.period.certificatesIssued}
+        periodCertificateTypes={analytics.period.certificateTypes}
         title="Municipal KK Analytics"
         subtitle="Municipality-only KK dashboard scoped to your assigned locality. Private and individual records stay aggregated and protected."
         workStatus={analytics.demographics.workStatus}
