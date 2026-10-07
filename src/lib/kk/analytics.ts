@@ -433,10 +433,10 @@ export async function getKkAnalyticsData(scope: KkAnalyticsScope, range: KkAnaly
   }
 
   const scopeLabel = scope.role === Role.ADMIN
-    ? "Province-wide KK analytics"
+    ? "Province of Oriental Mindoro"
     : scope.role === Role.STAFF
-      ? "Municipality-level KK analytics"
-      : "Barangay-level KK analytics";
+      ? `Municipality of ${municipalityLookup[0]?.name ?? "assigned municipality"}`
+      : `Barangay ${barangayRecords[0]?.name ?? "assigned barangay"}, ${municipalityLookup[0]?.name ?? "assigned municipality"}`;
 
   return {
     scopeLabel,

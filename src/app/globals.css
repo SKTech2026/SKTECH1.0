@@ -437,6 +437,78 @@ html.theme-midnight-elite .landing-page-dark .landing-overview {
   background: color-mix(in oklab, var(--color-accent) 30%, transparent);
 }
 
+.kk-print-report {
+  display: none;
+}
+
+@media print {
+  @page { size: A4 portrait; margin: 14mm; }
+  body:has(.kk-print-report) aside,
+  body:has(.kk-document-print) aside,
+  body:has(.kk-print-report) header:not(.kk-print-header),
+  body:has(.kk-document-print) header,
+  body:has(.kk-print-report) .kk-analytics-screen,
+  body:has(.kk-document-print) section:not(:has(.kk-document-print)) { display: none !important; }
+  body:has(.kk-print-report) main,
+  body:has(.kk-document-print) main { padding: 0 !important; margin: 0 !important; max-width: none !important; }
+  body:has(.kk-print-report) main > div,
+  body:has(.kk-document-print) main > div { max-width: none !important; margin: 0 !important; }
+  body:has(.kk-document-print) * { visibility: hidden !important; }
+  body:has(.kk-document-print) .kk-document-print,
+  body:has(.kk-document-print) .kk-document-print * { visibility: visible !important; }
+  body:has(.kk-document-print) .kk-document-controls { display: none !important; }
+  body:has(.kk-document-print) .kk-document-print {
+    position: static !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+  }
+  body:has(.kk-document-print) .kk-document-print * {
+    background: transparent !important;
+    color: #111827 !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+  body:has(.kk-document-print) .kk-document-print .mt-7.grid { grid-template-columns: minmax(0, 1.4fr) minmax(0, .8fr) !important; }
+  body:has(.kk-document-print) .kk-document-print svg { max-width: 100%; }
+  body:has(.kk-print-report),
+  body:has(.kk-print-report) main { background: #fff !important; color: #111827 !important; }
+  body:has(.kk-print-report) * { visibility: hidden !important; }
+  body:has(.kk-print-report) .kk-print-report,
+  body:has(.kk-print-report) .kk-print-report * { visibility: visible !important; }
+  body:has(.kk-print-report) .kk-print-report {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    color: #111827 !important;
+    font: 9pt/1.35 Arial, sans-serif;
+  }
+  .kk-print-report * { box-shadow: none !important; }
+  .kk-print-header { border-bottom: 2px solid #1e3a5f; padding-bottom: 5mm; margin-bottom: 5mm; }
+  .kk-print-header > p:first-child { color: #1e3a5f; font-size: 8pt; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+  .kk-print-header h1 { margin: 2mm 0 4mm; font-size: 20pt; font-weight: 700; }
+  .kk-print-header dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; }
+  .kk-print-header dt { color: #475569; font-size: 8pt; text-transform: uppercase; }
+  .kk-print-header dd { margin: 1mm 0 0; font-weight: 700; overflow-wrap: anywhere; }
+  .kk-print-note { margin-top: 4mm; color: #475569; }
+  .kk-print-section { margin: 0 0 5mm; break-inside: auto; }
+  .kk-print-section h2 { margin: 0 0 2mm; padding: 1.5mm 0; border-bottom: 1px solid #94a3b8; font-size: 11pt; font-weight: 700; break-after: avoid; }
+  .kk-print-section table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 8.5pt; }
+  .kk-print-section thead { display: table-header-group; }
+  .kk-print-section th, .kk-print-section td { border-bottom: 1px solid #cbd5e1; padding: 1.4mm 2mm; text-align: left; overflow-wrap: anywhere; }
+  .kk-print-section th:first-child { width: 65%; font-weight: 500; }
+  .kk-print-section tr { break-inside: avoid; page-break-inside: avoid; }
+  .kk-print-report footer { margin-top: 6mm; padding-top: 3mm; border-top: 1px solid #94a3b8; color: #475569; font-size: 8pt; }
+}
+
 @media print {
   body {
     background: #ffffff !important;

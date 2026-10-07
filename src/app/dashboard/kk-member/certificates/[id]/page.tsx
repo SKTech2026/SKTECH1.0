@@ -47,7 +47,7 @@ export default async function KKCertificateDetailPage({ params }: { params: Prom
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="kk-document-controls flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">KK Certificate</p>
           <h1 className="mt-2 text-3xl font-bold text-foreground">{certificate.title}</h1>
@@ -55,7 +55,7 @@ export default async function KKCertificateDetailPage({ params }: { params: Prom
         <PrintCertificateButton />
       </div>
 
-      <article className="overflow-hidden rounded-[32px] border border-sky-200 bg-white shadow-[0_28px_70px_-30px_rgba(15,23,42,0.45)] print:shadow-none">
+      <article className="kk-document-print overflow-hidden rounded-[32px] border border-sky-200 bg-white shadow-[0_28px_70px_-30px_rgba(15,23,42,0.45)] print:shadow-none">
         <div className="bg-[linear-gradient(135deg,#071a34_0%,#0d2d5f_50%,#173e7a_100%)] p-5 text-white sm:p-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -98,7 +98,7 @@ export default async function KKCertificateDetailPage({ params }: { params: Prom
               <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Barangay official</p>
               <p className="mt-2 text-base font-semibold text-slate-900">SKTECH / Barangay {certificate.kkMemberProfile.barangay?.name ?? "Barangay"}</p>
             </div>
-            <Link href={`/kk/certificates/${certificate.id}`} target="_blank" className="inline-flex rounded-xl border border-border px-4 py-2 text-sm font-semibold text-foreground">
+            <Link href={`/kk/certificates/${certificate.id}`} target="_blank" className="kk-document-controls inline-flex rounded-xl border border-border px-4 py-2 text-sm font-semibold text-foreground">
               Public verification
             </Link>
           </div>

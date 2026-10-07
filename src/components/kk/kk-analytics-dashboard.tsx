@@ -1,5 +1,8 @@
 import KkAnalyticsCharts, { type ChartPoint } from "@/components/kk/analytics/KkAnalyticsCharts";
 import KkAnalyticsRangeFilter from "@/components/kk/analytics/KkAnalyticsRangeFilter";
+import KkAnalyticsPrintButton from "@/components/kk/analytics/KkAnalyticsPrintButton";
+import KkAnalyticsPrintReport from "@/components/kk/analytics/KkAnalyticsPrintReport";
+import type { KkAnalyticsPayload } from "@/lib/kk/analytics";
 import { KK_ANALYTICS_RANGES, type KkAnalyticsRange } from "@/lib/kk/analytics-range";
 
 type DistributionItem = { label: string; count: number; percentage: number };
@@ -8,6 +11,7 @@ type Metric = { label: string; value: string; detail: string };
 type Insight = { title: string; value: string; detail: string };
 
 type Props = {
+  report: KkAnalyticsPayload;
   range: KkAnalyticsRange;
   pathname: string;
   periodRegistrations: number;
@@ -35,7 +39,8 @@ function ChartPanel({ title, data, kind, caption }: { title: string; data: Chart
   return <section className={panel}><div className="mb-2 flex items-start justify-between gap-2"><h2 className="text-xs font-bold uppercase tracking-[.12em] text-slate-200">{title}</h2><span className="shrink-0 text-[10px] tabular-nums text-slate-500">{data.reduce((sum, item) => sum + item.count, 0).toLocaleString()} total</span></div><KkAnalyticsCharts kind={kind} data={data} label={title} />{caption && <p className="mt-1 text-[11px] text-slate-500">{caption}</p>}</section>;
 }
 
-export default function KkAnalyticsDashboard({ range, pathname, periodRegistrations, periodCertificates, periodCertificateTypes, title, subtitle, stats, statusBreakdown = [], demographics, workStatus, civic, coverage, youthPass, certificates, quality, insights, emptyMessage = "No KK profiles recorded yet." }: Props) {
+export default function KkAnalyticsDashboard({ report, range, pathname, periodRegistrations, periodCertificates, periodCertificateTypes, title, subtitle, stats, statusBreakdown = [], demographics, workStatus, civic, coverage, youthPass, certificates, quality, insights, emptyMessage = "No KK profiles recorded yet." }: Props) {
+  const generatedAt = new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila", dateStyle: "long", timeStyle: "short" });
   const periodLabel = KK_ANALYTICS_RANGES.find((option) => option.value === range)?.label ?? "All time";
   const age = demographics.find((group) => group.title.toLowerCase().includes("age group"))?.items ?? [];
   const classification = demographics.find((group) => group.title.toLowerCase().includes("classification"))?.items ?? [];
@@ -48,10 +53,10 @@ export default function KkAnalyticsDashboard({ range, pathname, periodRegistrati
   const warnings = quality.filter((item) => Number(item.value) > 0).sort((a, b) => Number(b.value) - Number(a.value)).slice(0, 2);
   const total = Number(stats[0]?.value ?? 0);
 
-  return <div className="min-w-0 space-y-3 text-slate-100">
+  return <><div className="kk-analytics-screen min-w-0 space-y-3 text-slate-100">
     <header className="flex flex-wrap items-end justify-between gap-3 rounded-xl border border-slate-700/70 bg-[#0a1424] px-4 py-3">
       <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[.2em] text-sky-400">KK monitoring / live aggregates</p><h1 className="mt-1 text-xl font-bold tracking-tight sm:text-2xl">{title}</h1><p className="mt-1 max-w-3xl text-xs text-slate-400">{subtitle}</p></div>
-      <div className="flex min-w-0 flex-col items-start gap-1.5"><span className="text-[11px] font-semibold text-sky-300">Period: {periodLabel}</span><KkAnalyticsRangeFilter range={range} pathname={pathname} /></div>
+      <div className="flex min-w-0 flex-col items-start gap-1.5"><span className="text-[11px] font-semibold text-sky-300">Period: {periodLabel}</span><KkAnalyticsRangeFilter range={range} pathname={pathname} /><div className="flex flex-wrap gap-1.5"><a href={`/api/kk/analytics/export?range=${range}`} className="rounded-md border border-slate-600 px-2.5 py-1.5 text-[11px] font-semibold text-slate-200 hover:bg-slate-800">Export CSV</a><KkAnalyticsPrintButton /></div></div>
     </header>
 
     <section aria-label="Period activity" className="grid gap-2 sm:grid-cols-2"><div className="rounded-lg border border-sky-700/40 bg-sky-950/30 px-3 py-2"><p className="text-[10px] uppercase tracking-wider text-sky-300">New registrations · {periodLabel}</p><strong className="text-xl tabular-nums text-white">{periodRegistrations}</strong></div><div className="rounded-lg border border-sky-700/40 bg-sky-950/30 px-3 py-2"><p className="text-[10px] uppercase tracking-wider text-sky-300">Certificates issued · {periodLabel}</p><strong className="text-xl tabular-nums text-white">{periodCertificates}</strong></div></section>
@@ -73,5 +78,5 @@ export default function KkAnalyticsDashboard({ range, pathname, periodRegistrati
 
     <div className="grid gap-3 lg:grid-cols-2"><section className={panel}><div className="mb-2 flex items-center justify-between"><h2 className="text-xs font-bold uppercase tracking-[.12em]">Action insights</h2><span className="text-[10px] text-slate-500">Operations queue</span></div>{insights.length ? <ul className="divide-y divide-slate-800">{insights.slice(0, 4).map((item) => <li key={item.title} className="flex items-start justify-between gap-3 py-2 text-xs"><div className="min-w-0"><p className="font-semibold text-sky-300">{item.title}</p><p className="mt-0.5 text-slate-400">{item.detail}</p></div><b className="shrink-0 tabular-nums text-white">{item.value}</b></li>)}</ul> : <p className="text-xs text-slate-500">No action insights in this scope.</p>}</section>
       <section className={panel}><h2 className="text-xs font-bold uppercase tracking-[.12em]">Coverage watchlist</h2>{emptyAreas.length ? <ol className="mt-2 grid gap-1.5 text-xs sm:grid-cols-2">{emptyAreas.slice(0, 8).map((item, index) => <li key={`${item.label}-${index}`} className="flex items-center gap-2 rounded-md bg-slate-900/70 px-2 py-1.5"><span className="text-slate-500">{String(index + 1).padStart(2, "0")}</span><span className="min-w-0 truncate text-slate-200" title={item.label}>{item.label}</span><span className="ml-auto text-slate-500">0</span></li>)}</ol> : <p className="mt-2 text-xs text-slate-500">No areas without profiles in this scope.</p>}<p className="mt-3 border-t border-slate-800 pt-2 text-[11px] text-slate-500">YouthPass eligible: {youthPass[0]?.value ?? "0"} · Public checks: {youthPass[3]?.value ?? "0"}</p></section></div>
-  </div>;
+  </div><KkAnalyticsPrintReport data={report} generatedAt={generatedAt} /></>;
 }

@@ -28,6 +28,7 @@ export default async function OfficialKkAnalyticsPage({ searchParams }: { search
   return (
     <main className="space-y-7">
       <KkAnalyticsDashboard
+        report={analytics}
         range={range}
         pathname="/dashboard/official/kk-analytics"
         periodRegistrations={analytics.period.newRegistrations}

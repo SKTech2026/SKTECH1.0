@@ -27,6 +27,7 @@ export default async function StaffKkAnalyticsPage({ searchParams }: { searchPar
   return (
     <main className="space-y-7">
       <KkAnalyticsDashboard
+        report={analytics}
         range={range}
         pathname="/dashboard/staff/kk-analytics"
         periodRegistrations={analytics.period.newRegistrations}

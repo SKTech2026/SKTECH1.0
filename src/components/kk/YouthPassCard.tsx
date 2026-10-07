@@ -42,7 +42,7 @@ export default function YouthPassCard({ profile, verificationUrl = `/kk/youthpas
     : "border-amber-200 bg-amber-50 text-amber-700";
 
   return (
-    <div className="relative overflow-hidden rounded-[28px] border border-sky-200 bg-white shadow-[0_28px_70px_-30px_rgba(15,23,42,0.45)]">
+    <div className="kk-document-print relative overflow-hidden rounded-[28px] border border-sky-200 bg-white shadow-[0_28px_70px_-30px_rgba(15,23,42,0.45)]">
       <div className="absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.25),_transparent_35%),linear-gradient(135deg,#071a34_0%,#0d2d5f_50%,#173e7a_100%)]" />
 
       <div className="relative p-5 sm:p-7">
@@ -126,7 +126,7 @@ export default function YouthPassCard({ profile, verificationUrl = `/kk/youthpas
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-amber-400 px-4 py-3 text-sm font-bold text-slate-900 transition hover:bg-amber-300"
+                className="kk-document-controls mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-amber-400 px-4 py-3 text-sm font-bold text-slate-900 transition hover:bg-amber-300"
               >
                 <Download className="h-4 w-4" />
                 Download / Print
