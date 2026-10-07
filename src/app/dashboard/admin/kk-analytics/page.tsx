@@ -27,6 +27,7 @@ export default async function AdminKkAnalyticsPage() {
       <KkAnalyticsDashboard
         title="Province KK Analytics"
         subtitle="Province-wide overview of registrations, demographics, participation, and data quality across Oriental Mindoro."
+        workStatus={analytics.demographics.workStatus}
         statusBreakdown={[
           { label: "Verified", count: analytics.totals.verifiedMembers, color: "bg-emerald-500" },
           { label: "Pending", count: analytics.totals.pendingVerification, color: "bg-amber-500" },

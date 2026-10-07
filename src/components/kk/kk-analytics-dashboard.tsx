@@ -1,256 +1,68 @@
-type DistributionItem = {
-  label: string;
-  count: number;
-  percentage: number;
-};
+import KkAnalyticsCharts, { type ChartPoint } from "@/components/kk/analytics/KkAnalyticsCharts";
 
-type Insight = {
-  title: string;
-  value: string;
-  detail: string;
-};
+type DistributionItem = { label: string; count: number; percentage: number };
+type Group = { title: string; items: DistributionItem[] };
+type Metric = { label: string; value: string; detail: string };
+type Insight = { title: string; value: string; detail: string };
 
-type StatusBreakdownItem = {
-  label: string;
-  count: number;
-  color: string;
-};
-
-type KkAnalyticsDashboardProps = {
+type Props = {
   title: string;
   subtitle: string;
-  stats: Array<{ label: string; value: string; detail: string }>;
-  statusBreakdown?: StatusBreakdownItem[];
-  demographics: { title: string; items: DistributionItem[]; }[];
-  civic: { title: string; items: DistributionItem[]; }[];
-  coverage: { title: string; items: DistributionItem[]; }[];
-  youthPass: Array<{ label: string; value: string; detail: string }>;
-  certificates: { title: string; items: DistributionItem[]; }[];
-  quality: Array<{ label: string; value: string; detail: string }>;
+  stats: Metric[];
+  statusBreakdown?: Array<{ label: string; count: number; color: string }>;
+  demographics: Group[];
+  workStatus: DistributionItem[];
+  civic: Group[];
+  coverage: Group[];
+  youthPass: Metric[];
+  certificates: Group[];
+  quality: Metric[];
   insights: Insight[];
   emptyMessage?: string;
 };
 
-const MAX_BAR = 100;
+const points = (items: DistributionItem[] = []): ChartPoint[] => items.map(({ label, count }) => ({ label, count }));
+const panel = "min-w-0 rounded-xl border border-slate-700/70 bg-[#0c1729] p-3.5 shadow-[0_10px_24px_-18px_rgba(0,0,0,.65)]";
 
-function formatCompactValue(value: string) {
-  return value.length > 6 ? value.slice(0, 6) : value;
+function ChartPanel({ title, data, kind, caption }: { title: string; data: ChartPoint[]; kind: "status" | "donut" | "horizontal"; caption?: string }) {
+  return <section className={panel}><div className="mb-2 flex items-start justify-between gap-2"><h2 className="text-xs font-bold uppercase tracking-[.12em] text-slate-200">{title}</h2><span className="shrink-0 text-[10px] tabular-nums text-slate-500">{data.reduce((sum, item) => sum + item.count, 0).toLocaleString()} total</span></div><KkAnalyticsCharts kind={kind} data={data} label={title} />{caption && <p className="mt-1 text-[11px] text-slate-500">{caption}</p>}</section>;
 }
 
-function CompactStatCard({ label, value, detail }: { label: string; value: string; detail: string }) {
-  return (
-    <div className="rounded-xl border border-slate-700/80 bg-slate-950/60 p-3 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.7)]">
-      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">{label}</p>
-      <div className="mt-2 flex items-end justify-between gap-2">
-        <span className="text-2xl font-black leading-none text-white">{formatCompactValue(value)}</span>
-      </div>
-      <p className="mt-2 line-clamp-2 text-[11px] text-slate-400">{detail}</p>
+export default function KkAnalyticsDashboard({ title, subtitle, stats, statusBreakdown = [], demographics, workStatus, civic, coverage, youthPass, certificates, quality, insights, emptyMessage = "No KK profiles recorded yet." }: Props) {
+  const age = demographics.find((group) => group.title.toLowerCase().includes("age group"))?.items ?? [];
+  const classification = demographics.find((group) => group.title.toLowerCase().includes("classification"))?.items ?? [];
+  const civicCounts = civic.slice(0, 4).map((group) => ({ label: group.title.replace("Registered ", "").replace("Voted last election", "Voted last election").replace("Attended KK Assembly", "KK assembly"), count: group.items[0]?.count ?? 0 }));
+  const coverageRankings = coverage.filter((group) => /members per|barangay totals/i.test(group.title));
+  const emptyAreas = coverage.find((group) => /no KK profiles/i.test(group.title))?.items ?? [];
+  const certificateTypes = certificates.find((group) => /by type/i.test(group.title))?.items ?? [];
+  const certificatesMonth = certificates.find((group) => /this month/i.test(group.title))?.items[0]?.count ?? 0;
+  const revoked = certificates.find((group) => /revoked/i.test(group.title))?.items[0]?.count ?? 0;
+  const qualityCounts = quality.map((item) => ({ label: item.label.replace("Profiles with ", "").replace(" count", ""), count: Number(item.value) || 0 }));
+  const warnings = quality.filter((item) => Number(item.value) > 0).sort((a, b) => Number(b.value) - Number(a.value)).slice(0, 2);
+  const total = Number(stats[0]?.value ?? 0);
+
+  return <div className="min-w-0 space-y-3 text-slate-100">
+    <header className="flex flex-wrap items-end justify-between gap-3 rounded-xl border border-slate-700/70 bg-[#0a1424] px-4 py-3">
+      <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[.2em] text-sky-400">KK monitoring / live aggregates</p><h1 className="mt-1 text-xl font-bold tracking-tight sm:text-2xl">{title}</h1><p className="mt-1 max-w-3xl text-xs text-slate-400">{subtitle}</p></div>
+      <div className="flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-300"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />Aggregate only</div>
+    </header>
+
+    <section aria-label="Key metrics" className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">{stats.slice(0, 6).map((item) => <div key={item.label} className="min-w-0 rounded-xl border border-slate-700/70 bg-[#0c1729] px-3 py-2.5"><p className="truncate text-[10px] font-semibold uppercase tracking-[.1em] text-slate-400" title={item.label}>{item.label}</p><p className="mt-1 text-2xl font-bold tabular-nums text-white">{item.value}</p><p className="truncate text-[10px] text-slate-500" title={item.detail}>{item.detail}</p></div>)}</section>
+
+    {total === 0 && <p role="status" className="rounded-lg border border-sky-800 bg-sky-950/40 px-3 py-2 text-xs text-sky-200">{emptyMessage} Charts will populate from registered members in this scope.</p>}
+
+    <div className="grid min-w-0 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+      <ChartPanel title="Registration status" kind="status" data={statusBreakdown.map(({ label, count }) => ({ label, count }))} caption="Profiles by current review state" />
+      <ChartPanel title="Age groups" kind="donut" data={points(age)} />
+      <ChartPanel title="Youth classification" kind="horizontal" data={points(classification)} />
+      <ChartPanel title="Work status" kind="horizontal" data={points(workStatus)} />
+      <ChartPanel title="Civic participation" kind="horizontal" data={civicCounts} caption="Members reporting yes for each activity" />
+      {coverageRankings.length ? coverageRankings.map((group) => <ChartPanel key={group.title} title={group.title} kind="horizontal" data={points(group.items)} caption="Highest coverage areas shown" />) : <ChartPanel title="Coverage" kind="horizontal" data={[]} />}
+      <section className={panel}><div className="mb-2 flex items-start justify-between gap-2"><h2 className="text-xs font-bold uppercase tracking-[.12em] text-slate-200">Certificate output</h2><span className="text-[10px] text-slate-500">By type</span></div><KkAnalyticsCharts kind="donut" data={points(certificateTypes)} label="Certificates by type" /><div className="mt-2 grid grid-cols-2 gap-2 border-t border-slate-800 pt-2 text-xs"><div><b className="text-lg tabular-nums text-white">{certificatesMonth}</b><p className="text-slate-400">This month</p></div><div><b className="text-lg tabular-nums text-white">{revoked}</b><p className="text-slate-400">Revoked</p></div></div></section>
+      <section className={panel}><div className="mb-2 flex items-start justify-between gap-2"><h2 className="text-xs font-bold uppercase tracking-[.12em] text-slate-200">Data quality</h2><span className="text-[10px] text-slate-500">Records needing attention</span></div><KkAnalyticsCharts kind="horizontal" data={qualityCounts} label="Data quality gaps" /><div className="mt-2 flex flex-wrap gap-1.5 border-t border-slate-800 pt-2">{warnings.length ? warnings.map((item) => <span key={item.label} className="rounded-md border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-[10px] text-amber-200">{item.value} {item.label.toLowerCase()}</span>) : <span className="text-[11px] text-slate-500">No recorded quality warnings</span>}</div></section>
     </div>
-  );
-}
 
-function DistributionRow({ item, title }: { item: DistributionItem; title: string }) {
-  const width = Math.min(MAX_BAR, Math.max(8, item.percentage || (item.count > 0 ? 10 : 0)));
-  return (
-    <div key={`${title}-${item.label}`} className="space-y-1.5">
-      <div className="flex items-center justify-between gap-2 text-[11px]">
-        <span className="truncate text-slate-200">{item.label}</span>
-        <span className="font-semibold text-slate-400">{item.count}</span>
-      </div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-slate-800">
-        <div className="h-full rounded-full bg-gradient-to-r from-sky-500 via-cyan-400 to-emerald-400" style={{ width: `${width}%` }} />
-      </div>
-    </div>
-  );
-}
-
-function DistributionPanel({ title, items, emptyMessage }: { title: string; items: DistributionItem[]; emptyMessage?: string }) {
-  const hasData = items.length > 0 && items.some((item) => item.count > 0);
-
-  return (
-    <div className="rounded-xl border border-slate-700/80 bg-slate-950/60 p-3 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.7)]">
-      <h3 className="mb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-300">{title}</h3>
-      {!hasData ? (
-        <p className="text-xs text-slate-400">{emptyMessage ?? "No data available yet."}</p>
-      ) : (
-        <div className="space-y-3">{items.slice(0, 6).map((item) => <DistributionRow key={`${title}-${item.label}`} item={item} title={title} />)}</div>
-      )}
-    </div>
-  );
-}
-
-function StatusBarPanel({ items }: { items: StatusBreakdownItem[] }) {
-  const total = items.reduce((sum, item) => sum + item.count, 0);
-  const filtered = items.filter((item) => item.count > 0);
-
-  if (filtered.length === 0) {
-    return (
-      <div className="rounded-xl border border-slate-700/80 bg-slate-950/60 p-3 text-xs text-slate-400 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.7)]">
-        No profile status data available yet.
-      </div>
-    );
-  }
-
-  return (
-    <div className="rounded-xl border border-slate-700/80 bg-slate-950/60 p-3 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.7)]">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-300">Registration status</h3>
-        <span className="text-[10px] uppercase tracking-[0.14em] text-slate-400">{total} total</span>
-      </div>
-      <div className="mb-3 flex h-2.5 overflow-hidden rounded-full bg-slate-800">
-        {filtered.map((item) => (
-          <div
-            key={item.label}
-            className={`h-full ${item.color}`}
-            style={{ width: `${total ? (item.count / total) * 100 : 0}%` }}
-          />
-        ))}
-      </div>
-      <div className="grid gap-2 sm:grid-cols-2">
-        {filtered.map((item) => (
-          <div key={item.label} className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/70 px-2 py-1.5 text-[11px]">
-            <span className="flex items-center gap-2 text-slate-300">
-              <span className={`h-2 w-2 rounded-full ${item.color}`} />
-              {item.label}
-            </span>
-            <span className="font-semibold text-white">{item.count}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function InsightList({ insights }: { insights: Insight[] }) {
-  if (insights.length === 0) {
-    return (
-      <div className="rounded-xl border border-slate-700/80 bg-slate-950/60 p-3 text-xs text-slate-400 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.7)]">
-        No action insights available yet.
-      </div>
-    );
-  }
-
-  return (
-    <div className="rounded-xl border border-slate-700/80 bg-slate-950/60 p-3 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.7)]">
-      <h3 className="mb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-300">Action insights</h3>
-      <div className="space-y-2">
-        {insights.slice(0, 6).map((insight) => (
-          <div key={insight.title} className="rounded-lg border border-slate-800 bg-slate-900/60 p-2.5">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-sky-300">{insight.title}</span>
-              <span className="text-sm font-bold text-white">{insight.value}</span>
-            </div>
-            <p className="mt-1 text-[11px] leading-4 text-slate-400">{insight.detail}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-export default function KkAnalyticsDashboard({
-  title,
-  subtitle,
-  stats,
-  statusBreakdown = [],
-  demographics,
-  civic,
-  coverage,
-  youthPass,
-  certificates,
-  quality,
-  insights,
-  emptyMessage = "No data available yet.",
-}: KkAnalyticsDashboardProps) {
-  return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-slate-700/80 bg-slate-950/70 p-4 shadow-[0_14px_28px_-22px_rgba(15,23,42,0.7)]">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-sky-300">KK Analytics</p>
-        <h1 className="mt-2 text-2xl font-black tracking-tight text-white">{title}</h1>
-        <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">{subtitle}</p>
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-        {stats.map((item) => (
-          <CompactStatCard key={item.label} {...item} />
-        ))}
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-12">
-        <div className="xl:col-span-6">
-          <StatusBarPanel items={statusBreakdown} />
-        </div>
-
-        <div className="xl:col-span-3">
-          <DistributionPanel title="YouthPass" items={youthPass.map((item) => ({ label: item.label, count: Number(item.value || 0), percentage: Number(item.value || 0) }))} emptyMessage={emptyMessage} />
-        </div>
-
-        <div className="xl:col-span-3">
-          <DistributionPanel title="Certificate output" items={certificates.flatMap((group) => group.items).slice(0, 6)} emptyMessage={emptyMessage} />
-        </div>
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-12">
-        {demographics.slice(0, 2).map((group) => (
-          <div key={group.title} className="xl:col-span-3">
-            <DistributionPanel title={group.title} items={group.items} emptyMessage={emptyMessage} />
-          </div>
-        ))}
-
-        {civic.slice(0, 2).map((group) => (
-          <div key={group.title} className="xl:col-span-3">
-            <DistributionPanel title={group.title} items={group.items} emptyMessage={emptyMessage} />
-          </div>
-        ))}
-
-        <div className="xl:col-span-3">
-          <DistributionPanel title="Coverage snapshot" items={coverage.flatMap((group) => group.items).slice(0, 6)} emptyMessage={emptyMessage} />
-        </div>
-
-        <div className="xl:col-span-3">
-          <DistributionPanel title="Data quality" items={quality.map((item) => ({ label: item.label, count: Number(item.value || 0), percentage: Number(item.value || 0) }))} emptyMessage={emptyMessage} />
-        </div>
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-12">
-        <div className="xl:col-span-4">
-          <DistributionPanel title="Age groups" items={demographics[0]?.items ?? []} emptyMessage={emptyMessage} />
-        </div>
-        <div className="xl:col-span-4">
-          <DistributionPanel title="Civic participation" items={civic.flatMap((group) => group.items).slice(0, 6)} emptyMessage={emptyMessage} />
-        </div>
-        <div className="xl:col-span-4">
-          <InsightList insights={insights} />
-        </div>
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-12">
-        {coverage.map((group) => (
-          <div key={group.title} className="xl:col-span-4">
-            <DistributionPanel title={group.title} items={group.items} emptyMessage={emptyMessage} />
-          </div>
-        ))}
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-12">
-        {certificates.map((group) => (
-          <div key={group.title} className="xl:col-span-4">
-            <DistributionPanel title={group.title} items={group.items} emptyMessage={emptyMessage} />
-          </div>
-        ))}
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-12">
-        {quality.map((item) => (
-          <div key={item.label} className="xl:col-span-3">
-            <div className="rounded-xl border border-slate-700/80 bg-slate-950/60 p-3 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.7)]">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">{item.label}</p>
-              <p className="mt-2 text-2xl font-black text-white">{item.value}</p>
-              <p className="mt-1 text-[11px] leading-4 text-slate-400">{item.detail}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+    <div className="grid gap-3 lg:grid-cols-2"><section className={panel}><div className="mb-2 flex items-center justify-between"><h2 className="text-xs font-bold uppercase tracking-[.12em]">Action insights</h2><span className="text-[10px] text-slate-500">Operations queue</span></div>{insights.length ? <ul className="divide-y divide-slate-800">{insights.slice(0, 4).map((item) => <li key={item.title} className="flex items-start justify-between gap-3 py-2 text-xs"><div className="min-w-0"><p className="font-semibold text-sky-300">{item.title}</p><p className="mt-0.5 text-slate-400">{item.detail}</p></div><b className="shrink-0 tabular-nums text-white">{item.value}</b></li>)}</ul> : <p className="text-xs text-slate-500">No action insights in this scope.</p>}</section>
+      <section className={panel}><h2 className="text-xs font-bold uppercase tracking-[.12em]">Coverage watchlist</h2>{emptyAreas.length ? <ol className="mt-2 grid gap-1.5 text-xs sm:grid-cols-2">{emptyAreas.slice(0, 8).map((item, index) => <li key={`${item.label}-${index}`} className="flex items-center gap-2 rounded-md bg-slate-900/70 px-2 py-1.5"><span className="text-slate-500">{String(index + 1).padStart(2, "0")}</span><span className="min-w-0 truncate text-slate-200" title={item.label}>{item.label}</span><span className="ml-auto text-slate-500">0</span></li>)}</ol> : <p className="mt-2 text-xs text-slate-500">No areas without profiles in this scope.</p>}<p className="mt-3 border-t border-slate-800 pt-2 text-[11px] text-slate-500">YouthPass eligible: {youthPass[0]?.value ?? "0"} · Public checks: {youthPass[3]?.value ?? "0"}</p></section></div>
+  </div>;
 }

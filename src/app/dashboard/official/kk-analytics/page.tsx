@@ -28,6 +28,7 @@ export default async function OfficialKkAnalyticsPage() {
       <KkAnalyticsDashboard
         title="Barangay KK Analytics"
         subtitle="Barangay-level youth analytics for your assigned SK Chairperson coverage only."
+        workStatus={analytics.demographics.workStatus}
         statusBreakdown={[
           { label: "Verified", count: analytics.totals.verifiedMembers, color: "bg-emerald-500" },
           { label: "Pending", count: analytics.totals.pendingVerification, color: "bg-amber-500" },

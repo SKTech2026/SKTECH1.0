@@ -27,6 +27,7 @@ export default async function StaffKkAnalyticsPage() {
       <KkAnalyticsDashboard
         title="Municipal KK Analytics"
         subtitle="Municipality-only KK dashboard scoped to your assigned locality. Private and individual records stay aggregated and protected."
+        workStatus={analytics.demographics.workStatus}
         statusBreakdown={[
           { label: "Verified", count: analytics.totals.verifiedMembers, color: "bg-emerald-500" },
           { label: "Pending", count: analytics.totals.pendingVerification, color: "bg-amber-500" },
