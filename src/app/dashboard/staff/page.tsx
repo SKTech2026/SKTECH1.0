@@ -172,6 +172,11 @@ export default async function StaffDashboardHomePage() {
           <div className="mt-5 grid gap-3">
             {[
               {
+                href: "/dashboard/staff/kk-analytics",
+                label: "Municipality KK Analytics",
+                description: "Review youth participation, verification, and public reporting.",
+              },
+              {
                 href: "/dashboard/staff/admissions",
                 label: "Review Admission Queue",
                 description: "Validate pending SK official submissions.",

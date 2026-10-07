@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import {
   ArrowUpRight,
+  BarChart3,
   ClipboardList,
   IdCard,
   Megaphone,
@@ -11,12 +12,14 @@ import {
   Settings2,
   UserCheck,
   UserCog,
+  Users,
 } from "lucide-react";
 
 import FlippablePortraitID from "@/components/id/FlippablePortraitID";
 import { authOptions } from "@/lib/auth";
 import { getActiveAnnouncements } from "@/lib/announcements";
 import { prisma } from "@/lib/db";
+import { getChairScope } from "@/lib/kk";
 import { requireDashboardRole } from "@/lib/roleGuard";
 import { formatEnumLabel, formatOfficialFullName } from "@/lib/sk-official";
 
@@ -132,6 +135,7 @@ export default async function OfficialDashboardHomePage({
     );
   }
 
+  const chairScope = await getChairScope();
   const [attendanceCount, bulletinItems] = await Promise.all([
     currentUser.official
       ? prisma.officialAttendance.count({
@@ -154,6 +158,7 @@ export default async function OfficialDashboardHomePage({
     ["Municipal SK Federation Feed", "/dashboard/official/feed", Megaphone, "bg-[#1452d9]/15 text-[#6ea0ff]"],
     ["Attendance", "/dashboard/official/attendance", ClipboardList, "bg-[#1452d9]/15 text-[#6ea0ff]"],
     ["Chat", "/dashboard/official/chat", MessageSquare, "bg-[#cf2638]/15 text-[#ff8a95]"],
+    ...(chairScope ? [["KK Registry", "/dashboard/official/kk-registry", Users, "bg-emerald-500/15 text-emerald-300"] as const, ["KK Analytics", "/dashboard/official/kk-analytics", BarChart3, "bg-emerald-500/15 text-emerald-300"] as const] : []),
     ["Settings", "/dashboard/official/settings", Settings2, "bg-[#f3c72b]/15 text-[#e7b720]"],
   ] as const;
 

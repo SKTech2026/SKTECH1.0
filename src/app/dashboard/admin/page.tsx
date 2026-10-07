@@ -119,6 +119,12 @@ export default async function AdminDashboardHomePage() {
       Icon: MapPinned,
     },
     {
+      href: "/dashboard/admin/kk-analytics",
+      title: "KK Youth Analytics",
+      description: "Review youth analytics and profiling coverage.",
+      Icon: BarChart3,
+    },
+    {
       href: "/dashboard/admin/analytics",
       title: "View Analytics",
       description: "Review province-wide operational reports.",

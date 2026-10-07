@@ -65,6 +65,7 @@ export default async function KKDashboard() {
           <Link href="/dashboard/kk-member/profile" className="inline-flex rounded-xl bg-amber-400 px-5 py-3 text-sm font-bold text-slate-900">Complete KK Survey / Profiling</Link>
           <Link href="/dashboard/kk-member/youthpass" className="inline-flex rounded-xl border border-sky-200/60 bg-white/5 px-5 py-3 text-sm font-semibold text-white">View YouthPass</Link>
           <Link href="/dashboard/kk-member/certificates" className="inline-flex rounded-xl border border-sky-200/60 bg-white/5 px-5 py-3 text-sm font-semibold text-white">View Certificates</Link>
+          <Link href="/dashboard/kk-member/profile" className="inline-flex rounded-xl border border-sky-200/60 bg-white/5 px-5 py-3 text-sm font-semibold text-white">View Verification Status</Link>
         </div>
       </section>
 

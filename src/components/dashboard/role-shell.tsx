@@ -119,7 +119,7 @@ const getCollapseServerSnapshot = () => false;
 const ADMIN_GROUPS = [
   {
     label: "OVERVIEW",
-    items: ["System Overview", "Overall Analytics", "Compliance Dashboard", "Audit Trail"],
+    items: ["System Overview", "Overall Analytics", "KK Analytics", "Compliance Dashboard", "Audit Trail"],
   },
   {
     label: "GOVERNANCE",
@@ -138,7 +138,7 @@ const ADMIN_GROUPS = [
 const STAFF_GROUPS = [
   {
     label: "OVERVIEW",
-    items: ["Operations Hub"],
+    items: ["Operations Hub", "KK Analytics"],
   },
   {
     label: "GOVERNANCE",
@@ -163,7 +163,7 @@ const ADMIN_DROPDOWN_GROUPS = [
   {
     label: "Management",
     icon: "userCog",
-    items: ["Overall Analytics", "Compliance Dashboard", "Audit Trail", "Municipalities", "Staff Admission", "Staff Access", "Archive Bin", "SK Profiling"],
+    items: ["Overall Analytics", "KK Analytics", "Compliance Dashboard", "Audit Trail", "Municipalities", "Staff Admission", "Staff Access", "Archive Bin", "SK Profiling"],
   },
   {
     label: "Services",
@@ -173,7 +173,7 @@ const ADMIN_DROPDOWN_GROUPS = [
 ] as const;
 
 const STAFF_DROPDOWN_GROUPS = [
-  { label: "Home", icon: "layoutDashboard", items: ["Operations Hub"] },
+  { label: "Home", icon: "layoutDashboard", items: ["Operations Hub", "KK Analytics"] },
   { label: "Announcements", icon: "megaphone", items: ["Announcements"] },
   {
     label: "Services",
@@ -201,7 +201,7 @@ const STAFF_DESKTOP_EXTRA_ITEMS: RoleShellItem[] = [
 ];
 
 const OFFICIAL_GROUPS = [
-  { label: "Home", icon: "layoutDashboard", items: ["Official Briefing"] },
+  { label: "Home", icon: "layoutDashboard", items: ["Official Briefing", "KK Registry", "KK Analytics"] },
   { label: "Announcements", icon: "megaphone", items: ["Announcements", "Municipal SK Federation Feed"] },
   {
     label: "Service",
