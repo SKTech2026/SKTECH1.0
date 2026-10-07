@@ -120,9 +120,9 @@ function LoginContent() {
       subtitle="Administrative and municipal operations access."
       portal="internal"
       roleBadge="Admin & Staff"
-      illustrationTitle="One secure workspace for provincial operations."
-      illustrationSubtitle="Choose your assigned role to manage governance, identity, events, and reporting."
-      highlights={["Provincial administration and oversight", "Municipal staff operations", "Role-scoped records and reporting"]}
+      illustrationTitle="Provincial operations, secured in one platform."
+      illustrationSubtitle="Manage Oriental Mindoro youth governance through the access assigned to your role."
+      highlights={["Provincial monitoring", "Staff access and admissions", "Compliance and analytics"]}
       privacyNote="Use only your assigned employee account. Activity is limited to your authorized role."
       footer={<div className="flex flex-wrap gap-x-4 gap-y-2 border-t border-slate-200 pt-4 text-xs font-semibold text-blue-800"><Link href="/official/auth" className="hover:underline">Official Portal</Link><Link href="/kk/login" className="hover:underline">KK Member Portal</Link></div>}
     >

@@ -53,7 +53,7 @@ export default function OfficialAuthPage() {
       subtitle="Secure access for SK officials and barangay youth governance."
       portal="official"
       roleBadge="SK Official Access"
-      illustrationTitle="Your barangay governance workspace."
+      illustrationTitle="Serve your barangay with secure digital access."
       illustrationSubtitle="Sign in to your official profile and the tools available to your role."
       highlights={["Official identity and profile", "Attendance and municipal updates", "Barangay KK tools for authorized chairpersons"]}
       privacyNote="Official records remain inside your authorized workspace. Use your registered email to continue."

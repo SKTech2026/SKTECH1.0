@@ -34,11 +34,11 @@ export default function KKLoginPage() {
     subtitle="Access your KK profile, YouthPass, and certificates."
     portal="kk"
     roleBadge="Katipunan ng Kabataan"
-    illustrationTitle="Your youth profile, in one place."
+    illustrationTitle="Your youth profile, YouthPass, and certificates."
     illustrationSubtitle="Stay connected to your barangay and access the services linked to your verified membership."
-    highlights={["Complete your KK profile", "View your YouthPass", "Access earned certificates"]}
+    highlights={["KK profiling", "YouthPass verification", "Certificates and participation records"]}
     privacyNote="Only verified members can sign in. Public verification shows limited, public-safe details."
-    footer={<div className="space-y-2 border-t border-slate-200 pt-4 text-xs text-slate-600"><p><Link href="/kk#invitation" className="font-semibold text-teal-800 hover:underline">I have an invite link / Join through invitation</Link></p><p><Link href="/kk#verification" className="font-semibold text-teal-800 hover:underline">Verify YouthPass or Certificate</Link></p></div>}
+    footer={<div className="space-y-2 border-t border-slate-200 pt-4 text-xs text-slate-600"><p><Link href="/kk#invitation" className="font-semibold text-teal-800 hover:underline">I have an invite link / Join through invitation</Link></p><p><Link href="/kk#verification" className="font-semibold text-teal-800 hover:underline">Verify YouthPass or Certificate</Link></p><p>SK Official? <Link href="/official/auth" className="font-semibold text-teal-800 hover:underline">Open the Official Portal</Link></p></div>}
   >
     {error ? <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p> : null}
     <form onSubmit={submit} className="space-y-4" aria-busy={busy}>
