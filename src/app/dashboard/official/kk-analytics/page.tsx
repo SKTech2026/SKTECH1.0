@@ -28,6 +28,13 @@ export default async function OfficialKkAnalyticsPage() {
       <KkAnalyticsDashboard
         title="Barangay KK Analytics"
         subtitle="Barangay-level youth analytics for your assigned SK Chairperson coverage only."
+        statusBreakdown={[
+          { label: "Verified", count: analytics.totals.verifiedMembers, color: "bg-emerald-500" },
+          { label: "Pending", count: analytics.totals.pendingVerification, color: "bg-amber-500" },
+          { label: "Needs correction", count: analytics.totals.needsCorrection, color: "bg-orange-500" },
+          { label: "Rejected", count: analytics.totals.rejected, color: "bg-rose-500" },
+          { label: "Archived", count: analytics.totals.archived, color: "bg-slate-500" },
+        ]}
         stats={[
           { label: "Total KK Members", value: String(analytics.totals.totalMembers), detail: "Members in your barangay" },
           { label: "Verified", value: String(analytics.totals.verifiedMembers), detail: `${analytics.totals.registrationCompletionRate}% completion rate` },

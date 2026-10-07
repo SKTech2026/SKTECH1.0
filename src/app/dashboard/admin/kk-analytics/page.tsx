@@ -27,6 +27,13 @@ export default async function AdminKkAnalyticsPage() {
       <KkAnalyticsDashboard
         title="Province KK Analytics"
         subtitle="Province-wide overview of registrations, demographics, participation, and data quality across Oriental Mindoro."
+        statusBreakdown={[
+          { label: "Verified", count: analytics.totals.verifiedMembers, color: "bg-emerald-500" },
+          { label: "Pending", count: analytics.totals.pendingVerification, color: "bg-amber-500" },
+          { label: "Needs correction", count: analytics.totals.needsCorrection, color: "bg-orange-500" },
+          { label: "Rejected", count: analytics.totals.rejected, color: "bg-rose-500" },
+          { label: "Archived", count: analytics.totals.archived, color: "bg-slate-500" },
+        ]}
         stats={[
           { label: "Total KK Members", value: String(analytics.totals.totalMembers), detail: "All records in scope" },
           { label: "Verified", value: String(analytics.totals.verifiedMembers), detail: `${analytics.totals.registrationCompletionRate}% complete` },

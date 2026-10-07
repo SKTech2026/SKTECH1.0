@@ -27,6 +27,13 @@ export default async function StaffKkAnalyticsPage() {
       <KkAnalyticsDashboard
         title="Municipal KK Analytics"
         subtitle="Municipality-only KK dashboard scoped to your assigned locality. Private and individual records stay aggregated and protected."
+        statusBreakdown={[
+          { label: "Verified", count: analytics.totals.verifiedMembers, color: "bg-emerald-500" },
+          { label: "Pending", count: analytics.totals.pendingVerification, color: "bg-amber-500" },
+          { label: "Needs correction", count: analytics.totals.needsCorrection, color: "bg-orange-500" },
+          { label: "Rejected", count: analytics.totals.rejected, color: "bg-rose-500" },
+          { label: "Archived", count: analytics.totals.archived, color: "bg-slate-500" },
+        ]}
         stats={[
           { label: "Total KK Members", value: String(analytics.totals.totalMembers), detail: "Records in assigned municipality" },
           { label: "Verified", value: String(analytics.totals.verifiedMembers), detail: `${analytics.totals.registrationCompletionRate}% completion rate` },
