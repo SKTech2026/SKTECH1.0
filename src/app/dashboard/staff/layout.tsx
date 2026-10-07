@@ -75,6 +75,16 @@ const staffItems: RoleShellItem[] = [
   },
 ];
 
+const desktopItems: RoleShellItem[] = [
+  { href: "/dashboard/staff", label: "Dashboard", description: "Municipal overview", icon: "layoutDashboard" },
+  { href: "/dashboard/staff/operations", label: "Staff Operations", description: "Daily workspaces", icon: "userCog", activePaths: ["/dashboard/staff/chat"] },
+  { href: "/dashboard/staff/admissions-profiles", label: "Admissions & Profiles", description: "Official records", icon: "userCheck", activePaths: ["/dashboard/staff/admissions", "/dashboard/staff/digital-admission", "/dashboard/staff/profiling"] },
+  { href: "/dashboard/staff/events-attendance", label: "Events & Attendance", description: "Events and scanning", icon: "calendarDays", activePaths: ["/dashboard/staff/events", "/dashboard/staff/attendance-monitoring", "/dashboard/staff/id-scanning", "/dashboard/staff/event-kiosk"] },
+  { href: "/dashboard/staff/analytics", label: "Analytics & Reports", description: "Municipal insights", icon: "barChart3", activePaths: ["/dashboard/staff/kk-analytics"] },
+  { href: "/dashboard/staff/announcements", label: "Announcements", description: "Public bulletin", icon: "megaphone" },
+  { href: "/dashboard/staff/settings", label: "Settings", description: "Theme and account", icon: "settings" },
+];
+
 export default async function StaffDashboardLayout({
   children,
 }: {
@@ -91,6 +101,7 @@ export default async function StaffDashboardLayout({
       heading="Municipal Staff Dashboard"
       subheading="Coordinate municipal admissions, attendance, events, and public communications."
       items={staffItems}
+      desktopItems={desktopItems}
       variant="staffCn"
       account={{
         name: authorizedSession.user.name,

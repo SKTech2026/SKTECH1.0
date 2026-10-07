@@ -119,7 +119,7 @@ export default function SettingsPanel({
 
           <LogoutConfirmButton
             callbackUrl={logoutCallbackUrl}
-            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-400/35 bg-red-500/15 px-4 py-2.5 text-sm font-semibold text-red-100 transition hover:bg-red-500/25"
+            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-600 bg-red-700 px-4 py-2.5 text-sm font-semibold text-white motion-safe:transition-colors motion-safe:duration-200 hover:bg-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
           >
             <LogOut className="h-4 w-4" />
             Logout

@@ -54,7 +54,8 @@ export default function ThemeSelector() {
             key={preset.id}
             type="button"
             onClick={() => setTheme(preset.id)}
-            className={`rounded-2xl border p-3 text-left transition ${
+            aria-pressed={active}
+            className={`rounded-2xl border p-3 text-left motion-safe:transition-[border-color,background-color,box-shadow,transform] motion-safe:duration-200 motion-safe:hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
               active
                 ? "border-[color:var(--color-accent)] bg-[color:var(--color-surface-elevated)] shadow-lg"
                 : "border-[color:var(--color-glass-border)] bg-[color:var(--color-surface)] hover:border-[color:var(--color-accent)]/70 hover:bg-[color:var(--color-surface-elevated)]"
@@ -68,7 +69,7 @@ export default function ThemeSelector() {
               />
               <div className={`absolute inset-x-3 bottom-3 h-6 rounded-md ${preview.surface}`} />
               {active ? (
-                <span className="absolute right-2 top-2 rounded-full bg-black/35 p-1 text-foreground">
+                <span className="absolute right-2 top-2 rounded-full bg-surface p-1 text-foreground">
                   <Check className="h-3.5 w-3.5" />
                 </span>
               ) : null}

@@ -76,6 +76,7 @@ export type RoleShellItem = {
   label: string;
   description: string;
   icon: IconName;
+  activePaths?: string[];
 };
 
 type RoleShellProps = {
@@ -83,6 +84,7 @@ type RoleShellProps = {
   heading: string;
   subheading: string;
   items: RoleShellItem[];
+  desktopItems?: RoleShellItem[];
   logoutCallbackUrl?: string;
   variant?: "default" | "adminCn" | "staffCn" | "officialCn";
   account?: {
@@ -226,6 +228,7 @@ export default function RoleShell({
   heading,
   subheading,
   items,
+  desktopItems,
   logoutCallbackUrl = "/login",
   variant = "default",
   account,
@@ -251,10 +254,10 @@ export default function RoleShell({
 
   const activeItem = useMemo(
     () =>
-      items
-        .filter((item) => isActivePath(pathname, item.href))
+      [...items, ...(desktopItems ?? [])]
+        .filter((item) => item.href === items[0]?.href ? pathname === item.href : isActivePath(pathname, item.href))
         .sort((a, b) => b.href.length - a.href.length)[0] ?? items[0],
-    [items, pathname],
+    [desktopItems, items, pathname],
   );
 
   const navGroups = useMemo(
@@ -268,9 +271,11 @@ export default function RoleShell({
     [isOfficialCn, isStaffCn, items],
   );
 
-  const desktopNavGroups = useMemo(
-    () => {
-      const desktopItems = isStaffCn
+  const desktopNavGroups = (() => {
+      if (desktopItems) {
+        return desktopItems.map((item) => ({ label: item.label, icon: item.icon, items: [item] }));
+      }
+      const legacyDesktopItems = isStaffCn
         ? [
             ...items,
             ...STAFF_DESKTOP_EXTRA_ITEMS.filter(
@@ -282,12 +287,10 @@ export default function RoleShell({
       return (isStaffCn ? STAFF_DROPDOWN_GROUPS : isOfficialCn ? OFFICIAL_GROUPS : ADMIN_DROPDOWN_GROUPS).map((group) => ({
         ...group,
         items: group.items
-          .map((label) => desktopItems.find((item) => item.label === label))
+          .map((label) => legacyDesktopItems.find((item) => item.label === label))
           .filter((item): item is RoleShellItem => Boolean(item)),
       })).filter((group) => group.items.length > 0);
-    },
-    [isOfficialCn, isStaffCn, items],
-  );
+    })();
 
   if (isConsoleCn) {
     const accountName = account?.name ?? (isStaffCn ? "Staff User" : isOfficialCn ? "SK Official" : "Administrator");
@@ -308,7 +311,9 @@ export default function RoleShell({
       options?: { compact?: boolean; onNavigate?: () => void },
     ) => {
       const Icon = ICONS[item.icon];
-      const active = activeItem?.href === item.href;
+      const active = desktopItems && !options?.onNavigate
+        ? (pathname === item.href || (item.href !== homeHref && isActivePath(pathname, item.href))) || Boolean(item.activePaths?.some((path) => isActivePath(pathname, path)))
+        : activeItem?.href === item.href;
       const compact = options?.compact ?? false;
 
       return (
@@ -318,19 +323,20 @@ export default function RoleShell({
           title={compact ? item.label : undefined}
           aria-label={compact ? item.label : undefined}
           onClick={options?.onNavigate}
-          className={`group flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+          aria-current={active ? "page" : undefined}
+          className={`group flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-medium motion-safe:transition-colors motion-safe:duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
             compact ? "justify-center" : ""
           } ${
             active
-              ? "border-accent/30 bg-accent/15 text-accent shadow-[0_14px_32px_-20px_var(--color-ring)]"
-              : "border-transparent text-muted hover:border-glass-border hover:bg-surface-elevated/70 hover:text-foreground"
+              ? "border-accent bg-surface-elevated text-foreground shadow-sm"
+              : "border-transparent text-foreground hover:border-glass-border hover:bg-surface-elevated"
           }`}
         >
           <span
             className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition ${
               active
-                ? "border-accent/30 bg-accent/20 text-accent"
-                : "border-glass-border bg-surface-elevated/55 text-muted group-hover:text-foreground"
+                ? "border-accent bg-surface text-foreground"
+                : "border-glass-border bg-surface-elevated text-foreground"
             }`}
           >
             <Icon className="h-4 w-4" />
@@ -475,7 +481,7 @@ export default function RoleShell({
               ) : null}
             </div>
             {!collapsed || mobile ? (
-              <p className="mt-3 rounded-lg border border-accent/25 bg-accent/10 px-2.5 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-accent">
+              <p className="mt-3 rounded-lg border border-accent/40 bg-surface px-2.5 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-foreground">
                 {roleLabel}
               </p>
             ) : null}
@@ -507,7 +513,7 @@ export default function RoleShell({
         <div className="border-t border-glass-border p-3">
           <LogoutConfirmButton
             callbackUrl={logoutCallbackUrl}
-            className={`inline-flex w-full items-center gap-3 rounded-xl border border-glass-border bg-surface-elevated/55 px-3 py-2.5 text-sm font-semibold text-foreground transition hover:border-accent/35 hover:bg-accent/10 ${
+            className={`inline-flex w-full items-center gap-3 rounded-xl border border-glass-border bg-surface-elevated px-3 py-2.5 text-sm font-semibold text-foreground motion-safe:transition-colors motion-safe:duration-200 hover:border-accent hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
               collapsed && !mobile ? "justify-center" : "justify-start"
             }`}
             title="Sign out"

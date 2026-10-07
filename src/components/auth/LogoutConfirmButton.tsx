@@ -74,7 +74,7 @@ export default function LogoutConfirmButton({
               <button
                 type="button"
                 onClick={() => void signOut({ callbackUrl })}
-                className="inline-flex min-h-10 items-center justify-center rounded-xl border border-rose-300/35 bg-rose-500/15 px-4 py-2 text-sm font-semibold text-rose-100 transition hover:bg-rose-500/25"
+                className="inline-flex min-h-10 items-center justify-center rounded-xl border border-red-600 bg-red-700 px-4 py-2 text-sm font-semibold text-white motion-safe:transition-colors motion-safe:duration-200 hover:bg-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
               >
                 Log out
               </button>

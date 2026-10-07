@@ -117,6 +117,18 @@ const adminItems: RoleShellItem[] = [
   },
 ];
 
+const desktopItems: RoleShellItem[] = [
+  { href: "/dashboard/admin", label: "Dashboard", description: "System overview", icon: "layoutDashboard" },
+  { href: "/dashboard/admin/analytics", label: "Overall Analytics", description: "Reports and insights", icon: "barChart3", activePaths: ["/dashboard/admin/kk-analytics"] },
+  { href: "/dashboard/admin/user-access", label: "User & Access Management", description: "Staff and municipalities", icon: "userCog", activePaths: ["/dashboard/admin/staff-admission", "/dashboard/admin/staff-access", "/dashboard/admin/municipalities", "/dashboard/admin/archive"] },
+  { href: "/dashboard/admin/profiling", label: "SK Profiling", description: "Official records", icon: "users" },
+  { href: "/dashboard/admin/id-management", label: "ID Management", description: "Production and scanning", icon: "badgeCheck", activePaths: ["/dashboard/admin/id-production", "/dashboard/admin/id-template", "/dashboard/admin/id-scanning"] },
+  { href: "/dashboard/admin/events-attendance", label: "Events & Attendance", description: "Events and feeds", icon: "calendarDays", activePaths: ["/dashboard/admin/events", "/dashboard/admin/feed", "/dashboard/admin/public-news"] },
+  { href: "/dashboard/admin/compliance", label: "Compliance & Reports", description: "Compliance monitoring", icon: "clipboardList" },
+  { href: "/dashboard/admin/system-security", label: "System & Security", description: "Health and audit trail", icon: "shieldCheck", activePaths: ["/dashboard/admin/system-health", "/dashboard/admin/audit-trail"] },
+  { href: "/dashboard/admin/settings", label: "Settings", description: "Theme and account", icon: "settings" },
+];
+
 export default async function AdminDashboardLayout({
   children,
 }: {
@@ -133,6 +145,7 @@ export default async function AdminDashboardLayout({
       heading="Provincial Admin Dashboard"
       subheading="Administrative workspace for governance, identity, and attendance oversight."
       items={adminItems}
+      desktopItems={desktopItems}
       variant="adminCn"
       account={{
         name: authorizedSession.user.name,
