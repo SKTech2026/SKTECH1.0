@@ -14,6 +14,12 @@ const adminItems: RoleShellItem[] = [
     icon: "layoutDashboard",
   },
   {
+    href: "/dashboard/admin/system-health",
+    label: "System Health",
+    description: "Production monitoring",
+    icon: "activity",
+  },
+  {
     href: "/dashboard/admin/profiling",
     label: "SK Profiling",
     description: "Full official CRUD",
