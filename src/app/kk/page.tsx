@@ -25,17 +25,17 @@ export default function KKLandingPage() {
             Access your membership, YouthPass, and certificate records in one secure space designed for KK members and barangay verification.
           </p>
 
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          <div id="invitation" className="mt-6 flex flex-col gap-3 sm:flex-row">
             <Link href="/kk/login" className="inline-flex items-center justify-center rounded-xl bg-amber-400 px-5 py-3 text-sm font-bold text-slate-900 transition hover:bg-amber-300">
               KK Member Login
             </Link>
-            <Link href="/kk/login" className="inline-flex items-center justify-center rounded-xl border border-sky-200/60 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10">
-              I have an invite link
-            </Link>
+            <p className="inline-flex items-center rounded-xl border border-sky-200/60 bg-white/5 px-5 py-3 text-sm text-sky-100">
+              Have an invite? Open the unique link sent by your SK Chairperson.
+            </p>
           </div>
         </header>
 
-        <section className="mt-8 grid gap-4 md:grid-cols-3">
+        <section id="verification" className="mt-8 grid gap-4 md:grid-cols-3">
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-sky-700">Member access</p>
             <h2 className="mt-2 text-xl font-bold text-slate-900">Login to your portal</h2>

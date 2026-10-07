@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { Suspense, useMemo, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 
 import AuthLayout from "@/components/layouts/AuthLayout";
 import AuthRoleNav from "@/components/auth/AuthRoleNav";
@@ -56,10 +57,6 @@ function LoginContent() {
   const rolePrefill = searchParams.get("role")?.toUpperCase();
   const loginRole: CredentialRole = rolePrefill === "ADMIN" ? "ADMIN" : "STAFF";
   const isAdminView = loginRole === "ADMIN";
-  const loginTitle = isAdminView ? "Admin Login" : "Staff Login";
-  const loginSubtitle = isAdminView
-    ? "Sign in with your administrator account."
-    : "Sign in with your municipal staff account.";
 
   const callbackUrl = useMemo(
     () =>
@@ -119,8 +116,15 @@ function LoginContent() {
 
   return (
     <AuthLayout
-      title={loginTitle}
-      subtitle={loginSubtitle}
+      title="SKTECH Internal Portal"
+      subtitle="Administrative and municipal operations access."
+      portal="internal"
+      roleBadge="Admin & Staff"
+      illustrationTitle="One secure workspace for provincial operations."
+      illustrationSubtitle="Choose your assigned role to manage governance, identity, events, and reporting."
+      highlights={["Provincial administration and oversight", "Municipal staff operations", "Role-scoped records and reporting"]}
+      privacyNote="Use only your assigned employee account. Activity is limited to your authorized role."
+      footer={<div className="flex flex-wrap gap-x-4 gap-y-2 border-t border-slate-200 pt-4 text-xs font-semibold text-blue-800"><Link href="/official/auth" className="hover:underline">Official Portal</Link><Link href="/kk/login" className="hover:underline">KK Member Portal</Link></div>}
     >
       <AuthRoleNav activeRole={loginRole} />
       {formError ? (

@@ -49,8 +49,15 @@ export default function OfficialAuthPage() {
 
   return (
     <AuthLayout
-      title="Official sign in"
-      subtitle="Use your registered SK official email."
+      title="SK Official Portal"
+      subtitle="Secure access for SK officials and barangay youth governance."
+      portal="official"
+      roleBadge="SK Official Access"
+      illustrationTitle="Your barangay governance workspace."
+      illustrationSubtitle="Sign in to your official profile and the tools available to your role."
+      highlights={["Official identity and profile", "Attendance and municipal updates", "Barangay KK tools for authorized chairpersons"]}
+      privacyNote="Official records remain inside your authorized workspace. Use your registered email to continue."
+      footer={<div className="space-y-2 border-t border-slate-200 pt-4 text-xs text-slate-600"><p>For Admin or Staff access, use the <Link href="/login?role=STAFF" className="font-semibold text-blue-800 hover:underline">Internal Portal</Link>.</p><p>KK member? <Link href="/kk/login" className="font-semibold text-blue-800 hover:underline">Open the KK Member Portal</Link>.</p></div>}
     >
       {error ? (
         <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
@@ -112,10 +119,6 @@ export default function OfficialAuthPage() {
         >
           Register as an SK Official
         </Link>
-      </p>
-
-      <p className="mt-4 border-t border-slate-100 pt-3 text-[11px] leading-4 text-slate-500">
-        Capstone prototype. Not a government-issued system.
       </p>
 
     </AuthLayout>
