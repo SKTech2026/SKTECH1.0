@@ -59,8 +59,20 @@ function matchRoleRule(pathname: string): RoleRule | undefined {
   );
 }
 
+function isKkSubdomain(host: string | null | undefined): boolean {
+  if (!host) return false;
+  const normalizedHost = host.split(":")[0].toLowerCase();
+  return normalizedHost === "kk.sktech-ormin.com" || normalizedHost.startsWith("kk.");
+}
+
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  const host = request.headers.get("host");
+
+  if (pathname === "/" && isKkSubdomain(host)) {
+    return NextResponse.redirect(new URL("/kk", request.url));
+  }
+
   const roleRule = matchRoleRule(pathname);
   const { supabase, getResponse } = createSupabaseMiddlewareClient(request);
 
