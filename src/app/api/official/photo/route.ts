@@ -121,7 +121,7 @@ export async function GET(request: NextRequest) {
     return new NextResponse(Buffer.from(imageBytes), {
       status: 200,
       headers: {
-        "Cache-Control": "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400",
+        "Cache-Control": "private, no-store, max-age=0",
         "Content-Type": contentType,
         "Content-Length": String(imageBytes.byteLength),
         "X-Content-Type-Options": "nosniff",

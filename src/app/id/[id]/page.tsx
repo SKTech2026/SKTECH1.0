@@ -6,6 +6,7 @@ import { formatEnumLabel, formatOfficialFullName } from "@/lib/sk-official";
 import { loadActiveIdTemplate } from "@/lib/id-template/load-active-id-template";
 import { convertDbTemplateToRendererTemplate } from "@/lib/id-template/db-to-renderer-converter";
 import { validateIdTemplateOrDefault } from "@/lib/id-template/validate-template";
+import { publicOfficialIdTemplate } from "@/lib/id-template/public-template";
 
 export const dynamic = "force-dynamic";
 
@@ -39,20 +40,15 @@ export default async function IDPage({
       middleName: true,
       lastName: true,
       suffix: true,
-      birthDate: true,
       role: true,
       position: true,
       skFederationOfficer: true,
       skFederationPosition: true,
       municipality: true,
       barangay: true,
-      sitio: true,
       dateElected: true,
       termStart: true,
       termEnd: true,
-      contactNo: true,
-      email: true,
-      address: true,
       admissionStatus: true,
       status: true,
       user: {
@@ -74,15 +70,6 @@ export default async function IDPage({
     );
   }
 
-  const fallbackAddress = official.address ?? "";
-  const fallbackBarangay = fallbackAddress
-    .split(",")
-    .map((segment) => segment.trim())
-    .find((segment) => segment.length > 0);
-  const fallbackMunicipality = fallbackAddress
-    .split(",")
-    .map((segment) => segment.trim())
-    .find((segment, index) => segment.length > 0 && index > 0);
   const photoUrl =
     official.user?.image && official.user.image.startsWith("/")
       ? official.user.image
@@ -94,8 +81,8 @@ export default async function IDPage({
     official.skFederationOfficer && official.skFederationPosition
       ? formatEnumLabel(official.skFederationPosition)
       : null;
-  const barangay = official.barangay ?? fallbackBarangay ?? "Not specified";
-  const municipality = official.municipality ?? fallbackMunicipality ?? "Not specified";
+  const barangay = official.barangay ?? "Not specified";
+  const municipality = official.municipality ?? "Not specified";
   const idNumber = official.id.replace(/-/g, "").slice(-12).toUpperCase();
 
   // Load active ID template
@@ -130,14 +117,9 @@ export default async function IDPage({
           position={position}
           barangay={barangay}
           municipality={municipality}
-          sitio={official.sitio}
           skfedPosition={skfedPosition}
           dateElected={(official.dateElected ?? official.termStart).toISOString()}
           termEnd={official.termEnd?.toISOString() ?? null}
-          birthDate={official.birthDate?.toISOString() ?? null}
-          contactNo={official.contactNo}
-          email={official.email}
-          address={official.address}
           admissionStatus={official.admissionStatus}
           accountStatus={official.status}
           registryStatus={official.status}
@@ -152,7 +134,7 @@ export default async function IDPage({
             day: "2-digit",
             year: "numeric",
           }).format(new Date())}
-          template={template}
+          template={publicOfficialIdTemplate(template)}
         />
       </div>
     </div>

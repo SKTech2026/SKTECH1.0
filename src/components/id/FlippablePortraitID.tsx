@@ -273,7 +273,7 @@ export default function FlippablePortraitID({
       </div>
 
       {actions ? (
-        <div className="mt-3 grid grid-cols-2 gap-2">
+        <div className="id-screen-actions mt-3 grid grid-cols-2 gap-2">
           <Link
             href={closeHref}
             className="inline-flex h-11 items-center justify-center rounded-xl border border-glass-border bg-surface-elevated px-3 text-sm font-semibold text-foreground"
@@ -379,25 +379,30 @@ function IDStyles() {
       }
 
       @media print {
-        body {
-          background: #fff !important;
-        }
-
-        .id-screen-controls,
-        .id-screen-card {
-          display: none !important;
-        }
-
-        .id-print-stack {
+        body:has(.id-print-stack) { background: #fff !important; }
+        body:has(.id-print-stack) *:not(:has(.id-print-stack)):not(.id-print-stack):not(.id-print-stack *) { display: none !important; }
+        body:has(.id-print-stack) *:has(.id-print-stack) {
           display: block !important;
+          position: static !important;
+          width: auto !important;
+          max-width: none !important;
+          min-height: 0 !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          overflow: visible !important;
+          background: #fff !important;
+          box-shadow: none !important;
         }
+        .id-print-stack { display: block !important; width: 85.6mm !important; margin: 0 !important; }
 
         .official-id-print-card {
           width: 85.6mm !important;
           height: 53.98mm !important;
-          page-break-after: always;
-          break-after: page;
+          box-shadow: none !important;
         }
+
+        .official-id-print-card:not(:last-child) { page-break-after: always; break-after: page; }
+        .official-id-print-card:last-child { page-break-after: auto; break-after: auto; }
 
         .official-id-print-card .id-face {
           border-radius: 0 !important;

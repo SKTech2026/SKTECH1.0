@@ -4,12 +4,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { safeCsvCell } from "@/lib/csv-cell";
 
 export const dynamic = "force-dynamic";
 
 
-
-const toCsvCell = (value: string) => `"${value.replace(/"/g, '""')}"`;
 
 const requireAdminOrStaff = async () => {
   const session = await getServerSession(authOptions);
@@ -80,12 +79,12 @@ export async function GET(request: NextRequest) {
       const status = record.timeOut === null ? "Checked In" : "Checked Out";
 
       return [
-        toCsvCell(name),
-        toCsvCell(record.eventId ?? ""),
-        toCsvCell(record.timeIn.toISOString()),
-        toCsvCell(record.timeOut ? record.timeOut.toISOString() : ""),
-        toCsvCell(status),
-        toCsvCell(record.createdAt.toISOString()),
+        safeCsvCell(name),
+        safeCsvCell(record.eventId ?? ""),
+        safeCsvCell(record.timeIn.toISOString()),
+        safeCsvCell(record.timeOut ? record.timeOut.toISOString() : ""),
+        safeCsvCell(status),
+        safeCsvCell(record.createdAt.toISOString()),
       ].join(",");
     });
 
