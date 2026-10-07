@@ -87,7 +87,7 @@ export default async function OfficialDashboardLayout({
       roleLabel="SK Official"
       heading="Official Access Dashboard"
       subheading="Read-only portal for announcements, identity, attendance, and accomplishments."
-      items={chairScope ? [...officialItems, { href: "/dashboard/official/kk-registry", label: "KK Registry", description: "Barangay youth profiles", icon: "users" }] : officialItems}
+      items={chairScope ? [...officialItems, { href: "/dashboard/official/kk-registry", label: "KK Registry", description: "Barangay youth profiles", icon: "users" }, { href: "/dashboard/official/kk-analytics", label: "KK Analytics", description: "Barangay youth reporting", icon: "barChart3" }] : officialItems}
       logoutCallbackUrl="/official/auth"
       variant="officialCn"
       account={{

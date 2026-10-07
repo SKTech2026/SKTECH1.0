@@ -14,6 +14,12 @@ const staffItems: RoleShellItem[] = [
     icon: "layoutDashboard",
   },
   {
+    href: "/dashboard/staff/kk-analytics",
+    label: "KK Analytics",
+    description: "Municipality youth reporting",
+    icon: "barChart3",
+  },
+  {
     href: "/dashboard/staff/admissions",
     label: "Digital ID Admission",
     description: "Approve official joiners",

@@ -50,6 +50,12 @@ const adminItems: RoleShellItem[] = [
     icon: "barChart3",
   },
   {
+    href: "/dashboard/admin/kk-analytics",
+    label: "KK Analytics",
+    description: "Province-wide youth reporting",
+    icon: "barChart3",
+  },
+  {
     href: "/dashboard/admin/compliance",
     label: "Compliance Dashboard",
     description: "Reports and operational indicators",
