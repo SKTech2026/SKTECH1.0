@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth";
 import { ArrowLeft } from "lucide-react";
 
 import AppearanceSelector from "./appearance-selector";
+import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
 import LogoutButton from "./logout-button";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -80,6 +81,11 @@ export default async function MobileOfficialSettingsPage() {
         <h2 className="text-base font-semibold text-foreground">Appearance</h2>
         <p className="mt-1 text-sm text-muted">Choose how SKTECH looks on this device.</p>
         <div className="mt-3"><AppearanceSelector /></div>
+      </section>
+
+      <section className="rounded-2xl border border-glass-border bg-surface p-4">
+        <h2 className="text-base font-semibold text-foreground">Language / Wika</h2>
+        <div className="mt-3"><LanguageSwitcher /></div>
       </section>
 
       <section className="rounded-2xl border border-glass-border bg-surface p-4">

@@ -2,6 +2,7 @@ type SKTechBotLauncherProps = {
   open: boolean;
   onClick: () => void;
   controls: string;
+  label?: string;
 };
 
 export function SKTechBotIcon({ className = "" }: { className?: string }) {
@@ -19,12 +20,12 @@ export function SKTechBotIcon({ className = "" }: { className?: string }) {
   );
 }
 
-export default function SKTechBotLauncher({ open, onClick, controls }: SKTechBotLauncherProps) {
+export default function SKTechBotLauncher({ open, onClick, controls, label = "SKTECH AI Assistant" }: SKTechBotLauncherProps) {
   return (
     <button
       type="button"
       onClick={onClick}
-      aria-label={open ? "Close SKTECH AI Assistant" : "Open SKTECH AI Assistant"}
+      aria-label={open ? `Close ${label}` : `Open ${label}`}
       aria-expanded={open}
       aria-controls={controls}
       className={`group relative grid h-14 w-14 place-items-center rounded-full border border-cyan-300/50 bg-slate-950/90 text-cyan-50 shadow-[0_12px_34px_-10px_rgba(14,165,233,0.85)] backdrop-blur-xl transition-[transform,box-shadow,background-color] duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_16px_40px_-8px_rgba(34,211,238,0.9)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 motion-reduce:transform-none motion-reduce:transition-none md:h-16 md:w-16 ${open ? "bg-slate-900" : ""}`}

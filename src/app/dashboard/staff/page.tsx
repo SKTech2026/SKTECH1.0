@@ -1,3 +1,4 @@
+import TranslatedText from "@/components/i18n/TranslatedText";
 import Link from "next/link";
 import { AdmissionStatus, OfficialStatus, Role } from "@prisma/client";
 import { getServerSession } from "next-auth";
@@ -24,7 +25,7 @@ export default async function StaffDashboardHomePage() {
               Municipal Operations
             </p>
             <h2 className="mt-2 text-2xl font-semibold text-foreground sm:text-3xl">
-              Welcome, {authorizedSession.user.name ?? authorizedSession.user.email}
+              <TranslatedText text="Welcome," /> {authorizedSession.user.name ?? authorizedSession.user.email}
             </h2>
             <p className="mt-2 max-w-3xl text-sm text-muted">
               Your staff account is active, but no municipality has been assigned yet. Contact your
@@ -112,7 +113,7 @@ export default async function StaffDashboardHomePage() {
               Municipal Operations
             </p>
             <h2 className="mt-2 text-2xl font-semibold text-foreground sm:text-3xl">
-              Welcome, {authorizedSession.user.name ?? authorizedSession.user.email}
+              <TranslatedText text="Welcome," /> {authorizedSession.user.name ?? authorizedSession.user.email}
             </h2>
             <p className="mt-2 max-w-3xl text-sm text-muted">
               Process official admissions, maintain attendance visibility, and keep the

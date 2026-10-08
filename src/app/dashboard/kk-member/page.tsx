@@ -1,3 +1,4 @@
+import TranslatedText from "@/components/i18n/TranslatedText";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import YouthPassCard from "@/components/kk/YouthPassCard";
@@ -37,7 +38,7 @@ export default async function KKDashboard() {
     return (
       <section className="rounded-3xl border border-dashed border-sky-200 bg-surface p-6 sm:p-8">
         <p className="text-sm font-bold uppercase tracking-widest text-accent">My KK membership</p>
-        <h1 className="mt-3 text-3xl font-bold text-foreground">Profile unavailable</h1>
+        <h1 className="mt-3 text-3xl font-bold text-foreground"><TranslatedText text="Profile unavailable" /></h1>
         <p className="mt-3 text-muted">Complete your KK Survey / Profiling to activate your YouthPass.</p>
         <Link href="/dashboard/kk-member/profile" className="mt-6 inline-flex rounded-xl bg-blue-700 px-5 py-3 font-semibold text-white">
           KK Survey / Profiling
@@ -97,7 +98,7 @@ export default async function KKDashboard() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-bold uppercase tracking-widest text-accent">Katipunan ng Kabataan YouthPass</p>
-              <h2 className="mt-2 text-2xl font-bold text-foreground">Your digital youth credential</h2>
+              <h2 className="mt-2 text-2xl font-bold text-foreground"><TranslatedText text="Your digital youth credential" /></h2>
             </div>
             <Link href="/dashboard/kk-member/youthpass" className="inline-flex rounded-lg border border-border px-3 py-2 text-sm font-semibold text-foreground">Open full card</Link>
           </div>

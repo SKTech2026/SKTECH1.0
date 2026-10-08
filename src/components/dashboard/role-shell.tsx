@@ -30,6 +30,8 @@ import {
 } from "lucide-react";
 
 import ThemeToggle from "@/components/ThemeToggle";
+import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
+import { useLanguage } from "@/components/i18n/LanguageProvider";
 import SKTechAssistant from "@/components/assistant/SKTechAssistant";
 import LogoutConfirmButton from "@/components/auth/LogoutConfirmButton";
 import NotificationBell from "@/components/notifications/NotificationBell";
@@ -239,6 +241,7 @@ export default function RoleShell({
   children,
 }: RoleShellProps) {
   const pathname = usePathname();
+  const { t } = useLanguage();
   const isAdminCn = variant === "adminCn";
   const isStaffCn = variant === "staffCn";
   const isOfficialCn = variant === "officialCn";
@@ -348,10 +351,10 @@ export default function RoleShell({
           {!compact ? (
             <span className="min-w-0">
               <span className="block truncate text-[13px] font-semibold">
-                {item.label}
+                {t(item.label)}
               </span>
               <span className="block truncate text-xs font-normal text-muted">
-                {item.description}
+                {t(item.description)}
               </span>
             </span>
           ) : null}
@@ -400,7 +403,7 @@ export default function RoleShell({
             </span>
             {!collapsed ? (
               <span className="min-w-0 flex-1 truncate text-left text-[13px] font-semibold">
-                {group.label}
+                {t(group.label)}
               </span>
             ) : null}
             {!collapsed ? (
@@ -498,7 +501,7 @@ export default function RoleShell({
               <div key={group.label}>
                 {!collapsed || mobile ? (
                   <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-                    {group.label}
+                    {t(group.label)}
                   </p>
                 ) : null}
                 <div className="space-y-1">
@@ -520,10 +523,10 @@ export default function RoleShell({
             className={`inline-flex w-full items-center gap-3 rounded-xl border border-glass-border bg-surface-elevated px-3 py-2.5 text-sm font-semibold text-foreground motion-safe:transition-colors motion-safe:duration-200 hover:border-accent hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
               collapsed && !mobile ? "justify-center" : "justify-start"
             }`}
-            title="Sign out"
+            title={t("Sign out")}
           >
             <LogOut className="h-4 w-4" />
-            {!collapsed || mobile ? "Sign out" : null}
+            {!collapsed || mobile ? t("Sign out") : null}
           </LogoutConfirmButton>
         </div>
       </aside>
@@ -586,12 +589,13 @@ export default function RoleShell({
                       {headerEyebrow}
                     </p>
                     <h1 className="truncate text-base font-semibold text-foreground sm:text-lg">
-                      {activeItem?.label ?? heading}
+                      {t(activeItem?.label ?? heading)}
                     </h1>
                   </div>
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2">
+                  <LanguageSwitcher compact />
                   <ThemeToggle />
                   {roleLabel === "SK Official" ? (
                     <NotificationBell
@@ -641,15 +645,16 @@ export default function RoleShell({
               SKTech Command
             </p>
             <h1 className="mt-3 text-2xl font-bold leading-tight text-foreground">
-              {heading}
+              {t(heading)}
             </h1>
-            <p className="mt-2 text-sm text-muted">{subheading}</p>
+            <p className="mt-2 text-sm text-muted">{t(subheading)}</p>
           </div>
 
           <div className="mt-6 inline-flex w-fit rounded-full border border-accent/40 bg-accent/15 px-3 py-1 text-xs font-semibold tracking-wide text-accent">
             {roleLabel}
           </div>
 
+          <div className="mt-5"><LanguageSwitcher /></div>
           <nav className="mt-6 space-y-2">
             {items.map((item) => {
               const Icon = ICONS[item.icon];
@@ -677,9 +682,9 @@ export default function RoleShell({
                     </span>
                     <div>
                       <p className="text-sm font-semibold text-foreground">
-                        {item.label}
+                        {t(item.label)}
                       </p>
-                      <p className="text-xs text-muted">{item.description}</p>
+                      <p className="text-xs text-muted">{t(item.description)}</p>
                     </div>
                   </div>
                 </Link>
@@ -692,7 +697,7 @@ export default function RoleShell({
             className="mt-auto inline-flex items-center justify-center gap-2 rounded-xl border border-glass-border bg-surface/45 px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-surface-elevated/70 hover:text-foreground"
           >
             <LogOut className="h-4 w-4" />
-            Sign out
+            {t("Sign out")}
           </LogoutConfirmButton>
         </aside>
 
@@ -707,7 +712,7 @@ export default function RoleShell({
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">
                     {roleLabel}
                   </p>
-                  <h2 className="text-lg font-semibold text-foreground">{heading}</h2>
+                  <h2 className="text-lg font-semibold text-foreground">{t(heading)}</h2>
                 </div>
               </div>
               <LogoutConfirmButton
@@ -715,7 +720,7 @@ export default function RoleShell({
                 className="inline-flex items-center gap-1 rounded-lg border border-glass-border bg-surface/45 px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-surface-elevated/70"
               >
                 <LogOut className="h-3.5 w-3.5" />
-                Logout
+                {t("Logout")}
               </LogoutConfirmButton>
               {roleLabel === "SK Official" ? (
                 <NotificationBell
@@ -724,6 +729,7 @@ export default function RoleShell({
                 />
               ) : null}
             </div>
+            <div className="mb-3"><LanguageSwitcher /></div>
             <nav className="flex gap-2 overflow-x-auto pb-1">
               {items.map((item) => {
                 const Icon = ICONS[item.icon];
@@ -740,7 +746,7 @@ export default function RoleShell({
                     }`}
                   >
                     <Icon className="h-3.5 w-3.5" />
-                    {item.label}
+                    {t(item.label)}
                   </Link>
                 );
               })}

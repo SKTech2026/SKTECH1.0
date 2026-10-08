@@ -1,3 +1,4 @@
+import TranslatedText from "@/components/i18n/TranslatedText";
 import Link from "next/link";
 import { AdmissionStatus, Role, UserStatus } from "@prisma/client";
 import { getServerSession } from "next-auth";
@@ -159,7 +160,7 @@ export default async function AdminDashboardHomePage() {
               Administrator Workspace
             </div>
             <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-              Provincial Administration Dashboard
+              <TranslatedText text="Provincial Administration Dashboard" />
             </h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
               Monitor SK governance operations, official admissions, events,
@@ -167,7 +168,7 @@ export default async function AdminDashboardHomePage() {
               Mindoro.
             </p>
             <p className="mt-4 text-sm font-medium text-foreground">
-              Welcome, {authorizedSession.user.name ?? authorizedSession.user.email}
+              <TranslatedText text="Welcome," /> {authorizedSession.user.name ?? authorizedSession.user.email}
             </p>
           </div>
 

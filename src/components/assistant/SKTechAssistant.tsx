@@ -4,6 +4,7 @@ import { Loader2, MessageSquareText, SendHorizonal, Sparkles, X } from "lucide-r
 import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
 
+import { useLanguage } from "@/components/i18n/LanguageProvider";
 import SKTechBotLauncher, { SKTechBotIcon } from "@/components/assistant/SKTechBotLauncher";
 import { SKTECH_ROLE_HELP, type DashboardRole } from "@/lib/assistant/sktech-help";
 
@@ -25,6 +26,7 @@ const roleLabels: Record<DashboardRole, string> = {
 
 export default function SKTechAssistant({ role }: SKTechAssistantProps) {
   const pathname = usePathname();
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
@@ -91,7 +93,7 @@ export default function SKTechAssistant({ role }: SKTechAssistantProps) {
   return (
     <>
       <div className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-50 md:bottom-5 md:right-5">
-        <SKTechBotLauncher open={open} onClick={() => setOpen((value) => !value)} controls="dashboard-chat-panel" />
+        <SKTechBotLauncher open={open} onClick={() => setOpen((value) => !value)} controls="dashboard-chat-panel" label={t("SKTECH AI Assistant")} />
       </div>
 
       {open ? (
@@ -103,10 +105,10 @@ export default function SKTechAssistant({ role }: SKTechAssistantProps) {
                 <SKTechBotIcon className="h-5 w-5" />
               </span>
               <div>
-                <p className="text-sm font-semibold text-slate-900 dark:text-white">SKTECH AI Assistant</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">{t("SKTECH AI Assistant")}</p>
                 <div className="mt-0.5 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.16em] text-slate-500 dark:text-slate-300">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-                  <span>System help only</span>
+                  <span>{t("System help only")}</span>
                 </div>
                 <div className="mt-1 flex items-center gap-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-cyan-600 dark:text-cyan-300">
                   <Sparkles className="h-2.5 w-2.5" />
@@ -153,7 +155,7 @@ export default function SKTechAssistant({ role }: SKTechAssistantProps) {
             {loading ? (
               <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-100/80 px-3 py-2 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-300">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Thinking...
+                {t("Thinking...")}
               </div>
             ) : null}
           </div>
@@ -176,7 +178,7 @@ export default function SKTechAssistant({ role }: SKTechAssistantProps) {
                 }
               }}
               placeholder="Ask SKTECH about this page..."
-              aria-label="Ask SKTECH"
+              aria-label={t("Ask SKTECH")}
               className="w-full border-0 bg-transparent text-sm text-slate-800 placeholder:text-slate-500 focus:outline-none dark:text-slate-100 dark:placeholder:text-slate-400"
             />
             <button
@@ -184,7 +186,7 @@ export default function SKTechAssistant({ role }: SKTechAssistantProps) {
               onClick={() => void handleSubmit()}
               disabled={loading || !prompt.trim()}
               className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#22d3ee,#2563eb)] text-white shadow-[0_12px_24px_-12px_rgba(37,99,235,0.9)] disabled:cursor-not-allowed disabled:opacity-50"
-              aria-label="Send message"
+              aria-label={t("Send message")}
             >
               <SendHorizonal className="h-4 w-4" />
             </button>

@@ -7,6 +7,8 @@ import { Home, Info, LogOut, Settings, X } from "lucide-react";
 import { useState } from "react";
 
 import ThemeToggle from "@/components/ThemeToggle";
+import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
+import { useLanguage } from "@/components/i18n/LanguageProvider";
 import LogoutConfirmButton from "@/components/auth/LogoutConfirmButton";
 import NotificationBell from "@/components/notifications/NotificationBell";
 
@@ -25,6 +27,7 @@ export default function MobileTopBar({
   accountEmail,
   profileImageUrl,
 }: MobileTopBarProps) {
+  const { t } = useLanguage();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const pathname = usePathname();
@@ -44,13 +47,14 @@ export default function MobileTopBar({
         >
           <Home className="h-4 w-4" />
         </Link>
-        <div className="min-w-0">
+        <div className="hidden min-w-0 min-[390px]:block">
           <p className="text-[11px] uppercase tracking-[0.14em] text-accent">SKTech</p>
           <p className="truncate text-sm font-semibold text-foreground">{title}</p>
         </div>
       </div>
 
       <div className="flex items-center gap-2">
+        <LanguageSwitcher compact />
         <ThemeToggle className="h-8" />
         {isOfficial ? (
           <>
@@ -81,7 +85,7 @@ export default function MobileTopBar({
                 </div>
                 <Link href="/mobile/official/settings" onClick={() => setIsProfileOpen(false)} className="mt-2 flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-foreground hover:bg-surface-elevated">
                   <Settings className="h-4 w-4" />
-                  Settings
+                  {t("Settings")}
                 </Link>
                 <button type="button" onClick={() => setIsAboutOpen(true)} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-foreground hover:bg-surface-elevated">
                   <Info className="h-4 w-4" />
@@ -89,7 +93,7 @@ export default function MobileTopBar({
                 </button>
                 <LogoutConfirmButton callbackUrl="/official/auth" className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-rose-300 hover:bg-rose-500/10">
                   <LogOut className="h-4 w-4" />
-                  Logout
+                  {t("Logout")}
                 </LogoutConfirmButton>
               </div>
             ) : null}

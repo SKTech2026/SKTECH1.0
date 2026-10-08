@@ -1,3 +1,4 @@
+import TranslatedText from "@/components/i18n/TranslatedText";
 import Link from "next/link";
 import { AdmissionStatus, Role, UserStatus } from "@prisma/client";
 import { getServerSession } from "next-auth";
@@ -166,10 +167,10 @@ export default async function OfficialDashboardHomePage({
     <div className="space-y-6">
       <section className="flex flex-col justify-between gap-4 rounded-2xl border border-glass-border bg-surface p-6 shadow-[0_20px_45px_-28px_var(--shadow-color)] backdrop-blur-xl sm:flex-row sm:items-center sm:p-7">
         <h2 className="text-3xl font-black tracking-tight text-foreground sm:text-4xl">
-          SK Official Dashboard
+          <TranslatedText text="SK Official Dashboard" />
         </h2>
         <div className="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-2 text-xs font-semibold text-emerald-200">
-            <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_12px_rgba(110,231,183,0.9)]" /> Account approved
+            <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_12px_rgba(110,231,183,0.9)]" /> <TranslatedText text="Account approved" />
         </div>
       </section>
 
