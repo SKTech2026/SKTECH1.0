@@ -264,7 +264,7 @@ export const authOptions: NextAuthOptions = {
               if (
                 !user ||
                 user.role !== Role.OFFICIAL ||
-                user.status !== UserStatus.APPROVED ||
+                (user.status !== UserStatus.APPROVED && user.status !== UserStatus.PENDING) ||
                 !user.email
               ) {
                 return null;
@@ -318,7 +318,6 @@ export const authOptions: NextAuthOptions = {
               if (
                 !user ||
                 user.role !== Role.OFFICIAL ||
-                user.status !== UserStatus.APPROVED ||
                 !user.password ||
                 !user.email
               ) {
@@ -447,10 +446,13 @@ export const authOptions: NextAuthOptions = {
           credentialUser?.authMethod === "OFFICIAL_OTP" ||
           credentialUser?.authMethod === "OFFICIAL_PASSWORD"
         ) {
-          if (credentialUser.role !== Role.OFFICIAL || credentialUser.status !== UserStatus.APPROVED) {
+          if (credentialUser.role !== Role.OFFICIAL) {
             return false;
           }
-          return true;
+          if (credentialUser.status === UserStatus.APPROVED || credentialUser.status === UserStatus.PENDING) {
+            return true;
+          }
+          return "/official/auth?error=official_blocked";
         }
 
         const role = credentialUser?.role;

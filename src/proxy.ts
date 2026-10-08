@@ -129,14 +129,17 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  if (roleRule.prefix === "/dashboard/official" && role === "OFFICIAL" && status !== "APPROVED") {
+  if ((roleRule.prefix === "/dashboard/official" || roleRule.prefix === "/mobile/official") && role === "OFFICIAL" && status !== "APPROVED") {
+    if (status !== "PENDING") {
+      return NextResponse.redirect(new URL("/official/auth?error=official_blocked", request.url));
+    }
     const allowedPendingPath = (roleRule.pendingAllowedPaths ?? []).some(
       (allowedPath) =>
-        pathname === allowedPath || pathname.startsWith(`${allowedPath}/`),
+        pathname === allowedPath,
     );
 
     if (!allowedPendingPath) {
-      return NextResponse.redirect(new URL("/dashboard/official", request.url));
+      return NextResponse.redirect(new URL(roleRule.prefix, request.url));
     }
 
     return getResponse();

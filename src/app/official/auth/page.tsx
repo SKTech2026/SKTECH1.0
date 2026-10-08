@@ -3,14 +3,15 @@
 import type { FormEvent } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 
 import AuthLayout from "@/components/layouts/AuthLayout";
 import PasswordInput from "@/components/auth/PasswordInput";
 
-export default function OfficialAuthPage() {
+function OfficialAuthContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
@@ -31,6 +32,11 @@ export default function OfficialAuthPage() {
         officialPassword: password,
         callbackUrl: "/dashboard/official",
       });
+
+      if (response?.url?.includes("error=official_blocked")) {
+        setError("This Official account is inactive, rejected, or terminated. Contact your administrator.");
+        return;
+      }
 
       if (!response || response.error) {
         throw new Error("Invalid email or password.");
@@ -59,9 +65,9 @@ export default function OfficialAuthPage() {
       privacyNote="Official records remain inside your authorized workspace. Use your registered email to continue."
       footer={<div className="space-y-2 border-t border-slate-200 pt-4 text-xs text-slate-600"><p>For Admin or Staff access, use the <Link href="/login?role=STAFF" className="font-semibold text-blue-800 hover:underline">Internal Portal</Link>.</p><p>KK member? <Link href="/kk/login" className="font-semibold text-blue-800 hover:underline">Open the KK Member Portal</Link>.</p></div>}
     >
-      {error ? (
+      {error || searchParams.get("error") === "official_blocked" ? (
         <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          {error}
+          {error ?? "This Official account is inactive, rejected, or terminated. Contact your administrator."}
         </p>
       ) : null}
 
@@ -111,6 +117,10 @@ export default function OfficialAuthPage() {
         </button>
       </form>
 
+      <p className="mt-3 text-xs leading-5 text-slate-600">
+        If Staff created your account and you have not set a password, use Forgot Password to set one through your registered email.
+      </p>
+
       <p className="mt-4 text-sm text-slate-600">
         New here?{" "}
         <Link
@@ -123,4 +133,8 @@ export default function OfficialAuthPage() {
 
     </AuthLayout>
   );
+}
+
+export default function OfficialAuthPage() {
+  return <Suspense fallback={null}><OfficialAuthContent /></Suspense>;
 }
