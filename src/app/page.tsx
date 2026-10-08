@@ -11,7 +11,6 @@ import {
   IdCard,
   LockKeyhole,
   Menu,
-  MessageCircle,
   MessageSquare,
   QrCode,
   ScanFace,
@@ -26,6 +25,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import SKTechBotLauncher, { SKTechBotIcon } from "@/components/assistant/SKTechBotLauncher";
 import GovernanceCommandHub from "@/components/landing/GovernanceCommandHub";
 import PublicNewsFeed from "@/components/landing/PublicNewsFeed";
 import { answerSktTechChat } from "@/lib/chatbot/sktech-chatbot-engine";
@@ -832,21 +832,21 @@ export default function HomePage() {
             id="landing-chat-panel"
             role="region"
             aria-label="Ask SKTECH chat"
-            className="landing-chat-panel w-[calc(100vw-2rem)] max-w-[380px] overflow-hidden rounded-3xl border border-[#dbe7ff] bg-white shadow-[0_24px_70px_-34px_rgba(6,19,45,0.9)]"
+            className="landing-chat-panel mb-3 max-h-[calc(100dvh-7rem)] w-[calc(100vw-2rem)] overflow-y-auto max-w-[380px] rounded-3xl border border-[#dbe7ff] bg-white shadow-[0_24px_70px_-34px_rgba(6,19,45,0.9)]"
           >
             <div className="flex items-center justify-between bg-[#06132d] px-4 py-4 text-white">
               <div className="flex items-center gap-3">
-                <span className="rounded-full bg-[#f3c72b] p-2 text-[#06132d]">
-                  <MessageCircle className="h-4 w-4" />
+                <span className="relative rounded-full bg-[radial-gradient(circle_at_30%_30%,#38bdf8,#0a3aa2_70%)] p-2 text-cyan-50 ring-1 ring-cyan-200/50">
+                  <SKTechBotIcon className="h-6 w-6" />
                 </span>
                 <div>
-                  <p className="text-sm font-black">Ask SKTECH</p>
-                  <p className="text-xs text-white/55">Local system information</p>
+                  <p className="text-sm font-black">SKTECH AI Assistant</p>
+                  <p className="text-xs text-white/70">System help only</p>
                 </div>
               </div>
               <button
                 type="button"
-                aria-label="Close Ask SKTECH"
+                aria-label="Close SKTECH AI Assistant panel"
                 onClick={() => setChatOpen(false)}
                 className="rounded-full p-1 text-white/70 hover:bg-white/10 hover:text-white"
               >
@@ -909,25 +909,8 @@ export default function HomePage() {
               </form>
             </div>
           </motion.div>
-        ) : (
-          <motion.button
-            type="button"
-            initial={reducedMotion ? false : { opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            onClick={() => setChatOpen(true)}
-            aria-label="Open Ask SKTECH chatbot"
-            aria-expanded={false}
-            aria-controls="landing-chat-panel"
-            className="landing-launcher group relative inline-flex min-h-12 items-center gap-2.5 overflow-hidden rounded-2xl border border-white/70 bg-[linear-gradient(135deg,#2362dc_0%,#0a3aa2_65%,#082d78_100%)] py-2 pl-2 pr-4 text-sm font-bold text-white shadow-[0_8px_28px_-8px_rgba(10,58,162,0.5),inset_0_1px_0_rgba(255,255,255,0.35)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-8px_rgba(10,58,162,0.6)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-300 motion-reduce:transform-none sm:gap-3 sm:pr-5"
-          >
-            <span aria-hidden="true" className="relative grid h-9 w-9 place-items-center rounded-xl border border-white/30 bg-white/15 shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] sm:h-10 sm:w-10">
-              <MessageCircle className="h-5 w-5" />
-              <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full border border-[#0a3aa2] bg-[#f3c72b]" />
-            </span>
-            <span className="text-left leading-tight"><span className="block">Ask SKTECH</span><span className="mt-0.5 hidden text-[10px] font-medium tracking-wide text-blue-100 sm:block">Your platform guide</span></span>
-            <span aria-hidden="true" className="absolute inset-x-4 bottom-0 h-px bg-[linear-gradient(90deg,#1452d9,#cf2638,#f3c72b)]" />
-          </motion.button>
-        )}
+        ) : null}
+        <SKTechBotLauncher open={chatOpen} onClick={() => setChatOpen((value) => !value)} controls="landing-chat-panel" />
       </div>
 
       <style>{`

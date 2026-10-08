@@ -4,6 +4,7 @@ import { Loader2, MessageSquareText, SendHorizonal, Sparkles, X } from "lucide-r
 import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
 
+import SKTechBotLauncher, { SKTechBotIcon } from "@/components/assistant/SKTechBotLauncher";
 import { SKTECH_ROLE_HELP, type DashboardRole } from "@/lib/assistant/sktech-help";
 
 type SKTechAssistantProps = {
@@ -21,29 +22,6 @@ const roleLabels: Record<DashboardRole, string> = {
   OFFICIAL: "Official",
   KK_MEMBER: "KK Member",
 };
-
-function RobotGlyph({ className = "" }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 64 64"
-      aria-hidden="true"
-      className={className}
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <rect x="18" y="12" width="28" height="20" rx="7" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.46)" />
-      <rect x="14" y="18" width="36" height="26" rx="10" fill="rgba(15,23,42,0.18)" stroke="rgba(255,255,255,0.4)" />
-      <circle cx="24" cy="31" r="2.8" fill="currentColor" />
-      <circle cx="40" cy="31" r="2.8" fill="currentColor" />
-      <path d="M28 38C31.2 40.5 32.8 40.5 36 38" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
-      <path d="M23 10L20 5H44L41 10" stroke="rgba(255,255,255,0.5)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M20 21V15M44 21V15" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round" />
-      <path d="M20 44V52M44 44V52" stroke="rgba(255,255,255,0.4)" strokeWidth="2.2" strokeLinecap="round" />
-      <path d="M26 52H38" stroke="rgba(255,255,255,0.5)" strokeWidth="2.2" strokeLinecap="round" />
-      <path d="M10 29.5H14M50 29.5H54" stroke="rgba(125,211,252,0.65)" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
 
 export default function SKTechAssistant({ role }: SKTechAssistantProps) {
   const pathname = usePathname();
@@ -112,39 +90,17 @@ export default function SKTechAssistant({ role }: SKTechAssistantProps) {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        className={`fixed bottom-4 right-4 z-50 inline-flex items-center gap-3 rounded-full border border-cyan-400/40 bg-slate-950/85 text-white shadow-[0_0_0_1px_rgba(34,211,238,0.22),0_20px_45px_-18px_rgba(14,165,233,0.85)] backdrop-blur-xl transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_0_0_1px_rgba(34,211,238,0.3),0_24px_55px_-18px_rgba(34,211,238,0.9)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 md:bottom-5 md:right-5 ${open ? "scale-[1.01] border-cyan-300/50 bg-slate-900/90" : ""}`}
-        aria-label={open ? "Close SKTECH assistant" : "Open SKTECH assistant"}
-      >
-        <span className="relative flex h-12 w-12 items-center justify-center rounded-full bg-[radial-gradient(circle_at_30%_30%,rgba(103,232,249,0.55),rgba(8,145,178,0.28)_28%,rgba(15,23,42,0.9)_72%)] ring-1 ring-white/10 md:h-14 md:w-14">
-          <span className="absolute inset-0 rounded-full border border-cyan-300/25 motion-safe:animate-[pulse_3s_ease-out_infinite]" />
-          <span className="absolute inset-2 rounded-full border border-cyan-200/15 motion-safe:animate-[pulse_2.6s_ease-out_infinite]" />
-          <span className="absolute inset-[-4px] rounded-full border border-cyan-300/10" />
-          <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full border border-slate-950/80 bg-emerald-400 shadow-[0_0_16px_rgba(52,211,153,0.9)]">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-100 motion-safe:animate-[pulse_2s_ease-out_infinite]" />
-          </span>
-          <RobotGlyph className="relative z-10 h-6 w-6 text-cyan-50 md:h-7 md:w-7" />
-        </span>
-
-        <span className="hidden min-w-[136px] flex-col items-start pr-1 text-left sm:flex">
-          <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-cyan-200/75">SKTECH</span>
-          <span className="text-sm font-semibold text-white">Ask SKTECH AI</span>
-        </span>
-
-        <span className="inline-flex items-center justify-center rounded-full border border-cyan-300/25 bg-slate-900/70 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-100 sm:hidden">
-          AI
-        </span>
-      </button>
+      <div className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-50 md:bottom-5 md:right-5">
+        <SKTechBotLauncher open={open} onClick={() => setOpen((value) => !value)} controls="dashboard-chat-panel" />
+      </div>
 
       {open ? (
-        <div className="fixed inset-x-3 bottom-3 z-50 mx-auto max-w-[420px] rounded-[28px] border border-slate-200/80 bg-white/90 p-3 shadow-[0_30px_80px_-24px_rgba(15,23,42,0.38)] backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-950/90 md:inset-auto md:bottom-24 md:right-6 md:left-auto md:w-[390px]">
+        <div id="dashboard-chat-panel" role="region" aria-label="SKTECH AI Assistant chat" className="fixed inset-x-3 bottom-[calc(5rem+env(safe-area-inset-bottom))] motion-safe:animate-[bot-panel-in_220ms_ease-out_both] z-50 mx-auto max-w-[420px] max-h-[calc(100dvh-7rem)] overflow-y-auto rounded-[28px] border border-slate-200/80 bg-white/90 p-3 shadow-[0_30px_80px_-24px_rgba(15,23,42,0.38)] backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-950/90 md:inset-auto md:bottom-24 md:right-6 md:left-auto md:w-[390px]">
           <div className="mb-3 flex items-center justify-between gap-2 rounded-2xl border border-cyan-300/20 bg-[linear-gradient(135deg,rgba(14,116,144,0.12),rgba(59,130,246,0.08),rgba(15,23,42,0.02))] px-3 py-2.5 dark:border-cyan-500/20">
             <div className="flex items-center gap-2.5">
               <span className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-[radial-gradient(circle_at_30%_30%,rgba(103,232,249,0.38),rgba(2,132,199,0.35),rgba(15,23,42,0.8))] text-cyan-50 ring-1 ring-white/20">
                 <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)]" />
-                <RobotGlyph className="h-5 w-5" />
+                <SKTechBotIcon className="h-5 w-5" />
               </span>
               <div>
                 <p className="text-sm font-semibold text-slate-900 dark:text-white">SKTECH AI Assistant</p>
@@ -161,7 +117,7 @@ export default function SKTechAssistant({ role }: SKTechAssistantProps) {
             <button
               type="button"
               onClick={() => setOpen(false)}
-              aria-label="Close assistant panel"
+              aria-label="Close SKTECH AI Assistant panel"
               className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white/80 text-slate-500 transition hover:border-cyan-300 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-300 dark:hover:text-white"
             >
               <X className="h-4 w-4" />
