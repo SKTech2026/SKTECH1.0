@@ -1,58 +1,32 @@
-# SKTECH Gemini Dashboard Assistant setup
+﻿# SKTECH assistant setup
 
-This assistant is designed for dashboard-only guidance and stays within SKTECH system features, navigation, and support.
+SKTECH has two separate assistant routes:
 
-## Environment variables
+- **Dashboard:** `POST /api/assistant/sktech` requires an authenticated session. It uses the signed-in role and dashboard path for SKTECH-only guidance.
+- **Public landing:** `POST /api/assistant/public` needs no session. It receives only a public question, checks it against curated public topics, and sends that question plus the matching public knowledge to Gemini. It does not query member records or use dashboard context.
 
-Set these in Railway for the app environment:
+## Railway environment variables
 
-- `GEMINI_API_KEY`
-- `GEMINI_MODEL` (optional; defaults to `gemini-2.5-flash` if not set)
-
-Keep the key server-side only. Do not expose it to the browser or use a `NEXT_PUBLIC_` prefix.
-
-## Railway example
-
-In Railway, add these variables under the app environment:
+Set these on the server-side app service in Railway:
 
 ```bash
 GEMINI_API_KEY=your_server_side_key_here
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-2.5-flash-lite
 ```
 
-## Behavior notes
+`GEMINI_MODEL` is optional. The public route defaults to `gemini-2.5-flash-lite`; the dashboard route retains its existing `gemini-2.5-flash` default. A configured `GEMINI_MODEL` applies to both routes. Use a model available to the project's Gemini API key.
 
-- The assistant is available only in dashboard layouts.
-- It is role-aware and uses the current page path to tailor guidance.
-- It does not answer unrelated general questions.
-- It refuses API key, secret, private-data, or bypass requests.
-- If the Gemini key is missing, it falls back to a local SKTECH support reply.
+Keep `GEMINI_API_KEY` server-side. Never put it in browser code or a variable with a `NEXT_PUBLIC_` prefix. The public route sends the key to Gemini in a server-side request header.
 
-## Route
+## Public assistant behavior
 
-The assistant API is served at:
+The landing bot calls `/api/assistant/public` with a `message` and optional public page path. The route accepts questions up to 500 characters about public SKTECH features, KK joining, portal login, YouthPass and certificate verification, privacy, and navigation. It refuses unrelated or private-data requests. It does not read cookies, sessions, or database records.
 
-- `POST /api/assistant/sktech`
+If the key is missing, the public route returns a configuration notice and a curated local answer. If Gemini is unavailable, it returns the curated answer. The dashboard route keeps its existing authenticated fallback behavior.
 
-The request expects:
+The public route caps Gemini output at 400 tokens with temperature `0.2`. The browser receives only the answer or a validation error, never the system instruction or key.
+It also applies a per-instance request limit before calling Gemini. For stronger limits across multiple app instances, use an infrastructure-level rate limiter.
 
-```json
-{
-  "message": "How do I export a report?",
-  "currentPath": "/dashboard/admin/analytics"
-}
-```
+## Dashboard assistant behavior
 
-The server returns a JSON object with a single `reply` field when available.
-
-## Privacy
-
-The server sends only:
-
-- user role
-- current path
-- allowed feature list
-- the user question
-- curated help context
-
-It does not send raw database rows, tokens, credentials, or private profile details.
+The dashboard route expects a message, current dashboard path, and optional recent context. It still requires a session and uses role-aware SKTECH guidance. Its existing fallback and guardrails are unchanged.

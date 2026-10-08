@@ -10,6 +10,7 @@ import {
   Fingerprint,
   IdCard,
   LockKeyhole,
+  Loader2,
   Menu,
   MessageSquare,
   QrCode,
@@ -28,7 +29,6 @@ import { useEffect, useRef, useState } from "react";
 import SKTechBotLauncher, { SKTechBotIcon } from "@/components/assistant/SKTechBotLauncher";
 import GovernanceCommandHub from "@/components/landing/GovernanceCommandHub";
 import PublicNewsFeed from "@/components/landing/PublicNewsFeed";
-import { answerSktTechChat } from "@/lib/chatbot/sktech-chatbot-engine";
 
 type ChatMessage = {
   role: "bot" | "user";
@@ -112,6 +112,8 @@ export default function HomePage() {
   const [showFloatingMenu, setShowFloatingMenu] = useState(false);
   const [activeSection, setActiveSection] = useState("about");
   const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       role: "bot",
@@ -186,17 +188,36 @@ export default function HomePage() {
     }, 120);
   };
 
-  const sendChatMessage = (value?: string) => {
+  const sendChatMessage = async (value?: string) => {
     const question = (value ?? chatInput).trim();
-    if (!question) return;
+    if (!question || chatLoading) return;
 
-    setChatMessages((messages) => [
-      ...messages,
-      { role: "user", text: question },
-      { role: "bot", text: answerSktTechChat(question).text },
-    ]);
+    setChatMessages((messages) => [...messages, { role: "user", text: question }]);
     setChatInput("");
     setChatOpen(true);
+    setChatLoading(true);
+    setChatError(null);
+
+    try {
+      const response = await fetch("/api/assistant/public", {
+        method: "POST",
+        credentials: "omit",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: question, currentPath: "/" }),
+      });
+      const payload = (await response.json()) as { reply?: string; error?: string };
+      if (!response.ok || !payload.reply) {
+        throw new Error(payload.error ?? "The public assistant is unavailable right now.");
+      }
+      const reply = payload.reply;
+      setChatMessages((messages) => [...messages, { role: "bot", text: reply }]);
+    } catch (requestError) {
+      const message = requestError instanceof Error ? requestError.message : "The public assistant is unavailable right now.";
+      setChatError(message);
+      setChatMessages((messages) => [...messages, { role: "bot", text: "Please try again shortly. I can help with public SKTECH information and portal navigation." }]);
+    } finally {
+      setChatLoading(false);
+    }
   };
 
   return (
@@ -854,7 +875,7 @@ export default function HomePage() {
               </button>
             </div>
 
-            <div className="max-h-[48vh] space-y-3 overflow-y-auto px-4 py-4 sm:max-h-[360px]">
+            <div aria-live="polite" aria-busy={chatLoading} className="max-h-[48vh] space-y-3 overflow-y-auto px-4 py-4 sm:max-h-[360px]">
               {chatMessages.map((message, index) => (
                 <div
                   key={`${message.role}-${index}`}
@@ -871,7 +892,10 @@ export default function HomePage() {
                   </p>
                 </div>
               ))}
+              {chatLoading ? <p className="flex items-center gap-2 text-sm text-[#435878]"><Loader2 className="h-4 w-4 motion-safe:animate-spin" /> Thinking...</p> : null}
             </div>
+
+            {chatError ? <p role="alert" className="mx-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">{chatError}</p> : null}
 
             <div className="border-t border-[#edf2ff] px-4 py-3">
               <div className="flex gap-2 overflow-x-auto pb-2">
@@ -879,7 +903,8 @@ export default function HomePage() {
                   <button
                     key={question}
                     type="button"
-                    onClick={() => sendChatMessage(question)}
+                    onClick={() => void sendChatMessage(question)}
+                    disabled={chatLoading}
                     className="shrink-0 rounded-full border border-[#bfd1f8] px-3 py-1.5 text-xs font-bold text-[#0a3aa2]"
                   >
                     {question}
@@ -890,7 +915,7 @@ export default function HomePage() {
                 className="mt-2 flex items-center gap-2 rounded-2xl border border-[#dbe7ff] bg-[#f6f9ff] p-2"
                 onSubmit={(event) => {
                   event.preventDefault();
-                  sendChatMessage();
+                  void sendChatMessage();
                 }}
               >
                 <input
@@ -902,7 +927,8 @@ export default function HomePage() {
                 <button
                   type="submit"
                   aria-label="Send question"
-                  className="rounded-xl bg-[#cf2638] p-2 text-white"
+                  disabled={chatLoading || !chatInput.trim()}
+                  className="rounded-xl bg-[#cf2638] p-2 text-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Send className="h-4 w-4" />
                 </button>
