@@ -38,11 +38,11 @@ export default function MobileTopBar({
       : "/login";
 
   return (
-    <header className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-glass-border bg-surface/85 px-3 py-2.5 text-foreground backdrop-blur-md">
+    <header className="sticky top-[env(safe-area-inset-top)] z-40 flex items-center justify-between gap-2 border-b border-glass-border bg-surface/85 px-3 py-2.5 text-foreground backdrop-blur-md">
       <div className="flex items-center gap-2">
         <Link
           href="/mobile"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-glass-border bg-surface-elevated/70 text-foreground transition hover:border-accent/60 hover:bg-surface-elevated"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-glass-border bg-surface-elevated/70 text-foreground transition hover:border-accent/60 hover:bg-surface-elevated"
           aria-label="Go to landing page"
         >
           <Home className="h-4 w-4" />
@@ -53,20 +53,20 @@ export default function MobileTopBar({
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-1.5">
         <LanguageSwitcher compact />
-        <ThemeToggle className="h-8" />
+        <ThemeToggle className="h-11 min-w-11 justify-center" />
         {isOfficial ? (
           <>
           <NotificationBell
             chatHref="/mobile/official/chat"
-            className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-glass-border bg-surface-elevated/70 text-foreground transition hover:border-accent/60 hover:bg-surface-elevated"
+            className="relative inline-flex h-11 w-11 items-center justify-center rounded-xl border border-glass-border bg-surface-elevated/70 text-foreground transition hover:border-accent/60 hover:bg-surface-elevated"
           />
           <div className="relative">
             <button
               type="button"
               onClick={() => setIsProfileOpen((open) => !open)}
-              className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-glass-border bg-surface-elevated/70 text-foreground transition hover:border-accent/60 hover:bg-surface-elevated"
+              className="inline-flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl border border-glass-border bg-surface-elevated/70 text-foreground transition hover:border-accent/60 hover:bg-surface-elevated"
               aria-label="Open profile menu"
               aria-expanded={isProfileOpen}
             >
@@ -102,7 +102,7 @@ export default function MobileTopBar({
         ) : (
           <LogoutConfirmButton
             callbackUrl={logoutCallbackUrl}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-glass-border bg-surface-elevated/70 text-foreground transition hover:border-rose-300/60 hover:bg-surface-elevated"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-glass-border bg-surface-elevated/70 text-foreground transition hover:border-rose-300/60 hover:bg-surface-elevated"
             aria-label="Sign out"
           >
             <LogOut className="h-4 w-4" />

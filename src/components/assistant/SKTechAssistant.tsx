@@ -94,7 +94,7 @@ export default function SKTechAssistant({ role }: SKTechAssistantProps) {
 
   return (
     <>
-      <div className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-50 md:bottom-6 md:right-6">
+      <div className="fixed bottom-[calc(1rem_+_env(safe-area-inset-bottom))] right-4 z-50 md:bottom-6 md:right-6">
         {open ? (
           <motion.div
             initial={reducedMotion ? false : { opacity: 0, y: 16, scale: 0.98 }}
@@ -102,9 +102,9 @@ export default function SKTechAssistant({ role }: SKTechAssistantProps) {
             id="dashboard-chat-panel"
             role="region"
             aria-label="SKTECH AI Assistant chat"
-            className="mb-3 max-h-[calc(100dvh-7rem)] w-[calc(100vw-2rem)] max-w-[380px] overflow-y-auto rounded-3xl border border-[#dbe7ff] bg-white/95 shadow-[0_24px_70px_-34px_rgba(6,19,45,0.9)] backdrop-blur-xl dark:border-slate-700 dark:bg-slate-950/95"
+            className="mb-3 flex max-h-[calc(100dvh_-_7rem_-_env(safe-area-inset-bottom))] w-[calc(100vw-2rem)] max-w-[380px] flex-col overflow-hidden rounded-3xl border border-[#dbe7ff] bg-white/95 shadow-[0_24px_70px_-34px_rgba(6,19,45,0.9)] backdrop-blur-xl dark:border-slate-700 dark:bg-slate-950/95"
           >
-            <div className="flex items-center justify-between bg-[#06132d] px-4 py-4 text-white">
+            <div className="flex shrink-0 items-center justify-between bg-[#06132d] px-4 py-4 text-white">
               <div className="flex items-center gap-3">
                 <span className="relative rounded-full bg-[radial-gradient(circle_at_30%_30%,#38bdf8,#0a3aa2_70%)] p-2 text-cyan-50 ring-1 ring-cyan-200/50">
                   <SKTechBotIcon className="h-6 w-6" />
@@ -118,13 +118,13 @@ export default function SKTechAssistant({ role }: SKTechAssistantProps) {
                 type="button"
                 aria-label="Close SKTECH AI Assistant panel"
                 onClick={() => setOpen(false)}
-                className="rounded-full p-1 text-white/70 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-white/70 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div aria-live="polite" aria-busy={loading} className="max-h-[48vh] space-y-3 overflow-y-auto px-4 py-4 sm:max-h-[360px]">
+            <div aria-live="polite" aria-busy={loading} className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4 sm:max-h-[360px]">
               {messages.map((messageItem, index) => (
                 <div key={`${messageItem.role}-${index}`} className={`flex ${messageItem.role === "user" ? "justify-end" : "justify-start"}`}>
                   <p className={`max-w-[86%] rounded-2xl px-4 py-3 text-sm leading-6 ${messageItem.role === "user" ? "bg-[#0a3aa2] text-white" : "bg-[#eef4ff] text-[#06132d] dark:bg-slate-800 dark:text-slate-100"}`}>
@@ -137,7 +137,7 @@ export default function SKTechAssistant({ role }: SKTechAssistantProps) {
 
             {error ? <p role="alert" className="mx-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">{error}</p> : null}
 
-            <div className="border-t border-[#edf2ff] px-4 py-3 dark:border-slate-700">
+            <div className="shrink-0 border-t border-[#edf2ff] px-4 py-3 dark:border-slate-700">
               <div className="flex gap-2 overflow-x-auto pb-2">
                 {quickPrompts.map((promptItem) => (
                   <button
@@ -145,7 +145,7 @@ export default function SKTechAssistant({ role }: SKTechAssistantProps) {
                     type="button"
                     onClick={() => void handleSubmit(promptItem)}
                     disabled={loading}
-                    className="shrink-0 rounded-full border border-[#bfd1f8] px-3 py-1.5 text-xs font-bold text-[#0a3aa2] disabled:opacity-50 dark:border-cyan-700 dark:text-cyan-200"
+                    className="min-h-11 shrink-0 rounded-full border border-[#bfd1f8] px-3 py-1.5 text-xs font-bold text-[#0a3aa2] disabled:opacity-50 dark:border-cyan-700 dark:text-cyan-200"
                   >
                     {promptItem}
                   </button>
@@ -166,7 +166,7 @@ export default function SKTechAssistant({ role }: SKTechAssistantProps) {
                   type="submit"
                   aria-label={t("Send message")}
                   disabled={loading || !prompt.trim()}
-                  className="rounded-xl bg-[#cf2638] p-2 text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#cf2638] text-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Send className="h-4 w-4" />
                 </button>

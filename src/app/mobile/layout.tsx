@@ -31,7 +31,7 @@ export default async function MobileLayout({ children }: { children: ReactNode }
           }
         />
         <MobileOfflineNotice />
-        <main className="mx-auto w-full max-w-md px-3 pb-6 pt-3">{children}</main>
+        <main className="mx-auto w-full max-w-md min-w-0 px-3 pb-28 pt-3">{children}</main>
         {role ? <SKTechAssistant role={role} /> : null}
       </div>
     </LanguageProvider>

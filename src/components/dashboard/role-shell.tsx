@@ -561,7 +561,7 @@ export default function RoleShell({
                   <button
                     type="button"
                     onClick={() => setMobileDrawerOpen(true)}
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-glass-border bg-surface-elevated/60 text-muted transition hover:text-foreground lg:hidden"
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-glass-border bg-surface-elevated/60 text-muted transition hover:text-foreground lg:hidden"
                     aria-label={openNavigationLabel}
                   >
                     <Menu className="h-4 w-4" />
@@ -611,8 +611,8 @@ export default function RoleShell({
               </div>
             </header>
 
-            <main className="w-full flex-1 px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
-              <div className={`mx-auto w-full ${isOfficialCn ? "max-w-[1180px]" : "max-w-[1440px]"}`}>
+            <main className="w-full min-w-0 flex-1 px-4 pb-[calc(7rem_+_env(safe-area-inset-bottom))] pt-5 sm:px-6 lg:px-8 lg:py-7">
+              <div className={`mx-auto w-full min-w-0 ${isOfficialCn ? "max-w-[1180px]" : "max-w-[1440px]"}`}>
                 {children}
               </div>
             </main>
@@ -739,7 +739,7 @@ export default function RoleShell({
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                    className={`inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-full border px-3 py-2 text-xs font-semibold ${
                       active
                         ? "border-accent/40 bg-accent/15 text-accent"
                         : "border-glass-border bg-surface/45 text-foreground"
@@ -753,7 +753,7 @@ export default function RoleShell({
             </nav>
           </div>
 
-          <main>{children}</main>
+          <main className="min-w-0 pb-[calc(7rem_+_env(safe-area-inset-bottom))] lg:pb-0">{children}</main>
         </div>
       </div>
     </div>

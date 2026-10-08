@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 
 import MobileAutoRedirect from "@/components/mobile/MobileAutoRedirect";
 import PwaUpdateHandler from "@/components/PwaUpdateHandler";
+import PwaInstallPrompt from "@/components/pwa/PwaInstallPrompt";
 import { ThemeProvider } from "@/context/ThemeContext";
 
 import "@aws-amplify/ui-react/styles.css";
@@ -39,6 +40,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#b91c1c",
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -79,6 +81,7 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <PwaUpdateHandler />
+          <PwaInstallPrompt />
           <MobileAutoRedirect />
           {children}
         </ThemeProvider>
