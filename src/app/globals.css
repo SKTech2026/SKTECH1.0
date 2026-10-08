@@ -534,3 +534,13 @@ html.theme-midnight-elite .landing-page-dark .landing-overview {
   from { opacity: 0; transform: translateY(12px) scale(0.97); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+@keyframes kk-rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes kk-glow {
+  0%, 100% { transform: translate(0, 0); opacity: 0.65; }
+  50% { transform: translate(-24px, 18px); opacity: 1; }
+}
