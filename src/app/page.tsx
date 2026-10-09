@@ -95,11 +95,9 @@ const securityItems = ["Role-Based Access", "Private Photo Storage", "Municipali
 
 const suggestedQuestions = [
   "What is SKTECH?",
-  "How do I register?",
-  "How does Digital ID work?",
-  "What is Face Liveness?",
-  "What can Staff access?",
-  "Is SKTECH official?",
+  "Paano mag-register?",
+  "KK Portal help",
+  "Verify YouthPass",
 ] as const;
 
 export default function HomePage() {
@@ -117,7 +115,7 @@ export default function HomePage() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       role: "bot",
-      text: "Hi, I am Ask SKTECH. Choose a question or ask about registration, Digital ID, attendance, access, or system use.",
+      text: "Hi! Ask me about SKTECH, Official Portal, KK Portal, YouthPass, certificates, or login help.",
     },
   ]);
   const getStartedAudioRef = useRef<HTMLAudioElement | null>(null);

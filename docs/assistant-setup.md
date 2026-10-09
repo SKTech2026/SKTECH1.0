@@ -20,7 +20,7 @@ Keep `GEMINI_API_KEY` server-side. Never put it in browser code or a variable wi
 
 ## Public assistant behavior
 
-The landing bot calls `/api/assistant/public` with a `message` and optional public page path. The route accepts questions up to 500 characters about public SKTECH features, KK joining, portal login, YouthPass and certificate verification, privacy, and navigation. It refuses unrelated or private-data requests. It does not read cookies, sessions, or database records.
+The landing bot calls `/api/assistant/public` with a `message` and optional public page path. The route accepts questions up to 500 characters about public SKTECH features, KK joining, portal login, YouthPass and certificate verification, privacy, and navigation. It answers short greetings and clarifies vague Filipino or Taglish requests such as `pano`, while refusing unrelated or private-data requests. It does not read cookies, sessions, or database records.
 
 If the key is missing, the public route returns a configuration notice and a curated local answer. If Gemini is unavailable, it returns the curated answer. The dashboard route keeps its existing authenticated fallback behavior.
 
