@@ -29,6 +29,25 @@ function decodePublicKey(value: string) {
   return Uint8Array.from(decoded, (character) => character.charCodeAt(0));
 }
 
+async function waitForServiceWorkerReady(timeoutMs = 8000): Promise<ServiceWorkerRegistration | null> {
+  if (!("serviceWorker" in navigator)) return null;
+
+  let timeoutId: number | undefined;
+  try {
+    const registration = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<null>((resolve) => {
+        timeoutId = window.setTimeout(() => resolve(null), timeoutMs);
+      }),
+    ]);
+    return registration?.active ? registration : null;
+  } catch {
+    return null;
+  } finally {
+    if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+  }
+}
+
 export default function PushControls({ onUpdated }: { onUpdated: () => void }) {
   const { t } = useLanguage();
   const [supported, setSupported] = useState(false);
@@ -89,17 +108,29 @@ export default function PushControls({ onUpdated }: { onUpdated: () => void }) {
   };
 
   const enable = async () => {
+    if (!supported) {
+      setMessage(t("This browser does not support web push notifications."));
+      return;
+    }
     if (!publicKey || busy) return;
     setBusy(true);
     setMessage(null);
     try {
       const permission = await Notification.requestPermission();
-      if (permission !== "granted") {
-        setMessage("Browser permission was not granted. In-app notifications still work.");
+      if (permission === "denied") {
+        setMessage(t("Notifications are blocked. Enable them in browser settings."));
         return;
       }
-      const registration = await navigator.serviceWorker.getRegistration();
-      if (!registration) throw new Error("The PWA service worker is not ready. Reload the app and try again.");
+      if (permission !== "granted") {
+        setMessage(t("Notification permission was not granted. In-app notifications still work."));
+        return;
+      }
+
+      setMessage(t("Preparing push notifications. Please wait…"));
+      const registration = await waitForServiceWorkerReady();
+      if (!registration) {
+        throw new Error(t("Service worker is still starting. Reload once and try again."));
+      }
       const subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: decodePublicKey(publicKey) });
       const response = await fetch("/api/notifications/push/subscribe", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(subscription.toJSON()),
