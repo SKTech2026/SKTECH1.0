@@ -8,11 +8,13 @@ const sensitiveRuntimeCaching = [
     urlPattern: /^https?.*\/uploads\/.*$/i,
     handler: "NetworkOnly",
     method: "GET",
+    options: {},
   },
   {
     urlPattern: /^https?.*\/api\/(?:feed\/posts\/[^/]+\/image|public-news\/[^/]+\/image|official\/photo|admission-proofs)(?:\?.*)?$/i,
     handler: "NetworkOnly",
     method: "GET",
+    options: {},
   },
 ];
 
@@ -28,21 +30,46 @@ const sensitiveBuildExcludes = [
   },
 ];
 
+const cacheableStaticAssets = new Set([
+  "google-fonts-webfonts",
+  "google-fonts-stylesheets",
+  "static-font-assets",
+  "static-image-assets",
+  "static-audio-assets",
+  "static-video-assets",
+  "static-js-assets",
+  "static-style-assets",
+]);
+
+const safeStaticRuntimeCaching = (defaultRuntimeCaching as { options?: { cacheName?: string } }[])
+  .filter((rule) => Boolean(rule.options?.cacheName && cacheableStaticAssets.has(rule.options.cacheName)));
+
 const runtimeCaching = [
   ...sensitiveRuntimeCaching,
+  {
+    // Never store rendered pages or App Router/RSC navigation responses.
+    urlPattern: ({ request }: { request: Request }) => request.mode === "navigate",
+    handler: "NetworkOnly",
+    method: "GET",
+    options: {},
+  },
   {
     // Never cache API routes; always hit network for auth/attendance correctness.
     urlPattern: /^https?.*\/api\/.*$/i,
     handler: "NetworkOnly",
     method: "GET",
+    options: {},
   },
-  ...(defaultRuntimeCaching as object[]),
+  ...safeStaticRuntimeCaching,
 ];
 
 const withPWA = withPWAInit({
   dest: "public",
   register: true,
   skipWaiting: true,
+  cacheStartUrl: false,
+  dynamicStartUrl: false,
+  fallbacks: { document: "/offline" },
   disable: process.env.NODE_ENV !== "production",
   runtimeCaching,
   publicExcludes: ["!noprecache/**/*", "!uploads/**/*"],

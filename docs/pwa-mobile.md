@@ -1,7 +1,11 @@
-# SKTECH mobile PWA behavior
+# SKTECH PWA behavior
 
-The install card appears only after a browser emits `beforeinstallprompt`. It stays hidden in standalone mode and after the user selects **Not now**. Browsers that do not offer that event do not show the card.
+The manifest at `public/manifest.json` uses `/mobile` as the stable app identity and start URL, standalone display, and the 192px/512px SKTECH icons. The padded 512px icon is marked `any maskable`. The install card appears only after a browser emits `beforeinstallprompt`; it stays hidden in standalone mode and after **Not now**. Browsers that do not offer that event do not show the card.
 
-`/offline` provides a direct offline information page with retry and home actions. The existing service worker and runtime caching rules are unchanged. General navigation is not redirected to `/offline` when the network fails, because dashboard and account pages require live authentication and data. Users can open the page when it is available in the browser cache.
+`next-pwa` is enabled only for production builds. `npm run build` generates `public/sw.js`, Workbox's `public/workbox-*.js`, and hashed `public/worker-*.js` and `public/fallback-*.js` bundles. These are build artifacts and are ignored/untracked; do not edit or commit them. The source of push behavior is `worker/index.js`, which next-pwa compiles and imports into the generated service worker.
 
-Dashboard and mobile route loading files show layout placeholders while pages load. They do not display cached account data.
+Same-origin API requests and document navigations are network-only. The `/offline` document is explicitly precached as the offline navigation fallback, so private dashboard HTML and App Router payloads are not served from cache. Runtime caching is limited to static fonts, images, audio/video, JavaScript, and styles; uploaded files and sensitive image endpoints remain network-only. The app start URL is not cached.
+
+`/offline` provides retry and home actions and contains no account data. It is shown only when a navigation cannot be served by the network. Public page HTML is also network-only; the offline experience uses the static fallback rather than stale account or page content.
+
+For local verification, run `npm run build`, start with `npm start`, and check `/manifest.json` and `/offline`. Install from a supported secure browser, then test offline navigation with DevTools network offline. Enable browser notifications from the Notification Center and send a test push to verify the compiled worker's generic content and safe click handling. Rebuild twice and confirm `git status --short` shows no generated PWA files.
