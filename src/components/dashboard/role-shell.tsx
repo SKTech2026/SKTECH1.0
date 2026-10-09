@@ -35,6 +35,7 @@ import { useLanguage } from "@/components/i18n/LanguageProvider";
 import SKTechAssistant from "@/components/assistant/SKTechAssistant";
 import LogoutConfirmButton from "@/components/auth/LogoutConfirmButton";
 import NotificationBell from "@/components/notifications/NotificationBell";
+import RoleOnboardingTour from "@/components/onboarding/RoleOnboardingTour";
 import Logo from "@/components/ui/Logo";
 import type { DashboardRole } from "@/lib/assistant/sktech-help";
 
@@ -534,6 +535,7 @@ export default function RoleShell({
 
     return (
       <div className="min-h-screen bg-[linear-gradient(135deg,var(--color-gradient-start),var(--color-gradient-end))] text-foreground">
+        {assistantRole && <RoleOnboardingTour role={assistantRole} />}
         <SKTechAssistant role={assistantRole ?? (isAdminCn ? "ADMIN" : isStaffCn ? "STAFF" : "OFFICIAL")} />
         <div className="pointer-events-none fixed inset-0 bg-[linear-gradient(to_right,color-mix(in_oklab,var(--color-accent)_8%,transparent)_1px,transparent_1px),linear-gradient(to_bottom,color-mix(in_oklab,var(--color-accent)_6%,transparent)_1px,transparent_1px)] bg-[size:64px_64px]" />
 
@@ -622,6 +624,7 @@ export default function RoleShell({
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[linear-gradient(135deg,var(--color-gradient-start),var(--color-gradient-end))] text-foreground">
+      {assistantRole && <RoleOnboardingTour role={assistantRole} />}
       <SKTechAssistant role={assistantRole ?? (isAdminCn ? "ADMIN" : isStaffCn ? "STAFF" : "OFFICIAL")} />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_color-mix(in_oklab,var(--color-accent)_24%,transparent),_transparent_45%)]" />
       <div className="pointer-events-none absolute -left-24 top-12 h-72 w-72 rounded-full bg-accent/20 blur-3xl" />
