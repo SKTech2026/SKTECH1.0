@@ -67,14 +67,14 @@ function normalizedHost(value: string | null): string {
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const host = normalizedHost(request.headers.get("x-forwarded-host") || request.headers.get("host"));
-  const kkHosts = new Set(["sktech-kk-portal.com", "www.sktech-kk-portal.com", "kk.sktech-ormin.com"]);
+  const kkHosts = new Set(["kk-portal.sktech-ormin.com", "kk.sktech-ormin.com", "sktech-kk-portal.com", "www.sktech-kk-portal.com"]);
 
   if (pathname === "/" && kkHosts.has(host)) {
     return NextResponse.redirect(new URL(`/kk${request.nextUrl.search}`, `https://${host}`));
   }
 
   if (
-    (host === new URL(MAIN_PUBLIC_URL).hostname || host === "kk.sktech-ormin.com") &&
+    (host === new URL(MAIN_PUBLIC_URL).hostname || (kkHosts.has(host) && host !== new URL(KK_PORTAL_PUBLIC_URL).hostname)) &&
     /^\/kk\/join\/[^/]+$/.test(pathname)
   ) {
     return NextResponse.redirect(`${KK_PORTAL_PUBLIC_URL}${pathname}${request.nextUrl.search}`, 307);

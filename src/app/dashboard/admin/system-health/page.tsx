@@ -193,7 +193,7 @@ export default async function AdminSystemHealthPage() {
     },
     {
       label: "KK portal domain",
-      value: "sktech-kk-portal.com",
+      value: "kk-portal.sktech-ormin.com",
       note: "Official KK domain; old subdomain remains supported. No external DNS check performed here",
     },
   ];
