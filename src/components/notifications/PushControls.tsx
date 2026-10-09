@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLanguage } from "@/components/i18n/LanguageProvider";
 
 const defaultPreferences = {
   pushChat: true,
@@ -29,6 +30,7 @@ function decodePublicKey(value: string) {
 }
 
 export default function PushControls({ onUpdated }: { onUpdated: () => void }) {
+  const { t } = useLanguage();
   const [supported, setSupported] = useState(false);
   const [configured, setConfigured] = useState(false);
   const [publicKey, setPublicKey] = useState<string | null>(null);
@@ -147,20 +149,20 @@ export default function PushControls({ onUpdated }: { onUpdated: () => void }) {
 
   return (
     <div className="border-t border-glass-border px-4 py-3 text-xs text-muted">
-      <p className="font-semibold text-foreground">Browser alerts</p>
-      {!supported ? <p className="mt-1">Notifications are not supported on this browser.</p>
-        : !configured ? <p className="mt-1">Browser alerts are not configured yet. In-app notifications still work.</p>
+      <p className="font-semibold text-foreground">{t("Browser alerts")}</p>
+      {!supported ? <p className="mt-1">{t("Notifications are not supported on this browser.")}</p>
+        : !configured ? <p className="mt-1">{t("Browser alerts are not configured yet. In-app notifications still work.")}</p>
           : <div className="mt-2 flex flex-wrap gap-2">
-              <button type="button" disabled={busy} onClick={() => void (subscribed ? disable() : enable())} className="min-h-10 rounded-lg border border-accent/40 px-3 font-semibold text-accent disabled:opacity-50">{subscribed ? "Disable notifications" : "Enable notifications"}</button>
-              {subscribed ? <button type="button" disabled={busy} onClick={() => void test()} className="min-h-10 rounded-lg border border-glass-border px-3 font-semibold text-foreground disabled:opacity-50">Send test</button> : null}
+              <button type="button" disabled={busy} onClick={() => void (subscribed ? disable() : enable())} className="min-h-10 rounded-lg border border-accent/40 px-3 font-semibold text-accent disabled:opacity-50">{t(subscribed ? "Disable notifications" : "Enable notifications")}</button>
+              {subscribed ? <button type="button" disabled={busy} onClick={() => void test()} className="min-h-10 rounded-lg border border-glass-border px-3 font-semibold text-foreground disabled:opacity-50">{t("Send test")}</button> : null}
             </div>}
       <details className="mt-3 border-t border-glass-border pt-3">
-        <summary className="min-h-10 cursor-pointer py-2 font-semibold text-foreground">Notification preferences</summary>
-        <p className="mb-2 leading-5">These choices control browser push only. In-app notifications continue to work. Security alerts stay enabled.</p>
+        <summary className="min-h-10 cursor-pointer py-2 font-semibold text-foreground">{t("Notification preferences")}</summary>
+        <p className="mb-2 leading-5">{t("These choices control browser push only. In-app notifications continue to work. Security alerts stay enabled.")}</p>
         <div className="divide-y divide-glass-border">
           {preferenceOptions.map(({ key, label, detail }) => (
             <div key={key} className="flex min-h-14 items-center justify-between gap-3 py-2">
-              <span className="min-w-0"><span className="block font-semibold text-foreground">{label}</span><span className="block text-[11px] leading-4">{detail}</span></span>
+              <span className="min-w-0"><span className="block font-semibold text-foreground">{t(label)}</span><span className="block text-[11px] leading-4">{t(detail)}</span></span>
               <button
                 type="button"
                 role="switch"
@@ -176,7 +178,7 @@ export default function PushControls({ onUpdated }: { onUpdated: () => void }) {
           ))}
         </div>
       </details>
-      {message ? <p role="status" className="mt-2 leading-5">{message}</p> : null}
+      {message ? <p role="status" className="mt-2 leading-5">{t(message)}</p> : null}
     </div>
   );
 }

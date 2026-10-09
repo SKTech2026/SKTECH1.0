@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth";
 import Link from "next/link";
+import TranslatedText from "@/components/i18n/TranslatedText";
 
 import { authOptions } from "@/lib/auth";
 import {
@@ -71,19 +72,18 @@ export default async function OfficialAnnouncementsPage({
     <div className="space-y-6">
       <section className="rounded-3xl border border-glass-border bg-surface p-6 shadow-[0_24px_48px_-24px_var(--shadow-color)] backdrop-blur-md sm:p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
-          Public Bulletin
+          <TranslatedText text="Public Bulletin" />
         </p>
-        <h2 className="mt-3 text-3xl font-bold text-foreground">Public Announcements</h2>
+        <h2 className="mt-3 text-3xl font-bold text-foreground"><TranslatedText text="Public Announcements" /></h2>
         <p className="mt-2 max-w-3xl text-sm text-muted">
-          Active announcements are limited to {ACTIVE_ANNOUNCEMENT_LIMIT} posts and
-          show the newest posts first.
+          <TranslatedText text="Active announcements are limited to" /> {ACTIVE_ANNOUNCEMENT_LIMIT} <TranslatedText text="posts and show the newest posts first." />
         </p>
       </section>
 
       <section className="space-y-4">
         {events.length === 0 ? (
           <article className="rounded-2xl border border-glass-border bg-surface p-5 text-sm text-muted">
-            No announcements available.
+            <TranslatedText text="No announcements available." />
           </article>
         ) : (
           events.map((event) => (
@@ -96,10 +96,10 @@ export default async function OfficialAnnouncementsPage({
               </p>
               <h3 className="mt-2 text-xl font-semibold text-foreground">{event.title}</h3>
               <p className="mt-2 text-sm text-muted">
-                {event.description ?? "No additional details provided."}
+                {event.description ?? <TranslatedText text="No additional details provided." />}
               </p>
               <p className="mt-3 text-xs text-muted">
-                Published {event.createdAt.toLocaleString()}
+                <TranslatedText text="Published" /> {event.createdAt.toLocaleString()}
               </p>
             </article>
           ))
@@ -108,14 +108,14 @@ export default async function OfficialAnnouncementsPage({
 
       <section className="space-y-4">
         <div>
-          <h3 className="text-lg font-semibold text-foreground">Archive</h3>
+          <h3 className="text-lg font-semibold text-foreground"><TranslatedText text="Archive" /></h3>
           <p className="mt-1 text-sm text-muted">
-            Announcements move here automatically after their scheduled date passes or when newer posts rotate in.
+            <TranslatedText text="Announcements move here automatically after their scheduled date passes or when newer posts rotate in." />
           </p>
         </div>
         {archivedEvents.length === 0 ? (
           <article className="rounded-2xl border border-glass-border bg-surface p-5 text-sm text-muted">
-            No archived announcements yet.
+            <TranslatedText text="No archived announcements yet." />
           </article>
         ) : (
           archivedEvents.map((event) => (
@@ -124,11 +124,11 @@ export default async function OfficialAnnouncementsPage({
               className="rounded-2xl border border-glass-border bg-surface/70 p-5 opacity-80 shadow-xl backdrop-blur-md"
             >
               <p className="text-xs uppercase tracking-[0.14em] text-muted">
-                Archived {event.eventDate.toLocaleDateString()}
+                <TranslatedText text="Archived" /> {event.eventDate.toLocaleDateString()}
               </p>
               <h3 className="mt-2 text-lg font-semibold text-foreground">{event.title}</h3>
               <p className="mt-2 text-sm text-muted">
-                {event.description ?? "No additional details provided."}
+                {event.description ?? <TranslatedText text="No additional details provided." />}
               </p>
             </article>
           ))
@@ -136,11 +136,11 @@ export default async function OfficialAnnouncementsPage({
         {totalArchived > 0 ? (
           <footer className="flex flex-col gap-4 rounded-2xl border border-glass-border bg-surface/70 px-4 py-4 text-sm text-muted sm:flex-row sm:items-center sm:justify-between sm:px-5">
             <p>
-              Showing {firstArchived}-{lastArchived} of {totalArchived}
+              <TranslatedText text="Showing" /> {firstArchived}-{lastArchived} <TranslatedText text="of" /> {totalArchived}
             </p>
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-1" aria-label="Archive page size">
-                <span className="mr-1 text-xs">Rows</span>
+                <span className="mr-1 text-xs"><TranslatedText text="Rows" /></span>
                 {ARCHIVE_PAGE_SIZE_OPTIONS.map((option) => (
                   <Link
                     key={option}
@@ -163,18 +163,18 @@ export default async function OfficialAnnouncementsPage({
                     aria-label="Go to previous archived announcements page"
                     className="rounded-lg border border-glass-border px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-surface-elevated"
                   >
-                    Previous
+                    <TranslatedText text="Previous" />
                   </Link>
                 ) : (
                   <span
                     aria-disabled="true"
                     className="cursor-not-allowed rounded-lg border border-glass-border px-3 py-1.5 text-xs font-semibold text-muted opacity-50"
                   >
-                    Previous
+                    <TranslatedText text="Previous" />
                   </span>
                 )}
                 <span className="whitespace-nowrap text-xs font-semibold text-foreground">
-                  Page {archivePage} of {totalArchivePages}
+                  <TranslatedText text="Page" /> {archivePage} <TranslatedText text="of" /> {totalArchivePages}
                 </span>
                 {archivePage < totalArchivePages ? (
                   <Link
@@ -182,14 +182,14 @@ export default async function OfficialAnnouncementsPage({
                     aria-label="Go to next archived announcements page"
                     className="rounded-lg border border-glass-border px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-surface-elevated"
                   >
-                    Next
+                    <TranslatedText text="Next" />
                   </Link>
                 ) : (
                   <span
                     aria-disabled="true"
                     className="cursor-not-allowed rounded-lg border border-glass-border px-3 py-1.5 text-xs font-semibold text-muted opacity-50"
                   >
-                    Next
+                    <TranslatedText text="Next" />
                   </span>
                 )}
               </div>

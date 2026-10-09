@@ -3,6 +3,7 @@
 import { Check } from "lucide-react";
 
 import { type ThemeName, useTheme } from "@/context/ThemeContext";
+import { useLanguage } from "@/components/i18n/LanguageProvider";
 
 const THEME_PREVIEW: Record<
   ThemeName,
@@ -41,6 +42,7 @@ const THEME_PREVIEW: Record<
 };
 
 export default function ThemeSelector() {
+  const { t } = useLanguage();
   const { theme, setTheme, presets } = useTheme();
 
   return (
@@ -76,10 +78,10 @@ export default function ThemeSelector() {
             </div>
 
             <p className="mt-3 text-sm font-semibold text-[color:var(--color-foreground)]">
-              {preset.name}
+              {t(preset.name)}
             </p>
             <p className="mt-1 text-xs text-[color:var(--color-muted)]">
-              {preset.tagline}
+              {t(preset.tagline)}
             </p>
           </button>
         );

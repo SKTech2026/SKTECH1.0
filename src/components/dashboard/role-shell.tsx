@@ -448,7 +448,7 @@ export default function RoleShell({
                   SKTECH
                 </span>
                 <span className="block truncate text-xs text-muted">
-                  {brandSubtitle}
+                  {t(brandSubtitle)}
                 </span>
               </span>
             ) : null}
@@ -490,7 +490,7 @@ export default function RoleShell({
             </div>
             {!collapsed || mobile ? (
               <p className="mt-3 rounded-lg border border-accent/40 bg-surface px-2.5 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-foreground">
-                {roleLabel}
+                {t(roleLabel)}
               </p>
             ) : null}
           </div>
@@ -588,7 +588,7 @@ export default function RoleShell({
                   </button>
                   <div className="min-w-0">
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">
-                      {headerEyebrow}
+                      {t(headerEyebrow)}
                     </p>
                     <h1 className="truncate text-base font-semibold text-foreground sm:text-lg">
                       {t(activeItem?.label ?? heading)}
@@ -605,7 +605,7 @@ export default function RoleShell({
                   />
                   <div className="hidden items-center gap-2 rounded-full border border-glass-border bg-surface-elevated/60 px-3 py-1.5 text-xs font-semibold text-muted sm:inline-flex">
                     <UserCircle className="h-4 w-4 text-accent" />
-                    {workspaceLabel}
+                    {t(workspaceLabel)}
                   </div>
                 </div>
               </div>
@@ -639,11 +639,11 @@ export default function RoleShell({
                 <p className="text-sm font-semibold uppercase tracking-wide text-foreground">
                   SKTECH
                 </p>
-                <p className="text-xs tracking-wide text-muted">Provincial Federation</p>
+                <p className="text-xs tracking-wide text-muted">{t("Provincial Federation")}</p>
               </div>
             </div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">
-              SKTech Command
+              {t("SKTech Command")}
             </p>
             <h1 className="mt-3 text-2xl font-bold leading-tight text-foreground">
               {t(heading)}
@@ -652,7 +652,7 @@ export default function RoleShell({
           </div>
 
           <div className="mt-6 inline-flex w-fit rounded-full border border-accent/40 bg-accent/15 px-3 py-1 text-xs font-semibold tracking-wide text-accent">
-            {roleLabel}
+            {t(roleLabel)}
           </div>
 
           <div className="mt-5"><LanguageSwitcher /></div>
@@ -711,7 +711,7 @@ export default function RoleShell({
               <div className="min-w-0">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">
-                    {roleLabel}
+                    {t(roleLabel)}
                   </p>
                   <h2 className="text-lg font-semibold text-foreground">{t(heading)}</h2>
                 </div>

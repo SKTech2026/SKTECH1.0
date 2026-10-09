@@ -22,7 +22,7 @@ export default async function StaffDashboardHomePage() {
         <section className="overflow-hidden rounded-2xl border border-glass-border bg-surface shadow-xl backdrop-blur-md">
           <div className="border-b border-glass-border bg-surface-elevated/60 px-6 py-5">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent">
-              Municipal Operations
+              <TranslatedText text="Municipal Operations" />
             </p>
             <h2 className="mt-2 text-2xl font-semibold text-foreground sm:text-3xl">
               <TranslatedText text="Welcome," /> {authorizedSession.user.name ?? authorizedSession.user.email}
@@ -116,13 +116,12 @@ export default async function StaffDashboardHomePage() {
               <TranslatedText text="Welcome," /> {authorizedSession.user.name ?? authorizedSession.user.email}
             </h2>
             <p className="mt-2 max-w-3xl text-sm text-muted">
-              Process official admissions, maintain attendance visibility, and keep the
-              public bulletin up to date.
+              <TranslatedText text="Process official admissions, maintain attendance visibility, and keep the public bulletin up to date." />
             </p>
           </div>
           <div className="rounded-xl border border-glass-border bg-surface px-4 py-3 text-sm shadow-[0_16px_36px_-28px_var(--shadow-color)]">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-              Assigned Municipality
+              <TranslatedText text="Assigned Municipality" />
             </p>
             <p className="mt-1 font-semibold text-foreground">
               {municipality ? `${municipality.name}, ${municipality.province}` : "Unknown"}
@@ -143,10 +142,10 @@ export default async function StaffDashboardHomePage() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-                  {metric.label}
+                  <TranslatedText text={metric.label} />
                 </p>
                 <p className="mt-3 text-3xl font-semibold text-foreground">{metric.value}</p>
-                <p className="mt-1 text-sm text-muted">{metric.helper}</p>
+                <p className="mt-1 text-sm text-muted"><TranslatedText text={metric.helper} /></p>
               </div>
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-accent/30 bg-accent/15 text-accent">
                 <Icon className="h-5 w-5" />
@@ -162,9 +161,9 @@ export default async function StaffDashboardHomePage() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-                Next Steps
+                <TranslatedText text="Next Steps" />
               </p>
-              <h3 className="mt-1 text-lg font-semibold text-foreground">Priority Actions</h3>
+              <h3 className="mt-1 text-lg font-semibold text-foreground"><TranslatedText text="Priority Actions" /></h3>
             </div>
             <span className="rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
               Staff
@@ -194,9 +193,9 @@ export default async function StaffDashboardHomePage() {
                 className="group rounded-xl border border-glass-border bg-surface/55 px-4 py-3 transition hover:border-accent/35 hover:bg-accent/10"
               >
                 <p className="text-sm font-semibold text-foreground group-hover:text-accent">
-                  {action.label}
+                  <TranslatedText text={action.label} />
                 </p>
-                <p className="mt-1 text-xs text-muted">{action.description}</p>
+                <p className="mt-1 text-xs text-muted"><TranslatedText text={action.description} /></p>
               </Link>
             ))}
           </div>
@@ -206,9 +205,9 @@ export default async function StaffDashboardHomePage() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-                Bulletin
+                <TranslatedText text="Bulletin" />
               </p>
-              <h3 className="mt-1 text-lg font-semibold text-foreground">Active Announcement Feed</h3>
+              <h3 className="mt-1 text-lg font-semibold text-foreground"><TranslatedText text="Active Announcement Feed" /></h3>
             </div>
             <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-glass-border bg-surface text-accent">
               <Megaphone className="h-4 w-4" />
@@ -217,7 +216,7 @@ export default async function StaffDashboardHomePage() {
           <ul className="mt-4 space-y-3">
             {bulletinItems.length === 0 ? (
               <li className="rounded-xl border border-dashed border-glass-border bg-surface/45 px-4 py-6 text-center text-sm text-muted">
-                No announcements available.
+                <TranslatedText text="No announcements available." />
               </li>
             ) : (
               bulletinItems.map((item) => (
@@ -225,7 +224,7 @@ export default async function StaffDashboardHomePage() {
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <p className="text-sm font-semibold text-foreground">{item.title}</p>
                     <span className="rounded-full border border-accent/25 bg-accent/10 px-2.5 py-1 text-xs font-semibold text-accent">
-                      Active
+                      <TranslatedText text="Active" />
                     </span>
                   </div>
                   <p className="mt-2 text-xs text-muted">

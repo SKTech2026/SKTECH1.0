@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useOptionalLanguage } from "@/components/i18n/LanguageProvider";
 import type { MouseEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 
@@ -87,6 +88,7 @@ export default function FlippablePortraitID({
   variant = "full",
   closeHref = "/mobile/official",
 }: FlippablePortraitIDProps) {
+  const t = useOptionalLanguage()?.t ?? ((text: string) => text);
   const [isFlipped, setIsFlipped] = useState(false);
   const [failedPhotoUrl, setFailedPhotoUrl] = useState<string | null>(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
@@ -215,7 +217,7 @@ export default function FlippablePortraitID({
               !isFlipped ? "bg-accent text-accent-foreground" : "hover:bg-white/10"
             }`}
           >
-            Front
+            {t("Front")}
           </button>
           <button
             type="button"
@@ -224,7 +226,7 @@ export default function FlippablePortraitID({
               isFlipped ? "bg-accent text-accent-foreground" : "hover:bg-white/10"
             }`}
           >
-            Back
+            {t("Back")}
           </button>
         </div>
       ) : null}
@@ -278,7 +280,7 @@ export default function FlippablePortraitID({
             href={closeHref}
             className="inline-flex h-11 items-center justify-center rounded-xl border border-glass-border bg-surface-elevated px-3 text-sm font-semibold text-foreground"
           >
-            Close / Back
+            {t("Close / Back")}
           </Link>
           <a
             href={qrValue}
@@ -286,7 +288,7 @@ export default function FlippablePortraitID({
             rel="noreferrer"
             className="inline-flex h-11 items-center justify-center rounded-xl bg-accent px-3 text-sm font-semibold text-accent-foreground"
           >
-            Verify QR
+            {t("Verify QR")}
           </a>
         </div>
       ) : null}

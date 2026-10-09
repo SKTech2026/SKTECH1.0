@@ -90,46 +90,46 @@ export default async function OfficialDashboardHomePage({
           <div className="pointer-events-none absolute -bottom-28 left-10 h-56 w-56 rounded-full bg-[#cf2638]/10 blur-3xl" />
           <div className="relative">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">SKTECH Official Portal</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent"><TranslatedText text="SKTECH Official Portal" /></p>
               <span className="inline-flex items-center gap-2 rounded-full border border-amber-300/30 bg-amber-400/10 px-3 py-1.5 text-xs font-semibold text-amber-200">
-                <UserCheck className="h-3.5 w-3.5" /> {profileStatus}
+                <UserCheck className="h-3.5 w-3.5" /> <TranslatedText text={profileStatus} />
               </span>
             </div>
             <h2 className="mt-4 max-w-3xl text-3xl font-black tracking-tight text-foreground sm:text-4xl">
-              {rejected ? "Let's refresh your admission." : waitingForApproval && currentUser.official?.updatedAt ? "Your credentials are in review." : "Build your verified official profile."}
+              <TranslatedText text={rejected ? "Let's refresh your admission." : waitingForApproval && currentUser.official?.updatedAt ? "Your credentials are in review." : "Build your verified official profile."} />
             </h2>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-muted">
-              {rejected
+              <TranslatedText text={rejected
                 ? "Review the reason and resubmit your official details for Municipal Staff review."
                 : waitingForApproval && currentUser.official?.updatedAt
                   ? "Your Municipal SK Federation Staff is reviewing the submitted details. Approved dashboard features unlock after review."
-                  : "Complete the SKTECH admission flow with your official information and supporting credentials before accessing dashboard features."}
+                  : "Complete the SKTECH admission flow with your official information and supporting credentials before accessing dashboard features."} />
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link href="/dashboard/official/admission" className="inline-flex items-center gap-2 rounded-xl bg-[#1452d9] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_16px_30px_-18px_#1452d9] transition hover:bg-[#0f43b5]">
-                {rejected ? "Review Admission" : "Complete Admission"}
+                <TranslatedText text={rejected ? "Review Admission" : "Complete Admission"} />
                 <ArrowUpRight className="h-4 w-4" />
               </Link>
-              {admissionRequired ? <span className="inline-flex items-center rounded-xl border border-amber-300/25 bg-amber-400/10 px-4 py-2.5 text-xs font-semibold text-amber-100">Features unlock after Staff approval</span> : null}
+              {admissionRequired ? <span className="inline-flex items-center rounded-xl border border-amber-300/25 bg-amber-400/10 px-4 py-2.5 text-xs font-semibold text-amber-100"><TranslatedText text="Features unlock after Staff approval" /></span> : null}
             </div>
           </div>
         </section>
 
         <section className="grid gap-4 md:grid-cols-3">
           <article className="glass-card rounded-2xl p-5">
-            <p className="text-xs uppercase tracking-[0.14em] text-muted">Admission status</p>
-            <p className="mt-2 text-2xl font-black text-amber-200">{profileStatus}</p>
-            <p className="mt-2 text-xs text-muted">Staff review keeps your access protected.</p>
+            <p className="text-xs uppercase tracking-[0.14em] text-muted"><TranslatedText text="Admission status" /></p>
+            <p className="mt-2 text-2xl font-black text-amber-200"><TranslatedText text={profileStatus} /></p>
+            <p className="mt-2 text-xs text-muted"><TranslatedText text="Staff review keeps your access protected." /></p>
           </article>
           <article className="glass-card rounded-2xl p-5">
-            <p className="text-xs uppercase tracking-[0.14em] text-muted">Profile readiness</p>
-            <p className="mt-2 text-2xl font-black text-accent">{currentUser.official?.updatedAt ? "Submitted" : "Not started"}</p>
-            <p className="mt-2 text-xs text-muted">Personal and SK details are submitted through the admission form.</p>
+            <p className="text-xs uppercase tracking-[0.14em] text-muted"><TranslatedText text="Profile readiness" /></p>
+            <p className="mt-2 text-2xl font-black text-accent"><TranslatedText text={currentUser.official?.updatedAt ? "Submitted" : "Not started"} /></p>
+            <p className="mt-2 text-xs text-muted"><TranslatedText text="Personal and SK details are submitted through the admission form." /></p>
           </article>
           <article className="glass-card rounded-2xl p-5">
-            <p className="text-xs uppercase tracking-[0.14em] text-muted">Next step</p>
-            <p className="mt-2 text-2xl font-black text-[#cf2638]">{waitingForApproval ? "Wait" : "Submit"}</p>
-            <p className="mt-2 text-xs text-muted">Your official workspace remains locked until approval.</p>
+            <p className="text-xs uppercase tracking-[0.14em] text-muted"><TranslatedText text="Next step" /></p>
+            <p className="mt-2 text-2xl font-black text-[#cf2638]"><TranslatedText text={waitingForApproval ? "Wait" : "Submit"} /></p>
+            <p className="mt-2 text-xs text-muted"><TranslatedText text="Your official workspace remains locked until approval." /></p>
           </article>
         </section>
       </div>
@@ -176,15 +176,15 @@ export default async function OfficialDashboardHomePage({
 
       <section className="grid gap-4 md:grid-cols-3">
         <article className="glass-card rounded-2xl p-5">
-          <p className="text-xs uppercase tracking-[0.14em] text-muted">Account Status</p>
-          <p className="mt-2 text-2xl font-black text-accent">{currentUser.status}</p>
+          <p className="text-xs uppercase tracking-[0.14em] text-muted"><TranslatedText text="Account Status" /></p>
+          <p className="mt-2 text-2xl font-black text-accent"><TranslatedText text={currentUser.status} /></p>
         </article>
         <article className="glass-card rounded-2xl p-5">
-          <p className="text-xs uppercase tracking-[0.14em] text-muted">Official Role</p>
-          <p className="mt-2 text-2xl font-black text-emerald-300">{currentUser.official?.role ?? "Unassigned"}</p>
+          <p className="text-xs uppercase tracking-[0.14em] text-muted"><TranslatedText text="Official Role" /></p>
+          <p className="mt-2 text-2xl font-black text-emerald-300"><TranslatedText text={currentUser.official?.role ?? "Unassigned"} /></p>
         </article>
         <article className="glass-card rounded-2xl p-5">
-          <p className="text-xs uppercase tracking-[0.14em] text-muted">Attendance Logs</p>
+          <p className="text-xs uppercase tracking-[0.14em] text-muted"><TranslatedText text="Attendance Logs" /></p>
           <p className="mt-2 text-2xl font-black text-[#e7b720]">{attendanceCount}</p>
         </article>
       </section>
@@ -194,13 +194,13 @@ export default async function OfficialDashboardHomePage({
           <article className="min-w-0 overflow-hidden rounded-[1.5rem] border border-[#1452d9]/20 bg-surface p-4 shadow-[0_24px_55px_-28px_var(--shadow-color)] backdrop-blur-xl sm:p-5">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="text-xs uppercase tracking-[0.14em] text-muted">Digital ID</p>
+                <p className="text-xs uppercase tracking-[0.14em] text-muted"><TranslatedText text="Digital ID" /></p>
                 <h3 className="mt-1 text-lg font-semibold text-foreground">
                   {formatOfficialFullName(currentUser.official)}
                 </h3>
               </div>
               <Link href={`/id/${currentUser.official.id}`} target="_blank" className="inline-flex items-center gap-1 rounded-lg border border-glass-border px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-surface-elevated/70">
-                Full Page <ArrowUpRight className="h-3.5 w-3.5" />
+                <TranslatedText text="Full Page" /> <ArrowUpRight className="h-3.5 w-3.5" />
               </Link>
             </div>
             <FlippablePortraitID
@@ -229,19 +229,19 @@ export default async function OfficialDashboardHomePage({
         <div className="grid gap-4">
           <article className="rounded-[1.5rem] border border-[#cf2638]/20 bg-surface p-5 shadow-[0_24px_55px_-28px_var(--shadow-color)] backdrop-blur-xl">
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-lg font-semibold text-foreground">Quick Access</h3>
+              <h3 className="text-lg font-semibold text-foreground"><TranslatedText text="Quick Access" /></h3>
               <Link
                 href="/dashboard/official/settings"
                 className="text-xs font-semibold text-accent hover:underline"
               >
-                Settings
+                <TranslatedText text="Settings" />
               </Link>
             </div>
             <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
               {quickAccess.map(([label, href, Icon, colorClass]) => (
                 <Link key={href} href={href} className="group flex items-center gap-3 rounded-xl border border-glass-border bg-surface-elevated/35 p-3 transition hover:-translate-y-0.5 hover:border-accent/35 hover:bg-surface-elevated/70">
                   <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${colorClass}`}><Icon className="h-5 w-5" /></span>
-                  <span className="min-w-0 flex-1 text-sm font-semibold text-foreground">{label}</span>
+                  <span className="min-w-0 flex-1 text-sm font-semibold text-foreground"><TranslatedText text={label} /></span>
                   <ArrowUpRight className="h-4 w-4 shrink-0 text-muted transition group-hover:text-accent" />
                 </Link>
               ))}
@@ -249,10 +249,10 @@ export default async function OfficialDashboardHomePage({
           </article>
 
           <article id="announcements" className="scroll-mt-6 rounded-[1.5rem] border border-[#f3c72b]/20 bg-surface p-5 shadow-[0_24px_55px_-28px_var(--shadow-color)] backdrop-blur-xl">
-          <h3 className="text-lg font-semibold text-foreground">Active Announcements</h3>
+          <h3 className="text-lg font-semibold text-foreground"><TranslatedText text="Active Announcements" /></h3>
           <ul className="mt-4 space-y-3">
             {bulletinItems.length === 0 ? (
-              <li className="text-sm text-muted">No announcements published yet.</li>
+              <li className="text-sm text-muted"><TranslatedText text="No announcements published yet." /></li>
             ) : (
               bulletinItems.map((item) => (
                 <li key={item.id} className="rounded-xl border border-glass-border bg-surface/45 p-3">

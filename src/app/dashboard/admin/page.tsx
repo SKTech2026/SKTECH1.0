@@ -157,15 +157,13 @@ export default async function AdminDashboardHomePage() {
         <div className="grid gap-5 p-5 sm:p-6 xl:grid-cols-[1fr_auto] xl:items-center">
           <div className="min-w-0">
             <div className="mb-3 inline-flex rounded-full border border-accent/25 bg-accent/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-accent">
-              Administrator Workspace
+              <TranslatedText text="Administrator Workspace" />
             </div>
             <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
               <TranslatedText text="Provincial Administration Dashboard" />
             </h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
-              Monitor SK governance operations, official admissions, events,
-              identity services, and municipal performance across Oriental
-              Mindoro.
+              <TranslatedText text="Monitor SK governance operations, official admissions, events, identity services, and municipal performance across Oriental Mindoro." />
             </p>
             <p className="mt-4 text-sm font-medium text-foreground">
               <TranslatedText text="Welcome," /> {authorizedSession.user.name ?? authorizedSession.user.email}
@@ -174,11 +172,11 @@ export default async function AdminDashboardHomePage() {
 
           <div className="grid min-w-[220px] grid-cols-2 gap-3 rounded-xl border border-glass-border bg-surface-elevated/45 p-3">
             <div>
-              <p className="text-xs text-muted">Operations</p>
+              <p className="text-xs text-muted"><TranslatedText text="Operations" /></p>
               <p className="mt-1 text-xl font-bold text-foreground">{eventCount}</p>
             </div>
             <div>
-              <p className="text-xs text-muted">Attendance</p>
+              <p className="text-xs text-muted"><TranslatedText text="Attendance" /></p>
               <p className="mt-1 text-xl font-bold text-foreground">
                 {todayAttendance}
               </p>
@@ -196,7 +194,7 @@ export default async function AdminDashboardHomePage() {
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="truncate text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-                  {metric.label}
+                  <TranslatedText text={metric.label} />
                 </p>
                 <p className={`mt-3 text-3xl font-bold tracking-tight ${metric.tone}`}>
                   {metric.value}
@@ -215,27 +213,27 @@ export default async function AdminDashboardHomePage() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
-                Governance Snapshot
+                <TranslatedText text="Governance Snapshot" />
               </p>
               <h3 className="mt-2 text-lg font-semibold text-foreground">
-                Municipality and access coverage
+                <TranslatedText text="Municipality and access coverage" />
               </h3>
             </div>
             <ShieldCheck className="h-5 w-5 text-accent" />
           </div>
           <div className="mt-5 space-y-3">
             <div className="flex items-center justify-between rounded-xl border border-glass-border bg-surface-elevated/45 px-4 py-3">
-              <span className="text-sm text-muted">Municipalities tracked</span>
+              <span className="text-sm text-muted"><TranslatedText text="Municipalities tracked" /></span>
               <span className="text-lg font-bold text-foreground">
                 {totalMunicipalities}
               </span>
             </div>
             <div className="flex items-center justify-between rounded-xl border border-glass-border bg-surface-elevated/45 px-4 py-3">
-              <span className="text-sm text-muted">Approved staff accounts</span>
+              <span className="text-sm text-muted"><TranslatedText text="Approved staff accounts" /></span>
               <span className="text-lg font-bold text-foreground">{activeStaff}</span>
             </div>
             <div className="flex items-center justify-between rounded-xl border border-glass-border bg-surface-elevated/45 px-4 py-3">
-              <span className="text-sm text-muted">Registered officials</span>
+              <span className="text-sm text-muted"><TranslatedText text="Registered officials" /></span>
               <span className="text-lg font-bold text-foreground">
                 {officialCount}
               </span>
@@ -247,23 +245,23 @@ export default async function AdminDashboardHomePage() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
-                Operations Snapshot
+                <TranslatedText text="Operations Snapshot" />
               </p>
               <h3 className="mt-2 text-lg font-semibold text-foreground">
-                Events and identity activity
+                <TranslatedText text="Events and identity activity" />
               </h3>
             </div>
             <BarChart3 className="h-5 w-5 text-accent" />
           </div>
           <div className="mt-5 grid grid-cols-2 gap-3">
             <div className="rounded-xl border border-glass-border bg-surface-elevated/45 p-4">
-              <p className="text-xs text-muted">Total events</p>
+              <p className="text-xs text-muted"><TranslatedText text="Total events" /></p>
               <p className="mt-3 text-3xl font-bold text-accent">
                 {eventCount}
               </p>
             </div>
             <div className="rounded-xl border border-glass-border bg-surface-elevated/45 p-4">
-              <p className="text-xs text-muted">Attendance today</p>
+              <p className="text-xs text-muted"><TranslatedText text="Attendance today" /></p>
               <p className="mt-3 text-3xl font-bold text-accent">
                 {todayAttendance}
               </p>
@@ -271,8 +269,8 @@ export default async function AdminDashboardHomePage() {
           </div>
           <div className="mt-3 rounded-xl border border-amber-300/25 bg-amber-300/10 px-4 py-3 text-sm text-foreground">
             {pendingOfficials > 0
-              ? `${pendingOfficials} Official admission(s) currently require review by municipal staff.`
-              : "No Official admissions are currently pending municipal staff review."}
+              ? <>{pendingOfficials} <TranslatedText text="Official admission(s) currently require review by municipal staff." /></>
+              : <TranslatedText text="No Official admissions are currently pending municipal staff review." />}
           </div>
         </article>
 
@@ -280,10 +278,10 @@ export default async function AdminDashboardHomePage() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
-                Quick Management
+                <TranslatedText text="Quick Management" />
               </p>
               <h3 className="mt-2 text-lg font-semibold text-foreground">
-                Administrative shortcuts
+                <TranslatedText text="Administrative shortcuts" />
               </h3>
             </div>
             <ArrowUpRight className="h-5 w-5 text-accent" />
@@ -300,10 +298,10 @@ export default async function AdminDashboardHomePage() {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold text-foreground">
-                    {link.title}
+                    <TranslatedText text={link.title} />
                   </span>
                   <span className="block truncate text-xs text-muted">
-                    {link.description}
+                    <TranslatedText text={link.description} />
                   </span>
                 </span>
                 <ArrowUpRight className="h-4 w-4 text-muted transition group-hover:text-accent" />

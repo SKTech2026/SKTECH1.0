@@ -112,12 +112,12 @@ export default function SKTechAssistant({ role }: SKTechAssistantProps) {
                 </span>
                 <div>
                   <p className="text-sm font-black">{t("SKTECH AI Assistant")}</p>
-                  <p className="text-xs text-white/70">Role-aware system help · {roleLabels[role]}</p>
+                  <p className="text-xs text-white/70">{t("Role-aware system help")} · {roleLabels[role]}</p>
                 </div>
               </div>
               <button
                 type="button"
-                aria-label="Close SKTECH AI Assistant panel"
+                  aria-label={t("Close SKTECH AI Assistant panel")}
                 onClick={() => setOpen(false)}
                 className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-white/70 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
               >
@@ -129,7 +129,7 @@ export default function SKTechAssistant({ role }: SKTechAssistantProps) {
               {messages.map((messageItem, index) => (
                 <div key={`${messageItem.role}-${index}`} className={`flex ${messageItem.role === "user" ? "justify-end" : "justify-start"}`}>
                   <p className={`max-w-[86%] rounded-2xl px-4 py-3 text-sm leading-6 ${messageItem.role === "user" ? "bg-[#0a3aa2] text-white" : "bg-[#eef4ff] text-[#06132d] dark:bg-slate-800 dark:text-slate-100"}`}>
-                    {messageItem.text}
+                    {messageItem.role === "assistant" && index === 0 ? t(messageItem.text) : messageItem.text}
                   </p>
                 </div>
               ))}
@@ -148,7 +148,7 @@ export default function SKTechAssistant({ role }: SKTechAssistantProps) {
                     disabled={loading}
                     className="min-h-11 shrink-0 rounded-full border border-[#bfd1f8] px-3 py-1.5 text-xs font-bold text-[#0a3aa2] disabled:opacity-50 dark:border-cyan-700 dark:text-cyan-200"
                   >
-                    {promptItem}
+                    {t(promptItem)}
                   </button>
                 ))}
               </div>
@@ -159,7 +159,7 @@ export default function SKTechAssistant({ role }: SKTechAssistantProps) {
                 <input
                   value={prompt}
                   onChange={(event) => setPrompt(event.target.value)}
-                  placeholder="Ask SKTECH about this page..."
+                  placeholder={t("Ask SKTECH about this page...")}
                   aria-label={t("Ask SKTECH")}
                   className="min-w-0 flex-1 bg-transparent px-2 text-sm text-[#06132d] outline-none placeholder:text-[#24385f]/45 dark:text-slate-100 dark:placeholder:text-slate-400"
                 />

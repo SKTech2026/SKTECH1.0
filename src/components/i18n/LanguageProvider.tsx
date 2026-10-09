@@ -40,3 +40,7 @@ export function useLanguage() {
   if (!context) throw new Error("useLanguage must be used inside LanguageProvider");
   return context;
 }
+
+export function useOptionalLanguage() {
+  return useContext(LanguageContext);
+}

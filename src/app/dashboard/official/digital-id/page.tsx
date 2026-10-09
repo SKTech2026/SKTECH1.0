@@ -1,4 +1,5 @@
 import Link from "next/link";
+import TranslatedText from "@/components/i18n/TranslatedText";
 import { getServerSession } from "next-auth";
 
 import FlippablePortraitID from "@/components/id/FlippablePortraitID";
@@ -70,18 +71,17 @@ export default async function OfficialDigitalIdPage() {
     <div className="space-y-6">
       <section className="rounded-3xl border border-glass-border bg-surface p-6 shadow-[0_24px_48px_-24px_var(--shadow-color)] backdrop-blur-md sm:p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
-          Identity Wallet
+          <TranslatedText text="Identity Wallet" />
         </p>
-        <h2 className="mt-3 text-3xl font-bold text-foreground">Digital ID Access</h2>
+        <h2 className="mt-3 text-3xl font-bold text-foreground"><TranslatedText text="Digital ID Access" /></h2>
         <p className="mt-2 max-w-3xl text-sm text-muted">
-          View and download your federation-issued digital identity card.
+          <TranslatedText text="View and download your federation-issued digital identity card." />
         </p>
       </section>
 
       {!user?.official ? (
         <article className="rounded-2xl border border-amber-400/30 bg-amber-500/10 p-5 text-sm text-amber-200">
-          No linked SK official record is available yet. Please contact staff for identity
-          assignment.
+          <TranslatedText text="No linked SK official record is available yet. Please contact staff for identity assignment." />
         </article>
       ) : (
         <article className="rounded-2xl border border-glass-border bg-surface p-4 shadow-xl backdrop-blur-md sm:p-6">
@@ -104,13 +104,13 @@ export default async function OfficialDigitalIdPage() {
                   target="_blank"
                   className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition hover:opacity-90"
                 >
-                  Open Full Page ID
+                  <TranslatedText text="Open Full Page ID" />
                 </Link>
                 <Link
                   href="/dashboard/official/profile"
                   className="rounded-lg border border-glass-border px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-elevated/70"
                 >
-                  Edit Profile for ID
+                  <TranslatedText text="Edit Profile for ID" />
                 </Link>
               </div>
             </div>

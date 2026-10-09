@@ -34,7 +34,7 @@ export default function SettingsPanel({
           {t("Preferences & Account")}
         </h2>
         <p className="mt-2 max-w-3xl text-sm text-[color:var(--color-muted)]">
-          Configure appearance and review account details for your {roleLabel} workspace.
+          {t("Configure appearance and review account details for your")} {t(roleLabel)} {t("workspace.")}
         </p>
       </section>
 
@@ -43,7 +43,7 @@ export default function SettingsPanel({
           {t("Theme Selection")}
         </h3>
         <p className="mt-1 text-sm text-[color:var(--color-muted)]">
-          Choose a visual preset. Theme changes apply instantly and persist on this browser.
+          {t("Choose a visual preset. Theme changes apply instantly and persist on this browser.")}
         </p>
         <div className="mt-4">
           <ThemeSelector />
@@ -74,7 +74,7 @@ export default function SettingsPanel({
                 {t("Role")}
               </dt>
               <dd className="mt-1 text-sm font-medium text-[color:var(--color-foreground)]">
-                {roleLabel}
+                {t(roleLabel)}
               </dd>
             </div>
             <div>
@@ -98,7 +98,7 @@ export default function SettingsPanel({
                 {t("Account Status")}
               </dt>
               <dd className="mt-1 text-sm font-medium text-[color:var(--color-foreground)]">
-                {account.status}
+                {t(account.status)}
               </dd>
             </div>
           </dl>
@@ -121,7 +121,7 @@ export default function SettingsPanel({
               </div>
             </div>
             <p className="mt-4 text-xs text-[color:var(--color-muted)]">
-              Changes to profile metadata are controlled by authentication and user management policies.
+              {t("Changes to profile metadata are controlled by authentication and user management policies.")}
             </p>
           </div>
 
