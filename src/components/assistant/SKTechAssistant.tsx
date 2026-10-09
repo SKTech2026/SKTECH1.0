@@ -7,7 +7,8 @@ import { useMemo, useState } from "react";
 
 import { useLanguage } from "@/components/i18n/LanguageProvider";
 import SKTechBotLauncher, { SKTechBotIcon } from "@/components/assistant/SKTechBotLauncher";
-import { SKTECH_ROLE_HELP, type DashboardRole } from "@/lib/assistant/sktech-help";
+import type { DashboardRole } from "@/lib/assistant/sktech-help";
+import { getAssistantQuickPrompts } from "@/lib/assistant/quick-prompts";
 
 type SKTechAssistantProps = {
   role: DashboardRole;
@@ -40,7 +41,7 @@ export default function SKTechAssistant({ role }: SKTechAssistantProps) {
     },
   ]);
 
-  const quickPrompts = useMemo(() => SKTECH_ROLE_HELP[role].quickPrompts, [role]);
+  const quickPrompts = useMemo(() => getAssistantQuickPrompts(role, pathname), [role, pathname]);
 
   const handleSubmit = async (nextMessage?: string) => {
     const trimmed = (nextMessage ?? prompt).trim();
