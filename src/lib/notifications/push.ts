@@ -1,0 +1,44 @@
+import webpush from "web-push";
+
+import { prisma } from "@/lib/db";
+
+const SAFE_PAYLOAD = JSON.stringify({
+  title: "SKTECH Notification",
+  body: "You have a new update in SKTECH.",
+  url: "/dashboard",
+});
+
+export function getPushConfig() {
+  const publicKey = process.env.WEB_PUSH_PUBLIC_KEY?.trim();
+  const privateKey = process.env.WEB_PUSH_PRIVATE_KEY?.trim();
+  const subject = process.env.WEB_PUSH_SUBJECT?.trim();
+  if (!publicKey || !privateKey || !subject) return null;
+  return { publicKey, privateKey, subject };
+}
+
+export async function sendPushToUser(userId: string) {
+  const config = getPushConfig();
+  if (!config) return { sent: 0, configured: false };
+
+  const subscriptions = await prisma.pushSubscription.findMany({
+    where: { userId, revokedAt: null },
+    select: { id: true, endpoint: true, p256dh: true, auth: true },
+    take: 20,
+  });
+  const results = await Promise.allSettled(subscriptions.map(async (subscription) => {
+    try {
+      await webpush.sendNotification(
+        { endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth } },
+        SAFE_PAYLOAD,
+        { TTL: 60, vapidDetails: { subject: config.subject, publicKey: config.publicKey, privateKey: config.privateKey } },
+      );
+      return true;
+    } catch (error) {
+      if (typeof error === "object" && error && "statusCode" in error && (error.statusCode === 404 || error.statusCode === 410)) {
+        await prisma.pushSubscription.update({ where: { id: subscription.id }, data: { revokedAt: new Date() } });
+      }
+      return false;
+    }
+  }));
+  return { sent: results.filter((result) => result.status === "fulfilled" && result.value).length, configured: true };
+}

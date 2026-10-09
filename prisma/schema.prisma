@@ -177,6 +177,8 @@ model User {
   reviewedProfileChanges  OfficialProfileChangeRequest[] @relation("ProfileChangeReviewedBy")
   chatParticipants        ChatParticipant[]
   chatMessages            ChatMessage[]                  @relation("ChatMessageSender")
+  appNotifications        AppNotification[]
+  pushSubscriptions       PushSubscription[]
   feedPosts               FeedPost[]                     @relation("FeedPostAuthor")
   feedReactions           FeedReaction[]
   feedComments            FeedComment[]
@@ -871,4 +873,37 @@ model ChatAttachment {
 
   @@index([messageId])
   @@index([objectPath])
+}
+
+model AppNotification {
+  id        String    @id @default(cuid())
+  userId    String
+  category  String
+  title     String
+  body      String
+  href      String?
+  important Boolean   @default(false)
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+}
+
+model PushSubscription {
+  id        String    @id @default(cuid())
+  userId    String
+  endpoint  String    @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  revokedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
 }

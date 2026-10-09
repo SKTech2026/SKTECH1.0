@@ -15,6 +15,7 @@ import NotificationBell from "@/components/notifications/NotificationBell";
 type MobileTopBarProps = {
   title?: string;
   isOfficial?: boolean;
+  notificationChatHref?: string;
   accountName?: string | null;
   accountEmail?: string | null;
   profileImageUrl?: string | null;
@@ -23,6 +24,7 @@ type MobileTopBarProps = {
 export default function MobileTopBar({
   title = "SKTech Mobile",
   isOfficial = false,
+  notificationChatHref,
   accountName,
   accountEmail,
   profileImageUrl,
@@ -56,12 +58,12 @@ export default function MobileTopBar({
       <div className="flex shrink-0 items-center gap-1.5">
         <LanguageSwitcher compact />
         <ThemeToggle className="h-11 min-w-11 justify-center" />
+        {notificationChatHref ? <NotificationBell
+          chatHref={notificationChatHref}
+          className="relative inline-flex h-11 w-11 items-center justify-center rounded-xl border border-glass-border bg-surface-elevated/70 text-foreground transition hover:border-accent/60 hover:bg-surface-elevated"
+        /> : null}
         {isOfficial ? (
           <>
-          <NotificationBell
-            chatHref="/mobile/official/chat"
-            className="relative inline-flex h-11 w-11 items-center justify-center rounded-xl border border-glass-border bg-surface-elevated/70 text-foreground transition hover:border-accent/60 hover:bg-surface-elevated"
-          />
           <div className="relative">
             <button
               type="button"

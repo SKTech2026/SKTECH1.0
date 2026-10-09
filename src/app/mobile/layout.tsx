@@ -24,6 +24,7 @@ export default async function MobileLayout({ children }: { children: ReactNode }
       >
         <MobileTopBar
           isOfficial={isOfficial}
+          notificationChatHref={role === "OFFICIAL" ? "/mobile/official/chat" : role === "STAFF" ? "/mobile/staff/chat" : undefined}
           accountName={isOfficial ? session.user.name : undefined}
           accountEmail={isOfficial ? session.user.email : undefined}
           profileImageUrl={

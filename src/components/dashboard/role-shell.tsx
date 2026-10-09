@@ -597,12 +597,10 @@ export default function RoleShell({
                 <div className="flex shrink-0 items-center gap-2">
                   <LanguageSwitcher compact />
                   <ThemeToggle />
-                  {roleLabel === "SK Official" ? (
-                    <NotificationBell
-                      chatHref="/dashboard/official/chat"
-                      className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-glass-border bg-surface-elevated/60 text-muted transition hover:border-accent/50 hover:text-accent"
-                    />
-                  ) : null}
+                  <NotificationBell
+                    chatHref={isOfficialCn ? "/dashboard/official/chat" : isStaffCn ? "/dashboard/staff/chat" : undefined}
+                    className="relative inline-flex h-11 w-11 items-center justify-center rounded-lg border border-glass-border bg-surface-elevated/60 text-muted transition hover:border-accent/50 hover:text-accent"
+                  />
                   <div className="hidden items-center gap-2 rounded-full border border-glass-border bg-surface-elevated/60 px-3 py-1.5 text-xs font-semibold text-muted sm:inline-flex">
                     <UserCircle className="h-4 w-4 text-accent" />
                     {workspaceLabel}
@@ -722,12 +720,10 @@ export default function RoleShell({
                 <LogOut className="h-3.5 w-3.5" />
                 {t("Logout")}
               </LogoutConfirmButton>
-              {roleLabel === "SK Official" ? (
-                <NotificationBell
-                  chatHref="/dashboard/official/chat"
-                  className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-glass-border bg-surface-elevated/60 text-muted"
-                />
-              ) : null}
+              <NotificationBell
+                chatHref={isOfficialCn ? "/dashboard/official/chat" : isStaffCn ? "/dashboard/staff/chat" : undefined}
+                className="relative inline-flex h-11 w-11 items-center justify-center rounded-lg border border-glass-border bg-surface-elevated/60 text-muted"
+              />
             </div>
             <div className="mb-3"><LanguageSwitcher /></div>
             <nav className="flex gap-2 overflow-x-auto pb-1">
