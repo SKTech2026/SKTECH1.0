@@ -54,7 +54,7 @@ const CR80_HEIGHT = 539.8;
 const DEFAULT_PHOTO_URL = "/images/default-official.svg";
 const WATERMARK = "CAPSTONE PROJECT \u2013 DEMO ID \u2013 NOT AN OFFICIAL GOVERNMENT ID";
 const DEFAULT_CONTACT_INFO =
-  "This digital identification card is part of the SKTECH college capstone prototype. Scan the QR code to verify the holder's information through the SKTECH system.";
+  "Scan the QR code to verify this credential in the SKTECH registry. Match the serial number with the registry record.";
 
 export default function FlippablePortraitID({
   fullName,

@@ -21,6 +21,7 @@ import { authOptions } from "@/lib/auth";
 import { getActiveAnnouncements } from "@/lib/announcements";
 import { prisma } from "@/lib/db";
 import { getChairScope } from "@/lib/kk";
+import { getOfficialIdTemplate } from "@/lib/id-template/get-official-id-template";
 import { requireDashboardRole } from "@/lib/roleGuard";
 import { formatEnumLabel, formatOfficialFullName } from "@/lib/sk-official";
 
@@ -64,6 +65,12 @@ export default async function OfficialDashboardHomePage({
           municipality: true,
           barangay: true,
           sitio: true,
+          province: true,
+          birthDate: true,
+          termEnd: true,
+          contactNo: true,
+          email: true,
+          address: true,
           dateElected: true,
           termStart: true,
           status: true,
@@ -137,7 +144,7 @@ export default async function OfficialDashboardHomePage({
   }
 
   const chairScope = await getChairScope();
-  const [attendanceCount, bulletinItems] = await Promise.all([
+  const [attendanceCount, bulletinItems, template] = await Promise.all([
     currentUser.official
       ? prisma.officialAttendance.count({
           where: {
@@ -146,6 +153,7 @@ export default async function OfficialDashboardHomePage({
         })
       : Promise.resolve(0),
     getActiveAnnouncements(3),
+    getOfficialIdTemplate(),
   ]);
   const photoUrl =
     currentUser.image && currentUser.image.startsWith("/")
@@ -204,8 +212,9 @@ export default async function OfficialDashboardHomePage({
               </Link>
             </div>
             <FlippablePortraitID
+              className="mx-auto w-full max-w-[520px]"
               fullName={formatOfficialFullName(currentUser.official)}
-              position={formatEnumLabel(currentUser.official.position ?? currentUser.official.role)}
+              position={formatEnumLabel(currentUser.official.position)}
               skfedPosition={
                 currentUser.official.skFederationOfficer
                   ? formatEnumLabel(currentUser.official.skFederationPosition)
@@ -215,6 +224,13 @@ export default async function OfficialDashboardHomePage({
               municipality={currentUser.official.municipality ?? "Not specified"}
               sitio={currentUser.official.sitio}
               dateElected={(currentUser.official.dateElected ?? currentUser.official.termStart).toISOString()}
+              termEnd={currentUser.official.termEnd?.toISOString()}
+              birthDate={currentUser.official.birthDate?.toISOString()}
+              contactNo={currentUser.official.contactNo}
+              email={currentUser.official.email}
+              address={currentUser.official.address}
+              admissionStatus={currentUser.official.admissionStatus}
+              provinceName={currentUser.official.province ?? "ORIENTAL MINDORO"}
               idNumber={currentUser.official.id.replace(/-/g, "").slice(-12).toUpperCase()}
               qrValue={`/id/${currentUser.official.id}`}
               photoUrl={photoUrl}
@@ -222,6 +238,7 @@ export default async function OfficialDashboardHomePage({
               sktechLogoUrl="/assets/logos/sktech-logo-new.png"
               provincialSealUrl="/assets/logos/official-seal-logo-new.png"
               skfedLogoUrl="/assets/logos/sk-logo-new.png"
+              template={template}
             />
           </article>
         ) : null}
