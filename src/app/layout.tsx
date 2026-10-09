@@ -30,10 +30,10 @@ export const metadata: Metadata = {
     title: "SKTech Mobile",
   },
   icons: {
-    apple: "/icons/icon-192.png",
+    apple: "/apple-icon.png",
     icon: [
-      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/favicon.ico", sizes: "any", type: "image/x-icon" },
+      { url: "/icon.png", sizes: "192x192", type: "image/png" },
     ],
   },
 };
