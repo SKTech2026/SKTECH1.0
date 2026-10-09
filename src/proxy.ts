@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { createClient as createSupabaseMiddlewareClient } from "@/utils/supabase/middleware";
+import { KK_PORTAL_PUBLIC_URL, MAIN_PUBLIC_URL } from "@/lib/public-domains";
 
 type AppRole = "ADMIN" | "STAFF" | "OFFICIAL" | "KK_MEMBER";
 type AppStatus = "PENDING" | "APPROVED" | "REJECTED" | "INACTIVE" | "TERMINATED";
@@ -59,18 +60,24 @@ function matchRoleRule(pathname: string): RoleRule | undefined {
   );
 }
 
-function isKkSubdomain(host: string | null | undefined): boolean {
-  if (!host) return false;
-  const normalizedHost = host.split(":")[0].toLowerCase();
-  return normalizedHost === "kk.sktech-ormin.com" || normalizedHost.startsWith("kk.");
+function normalizedHost(value: string | null): string {
+  return (value ?? "").split(",")[0].trim().toLowerCase().replace(/:\d+$/, "");
 }
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  const host = request.headers.get("host");
+  const host = normalizedHost(request.headers.get("x-forwarded-host") || request.headers.get("host"));
+  const kkHosts = new Set(["sktech-kk-portal.com", "www.sktech-kk-portal.com", "kk.sktech-ormin.com"]);
 
-  if (pathname === "/" && isKkSubdomain(host)) {
-    return NextResponse.redirect(new URL("/kk", request.url));
+  if (pathname === "/" && kkHosts.has(host)) {
+    return NextResponse.redirect(new URL(`/kk${request.nextUrl.search}`, `https://${host}`));
+  }
+
+  if (
+    (host === new URL(MAIN_PUBLIC_URL).hostname || host === "kk.sktech-ormin.com") &&
+    /^\/kk\/join\/[^/]+$/.test(pathname)
+  ) {
+    return NextResponse.redirect(`${KK_PORTAL_PUBLIC_URL}${pathname}${request.nextUrl.search}`, 307);
   }
 
   const roleRule = matchRoleRule(pathname);
@@ -156,6 +163,7 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     "/",
+    "/kk/join/:code",
     "/dashboard/admin/:path*",
     "/dashboard/staff/:path*",
     "/dashboard/official/:path*",
