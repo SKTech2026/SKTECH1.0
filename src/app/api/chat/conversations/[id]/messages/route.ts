@@ -1,3 +1,4 @@
+import { AdmissionStatus, OfficialStatus, Role, UserStatus } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
 import {
@@ -7,6 +8,7 @@ import {
 } from "@/lib/chat-auth";
 import { deleteChatAttachmentObject, uploadChatAttachment } from "@/lib/chat-storage";
 import { prisma } from "@/lib/db";
+import { createNotificationsForUsers } from "@/lib/notifications/server";
 
 export const dynamic = "force-dynamic";
 
@@ -115,6 +117,15 @@ export async function GET(request: NextRequest, context: RouteContext) {
         lastReadAt: new Date(),
       },
     });
+    await prisma.appNotification.updateMany({
+      where: {
+        userId: current.userId,
+        category: "Chat",
+        dedupeKey: { startsWith: `chat:${id}:` },
+        readAt: null,
+      },
+      data: { readAt: new Date() },
+    });
 
     return NextResponse.json(
       {
@@ -219,6 +230,38 @@ export async function POST(request: NextRequest, context: RouteContext) {
         attachments: true,
       },
     });
+
+    try {
+      const participantIds = await prisma.chatParticipant.findMany({
+        where: { conversationId: conversation.id, userId: { not: current.userId } },
+        select: { userId: true },
+      });
+      const recipients = await prisma.user.findMany({
+        where: {
+          id: { in: participantIds.map(({ userId }) => userId) },
+          status: UserStatus.APPROVED,
+          OR: [
+            { role: Role.STAFF, municipalityPresidentId: conversation.municipalityId },
+            { role: Role.OFFICIAL, official: { is: { municipalityId: conversation.municipalityId, admissionStatus: AdmissionStatus.APPROVED, status: OfficialStatus.ACTIVE } } },
+          ],
+        },
+        select: { id: true, role: true },
+      });
+      await createNotificationsForUsers({
+        recipients: recipients.map((recipient) => ({
+          userId: recipient.id,
+          href: recipient.role === Role.STAFF ? "/dashboard/staff/chat" : "/dashboard/official/chat",
+        })),
+        excludeUserIds: [current.userId],
+        category: "Chat",
+        title: "New message",
+        body: "You have a new message in SKTECH Chat.",
+        dedupeKeyPrefix: `chat:${conversation.id}:${message.id}`,
+        pushKind: "chat",
+      });
+    } catch (notificationError) {
+      if (process.env.NODE_ENV !== "production") console.error("Chat notification delivery failed:", notificationError);
+    }
 
     return NextResponse.json(
       {

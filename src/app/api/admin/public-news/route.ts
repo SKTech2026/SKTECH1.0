@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireFeedViewer, FeedAuthError } from "@/lib/feed-auth";
 import { prisma } from "@/lib/db";
 import { PUBLIC_NEWS_BUCKET, uploadFeedImage } from "@/lib/feed-storage";
+import { notifyPublicNewsRecipients } from "@/lib/notifications/server";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,6 @@ export async function GET() {
     return failure(error);
   }
 }
-
 export async function POST(request: NextRequest) {
   let imagePath: string | null = null;
   try {
@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
     if (title.length > 180 || content.length > 5000) return NextResponse.json({ error: "News content is too long." }, { status: 400 });
     if (file) imagePath = (await uploadFeedImage(file, PUBLIC_NEWS_BUCKET, "public" )).objectPath;
     const post = await prisma.publicNewsPost.create({ data: { title, content: content || null, published, imagePath, imageMimeType: file?.type ?? null, authorId: viewer.userId } });
+    if (post.published) await notifyPublicNewsRecipients(post.id, viewer.userId);
     return NextResponse.json({ post }, { status: 201 });
   } catch (error) {
     return failure(error);

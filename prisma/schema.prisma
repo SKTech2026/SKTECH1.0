@@ -878,6 +878,7 @@ model ChatAttachment {
 model AppNotification {
   id        String    @id @default(cuid())
   userId    String
+  dedupeKey String?   @unique
   category  String
   title     String
   body      String

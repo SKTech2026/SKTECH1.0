@@ -13,7 +13,7 @@ export async function GET() {
   const session = await getServerSession(authOptions);
 
   const notifications = await prisma.appNotification.findMany({
-    where: { userId }, orderBy: { createdAt: "desc" }, take: 50,
+    where: { userId, category: { not: "Chat" } }, orderBy: { createdAt: "desc" }, take: 50,
     select: { id: true, category: true, title: true, body: true, href: true, important: true, readAt: true, createdAt: true },
   });
   const items = notifications.map((notification) => ({
@@ -64,9 +64,15 @@ export async function PATCH(request: Request) {
       prisma.chatParticipant.updateMany({ where: { userId }, data: { lastReadAt: new Date() } }),
     ]);
   } else if (typeof body.id === "string" && body.id.startsWith("chat:")) {
-    await prisma.chatParticipant.updateMany({
-      where: { userId, conversationId: body.id.slice(5) }, data: { lastReadAt: new Date() },
-    });
+    const conversationId = body.id.slice(5);
+    const readAt = new Date();
+    await Promise.all([
+      prisma.chatParticipant.updateMany({ where: { userId, conversationId }, data: { lastReadAt: readAt } }),
+      prisma.appNotification.updateMany({
+        where: { userId, category: "Chat", dedupeKey: { startsWith: `chat:${conversationId}:` }, readAt: null },
+        data: { readAt },
+      }),
+    ]);
   } else {
     await prisma.appNotification.updateMany({ where: { id: body.id as string, userId }, data: { readAt: new Date() } });
   }

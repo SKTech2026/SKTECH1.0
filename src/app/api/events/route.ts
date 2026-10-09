@@ -1,8 +1,9 @@
-import { Role } from "@prisma/client";
+import { AdmissionStatus, OfficialStatus, Role, UserStatus } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
 import { requireApiRole } from "@/lib/api-auth";
+import { createNotificationsForUsers } from "@/lib/notifications/server";
 import {
   getActiveAnnouncementIds,
   getActiveAnnouncementWhere,
@@ -145,6 +146,41 @@ export async function POST(request: NextRequest) {
         createdById: session.user.id,
       },
     });
+
+    try {
+      const officialWhere = {
+        role: Role.OFFICIAL,
+        status: UserStatus.APPROVED,
+        official: {
+          is: {
+            ...(event.municipalityId ? { municipalityId: event.municipalityId } : {}),
+            admissionStatus: AdmissionStatus.APPROVED,
+            status: OfficialStatus.ACTIVE,
+          },
+        },
+      };
+      const [officials, staff] = await Promise.all([
+        prisma.user.findMany({ where: officialWhere, select: { id: true, role: true } }),
+        event.municipalityId
+          ? Promise.resolve([])
+          : prisma.user.findMany({ where: { role: Role.STAFF, status: UserStatus.APPROVED }, select: { id: true, role: true } }),
+      ]);
+      await createNotificationsForUsers({
+        recipients: [...officials, ...staff].map((recipient) => ({
+          userId: recipient.id,
+          href: recipient.role === Role.STAFF ? "/dashboard/staff/announcements" : "/dashboard/official/announcements",
+        })),
+        excludeUserIds: [session.user.id],
+        category: "Announcement",
+        title: "New announcement",
+        body: "A new SKTECH announcement is available.",
+        important: true,
+        dedupeKeyPrefix: `event:${event.id}`,
+        pushKind: "announcement",
+      });
+    } catch (notificationError) {
+      if (process.env.NODE_ENV !== "production") console.error("Event notification delivery failed:", notificationError);
+    }
 
     return NextResponse.json(event, { status: 201 });
   } catch (error) {

@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { FeedAuthError, requireFeedViewer } from "@/lib/feed-auth";
 import { prisma } from "@/lib/db";
 import { deleteFeedImage, PUBLIC_NEWS_BUCKET, uploadFeedImage } from "@/lib/feed-storage";
+import { notifyPublicNewsRecipients } from "@/lib/notifications/server";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const viewer = await requireFeedViewer();
     if (viewer.role !== Role.ADMIN) return NextResponse.json({ error: "Admin access required." }, { status: 403 });
     const { id } = await context.params;
-    const existing = await prisma.publicNewsPost.findUnique({ where: { id }, select: { imagePath: true } });
+    const existing = await prisma.publicNewsPost.findUnique({ where: { id }, select: { imagePath: true, published: true } });
     if (!existing) return NextResponse.json({ error: "News post not found." }, { status: 404 });
     const formData = await request.formData();
     const data: { title?: string; content?: string | null; published?: boolean; imagePath?: string; imageMimeType?: string } = {};
@@ -41,6 +42,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       if (existing.imagePath) await deleteFeedImage(PUBLIC_NEWS_BUCKET, existing.imagePath);
     }
     const post = await prisma.publicNewsPost.update({ where: { id }, data });
+    if (!existing.published && post.published) await notifyPublicNewsRecipients(post.id, viewer.userId);
     return NextResponse.json({ post });
   } catch (error) {
     return failure(error);

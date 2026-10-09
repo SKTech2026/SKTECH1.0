@@ -1,10 +1,12 @@
 # Notification Center and browser alerts
 
-The authenticated Notification Center combines the signed-in user's in-app notices with safe chat activity summaries. It supports All, Unread, and Important filters and per-item or bulk read actions. Notification links are restricted to SKTECH dashboard or mobile paths. Chat summaries never include message text or private profile details.
+The authenticated Notification Center combines the signed-in user's in-app notices with safe chat activity summaries. It supports All, Unread, and Important filters and per-item or bulk read actions. Notification links are restricted to approved internal routes. Chat remains one unread item per conversation in the center, matching the existing unread badge behavior; individual chat message events are deduplicated for storage and push delivery.
 
 ## Database migration
 
 `prisma/migrations/20261009010000_add_notifications_and_push` adds `AppNotification` and `PushSubscription` with user foreign keys and indexes. The migration enables RLS without client policies; browser clients use authenticated Next.js routes, while the server's Prisma connection performs scoped queries. Deploy this migration through the normal `prisma migrate deploy` release step before enabling the new UI. No database reset or manual production SQL is required.
+
+`prisma/migrations/20261009020000_add_notification_dedupe_key` adds a nullable unique event key. Existing notifications keep `NULL`, and the unique index permits multiple null values.
 
 ## Web Push setup
 
@@ -20,10 +22,16 @@ Keep the private key on the server. The public key is returned only by the authe
 
 The **Enable notifications** button in the center is the only action that requests browser permission. Denial leaves in-app notifications available. **Disable notifications** revokes the current browser subscription. The authenticated **Send test** action creates one generic in-app notice for the current user and sends a generic push to that user's active subscriptions; it is limited to one request per minute per app instance. No client endpoint can choose another recipient or supply arbitrary push text.
 
-The worker source is `worker/index.js`; next-pwa incorporates it into the generated service worker during a production build. Do not edit generated `public/sw.js` directly. The push notification title, body, and click destination are fixed to generic SKTECH text and `/dashboard`. No OTP, profile data, contact detail, or message text enters a push payload.
+The worker source is `worker/index.js`; next-pwa incorporates it into the generated service worker during a production build. Do not edit generated `public/sw.js` directly. Push payloads contain only an allowlisted event kind and internal route. The worker selects fixed generic copy for announcements, chat, and test updates; it never displays message text, announcement content, or private profile data. Announcement and chat clicks open the matching role dashboard page. Public-news clicks open the public landing page.
 
-## Testing and next integration
+## Event notifications
 
-After deploying the migration and VAPID variables, open the Notification Center while signed in, enable browser alerts, and use **Send test**. Verify the in-app notice, browser alert, click destination, read actions, and disable flow. Test denial separately; the in-app center should continue to work.
+Creating an Event announcement notifies approved, active Officials who can view that Event; an Admin-created global Event also notifies approved Staff. A Staff-created Event is limited to active Officials assigned to the same municipality. The creator is excluded, and a nullable unique dedupe key prevents duplicate rows for the same event and recipient.
 
-The server helper `createNotificationForUser` and `sendPushToUser` can be called from selected high-value server events after the event recipient is verified. This version intentionally does not send a push for every chat message or database change.
+Public news is visible on the public landing feed. When an Admin creates a published post or changes a draft to published, approved registered users receive a generic announcement notice; inactive, unapproved, and inactive Official accounts are excluded. Saving a draft or editing an already-published post does not notify again. Official-authored barangay announcements are not supported by the current Event creation flow.
+
+Chat notifications are created only for eligible participants in the conversation other than the sender. The center continues to aggregate unread activity per conversation, and opening the conversation or marking it read clears its related notification events.
+
+## Testing
+
+After deploying migrations and VAPID variables, sign in as distinct approved recipients and verify an Admin global Event, a Staff municipality Event, published public news, and a chat message. Confirm the creator/sender is excluded, unrelated municipalities and inactive accounts receive nothing, and repeated delivery with the same event key creates no duplicate. Enable browser alerts to verify generic copy and internal click destinations; then test read-one, read-all, and chat unread behavior. Permission is requested only after clicking **Enable notifications**.

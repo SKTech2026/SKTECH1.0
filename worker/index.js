@@ -1,19 +1,38 @@
 /* Added to next-pwa's generated service worker at build time. */
+const notificationCopy = {
+  announcement: { title: "SKTECH Announcement", body: "A new announcement is available in SKTECH." },
+  chat: { title: "SKTECH Chat", body: "You have a new message." },
+  update: { title: "SKTECH Notification", body: "You have a new update in SKTECH." },
+};
+const notificationPaths = new Set([
+  "/",
+  "/dashboard",
+  "/dashboard/staff/announcements",
+  "/dashboard/official/announcements",
+  "/dashboard/staff/chat",
+  "/dashboard/official/chat",
+]);
+
 self.addEventListener("push", (event) => {
-  // Keep lock-screen content generic even if a push service sends unexpected data.
-  event.waitUntil(self.registration.showNotification("SKTECH Notification", {
-    body: "You have a new update in SKTECH.",
+  let payload = {};
+  try { payload = event.data?.json() ?? {}; } catch { /* Use generic safe copy. */ }
+  if (!payload || typeof payload !== "object") payload = {};
+  const kind = Object.hasOwn(notificationCopy, payload.kind) ? payload.kind : "update";
+  const url = notificationPaths.has(payload.url) ? payload.url : "/dashboard";
+  event.waitUntil(self.registration.showNotification(notificationCopy[kind].title, {
+    body: notificationCopy[kind].body,
     icon: "/icons/icon-192.png",
     badge: "/icons/icon-192.png",
-    tag: "sktech-update",
-    data: { url: "/dashboard" },
+    tag: kind === "chat" ? "sktech-chat" : kind === "announcement" ? "sktech-announcement" : "sktech-update",
+    data: { url },
   }));
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   event.waitUntil((async () => {
-    const target = new URL("/dashboard", self.location.origin).href;
+    const path = notificationPaths.has(event.notification.data?.url) ? event.notification.data.url : "/dashboard";
+    const target = new URL(path, self.location.origin).href;
     const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
     const existing = windows.find((client) => client.url.startsWith(self.location.origin));
     if (existing) {

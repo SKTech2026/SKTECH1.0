@@ -21,6 +21,7 @@ type NotificationItem = {
 type Filter = "All" | "Unread" | "Important";
 
 function safeHref(value: string | null): string | null {
+  if (value === "/") return value;
   return value && /^\/(?:dashboard|mobile)(?:\/[a-zA-Z0-9-]+)*\/?$/.test(value) ? value : null;
 }
 
@@ -48,6 +49,19 @@ export default function NotificationBell({ chatHref, className }: NotificationBe
 
   useEffect(() => { void load(); }, [load]);
   useEffect(() => { if (isOpen) void load(); }, [isOpen, load]);
+  useEffect(() => {
+    const refresh = () => {
+      if (!isOpen && document.visibilityState === "visible") void load();
+    };
+    const interval = window.setInterval(refresh, 30_000);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [isOpen, load]);
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") setIsOpen(false); };

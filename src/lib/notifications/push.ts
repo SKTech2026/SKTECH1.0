@@ -2,11 +2,20 @@ import webpush from "web-push";
 
 import { prisma } from "@/lib/db";
 
-const SAFE_PAYLOAD = JSON.stringify({
-  title: "SKTECH Notification",
-  body: "You have a new update in SKTECH.",
-  url: "/dashboard",
-});
+export type PushNotificationKind = "announcement" | "chat" | "update";
+
+const SAFE_PUSH_PATHS = new Set([
+  "/",
+  "/dashboard",
+  "/dashboard/staff/announcements",
+  "/dashboard/official/announcements",
+  "/dashboard/staff/chat",
+  "/dashboard/official/chat",
+]);
+
+function safePushPath(value: string): string {
+  return SAFE_PUSH_PATHS.has(value) ? value : "/dashboard";
+}
 
 export function getPushConfig() {
   const publicKey = process.env.WEB_PUSH_PUBLIC_KEY?.trim();
@@ -16,9 +25,13 @@ export function getPushConfig() {
   return { publicKey, privateKey, subject };
 }
 
-export async function sendPushToUser(userId: string) {
+export async function sendPushToUser(
+  userId: string,
+  notification: { kind: PushNotificationKind; href: string } = { kind: "update", href: "/dashboard" },
+) {
   const config = getPushConfig();
   if (!config) return { sent: 0, configured: false };
+  const payload = JSON.stringify({ kind: notification.kind, url: safePushPath(notification.href) });
 
   const subscriptions = await prisma.pushSubscription.findMany({
     where: { userId, revokedAt: null },
@@ -29,7 +42,7 @@ export async function sendPushToUser(userId: string) {
     try {
       await webpush.sendNotification(
         { endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth } },
-        SAFE_PAYLOAD,
+        payload,
         { TTL: 60, vapidDetails: { subject: config.subject, publicKey: config.publicKey, privateKey: config.privateKey } },
       );
       return true;
