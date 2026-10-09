@@ -544,3 +544,8 @@ html.theme-midnight-elite .landing-page-dark .landing-overview {
   0%, 100% { transform: translate(0, 0); opacity: 0.65; }
   50% { transform: translate(-24px, 18px); opacity: 1; }
 }
+
+@keyframes kk-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
