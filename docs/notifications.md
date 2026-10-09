@@ -8,6 +8,8 @@ The authenticated Notification Center combines the signed-in user's in-app notic
 
 `prisma/migrations/20261009020000_add_notification_dedupe_key` adds a nullable unique event key. Existing notifications keep `NULL`, and the unique index permits multiple null values.
 
+`prisma/migrations/20261009030000_add_notification_preferences` adds one preference row per user. Category switches default to enabled; browser push itself remains off until the user enables a browser subscription.
+
 ## Web Push setup
 
 Generate one VAPID key pair with `npx web-push generate-vapid-keys --json`. Store these variables on the Railway app service:
@@ -21,6 +23,8 @@ WEB_PUSH_SUBJECT=mailto:your-team@example.org
 Keep the private key on the server. The public key is returned only by the authenticated subscription setup API. Use a real contact address for the subject. Web Push needs HTTPS or localhost and a browser that supports PushManager and service workers. The installed PWA uses the same permission and subscription flow when supported.
 
 The **Enable notifications** button in the center is the only action that requests browser permission. Denial leaves in-app notifications available. **Disable notifications** revokes the current browser subscription. The authenticated **Send test** action creates one generic in-app notice for the current user and sends a generic push to that user's active subscriptions; it is limited to one request per minute per app instance. No client endpoint can choose another recipient or supply arbitrary push text.
+
+The Notification Center's **Notification preferences** controls affect browser push only. Chat, announcements, KK profile, certificates, admissions, and system updates can be switched independently; in-app notification creation is not disabled by these switches. Security push events are protected and bypass the category setting. New preference records default all categories to enabled, but no browser push is sent until a browser subscription is enabled.
 
 The worker source is `worker/index.js`; next-pwa incorporates it into the generated service worker during a production build. Do not edit generated `public/sw.js` directly. Push payloads contain only an allowlisted event kind and internal route. The worker selects fixed generic copy for announcements, chat, and test updates; it never displays message text, announcement content, or private profile data. Announcement and chat clicks open the matching role dashboard page. Public-news clicks open the public landing page.
 

@@ -2,6 +2,26 @@
 
 import { useEffect, useState } from "react";
 
+const defaultPreferences = {
+  pushChat: true,
+  pushAnnouncements: true,
+  pushKkProfile: true,
+  pushCertificates: true,
+  pushAdmissions: true,
+  pushSystem: true,
+};
+
+type PreferenceKey = keyof typeof defaultPreferences;
+
+const preferenceOptions: { key: PreferenceKey; label: string; detail: string }[] = [
+  { key: "pushChat", label: "Chat messages", detail: "New messages in your conversations" },
+  { key: "pushAnnouncements", label: "Announcements", detail: "New Events and published news" },
+  { key: "pushKkProfile", label: "Profile updates", detail: "Updates to your KK profile" },
+  { key: "pushCertificates", label: "Certificates", detail: "Certificate status and issuance" },
+  { key: "pushAdmissions", label: "Admissions", detail: "Admission status updates" },
+  { key: "pushSystem", label: "System alerts", detail: "Security alerts remain enabled" },
+];
+
 function decodePublicKey(value: string) {
   const padding = "=".repeat((4 - value.length % 4) % 4);
   const decoded = atob((value + padding).replace(/-/g, "+").replace(/_/g, "/"));
@@ -15,14 +35,21 @@ export default function PushControls({ onUpdated }: { onUpdated: () => void }) {
   const [subscribed, setSubscribed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [preferences, setPreferences] = useState(defaultPreferences);
+  const [savingPreference, setSavingPreference] = useState<PreferenceKey | null>(null);
 
   useEffect(() => {
     const available = typeof window !== "undefined" && "Notification" in window && "serviceWorker" in navigator && "PushManager" in window && window.isSecureContext;
     setSupported(available);
-    if (!available) return;
     let cancelled = false;
     void (async () => {
       try {
+        const preferencesResponse = await fetch("/api/notifications/preferences", { cache: "no-store" });
+        if (preferencesResponse.ok) {
+          const data = await preferencesResponse.json() as { preferences?: Partial<typeof defaultPreferences> };
+          if (!cancelled && data.preferences) setPreferences({ ...defaultPreferences, ...data.preferences });
+        }
+        if (!available) return;
         const response = await fetch("/api/notifications/push/subscribe", { cache: "no-store" });
         if (!response.ok) return;
         const data = await response.json() as { configured?: boolean; publicKey?: string | null };
@@ -37,6 +64,27 @@ export default function PushControls({ onUpdated }: { onUpdated: () => void }) {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  const updatePreference = async (key: PreferenceKey) => {
+    if (savingPreference) return;
+    const previous = preferences[key];
+    const value = !previous;
+    setPreferences((current) => ({ ...current, [key]: value }));
+    setSavingPreference(key);
+    try {
+      const response = await fetch("/api/notifications/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [key]: value }),
+      });
+      if (!response.ok) throw new Error("Could not update notification preferences.");
+      const data = await response.json() as { preferences?: typeof defaultPreferences };
+      if (data.preferences) setPreferences(data.preferences);
+    } catch (error) {
+      setPreferences((current) => ({ ...current, [key]: previous }));
+      setMessage(error instanceof Error ? error.message : "Could not update notification preferences.");
+    } finally { setSavingPreference(null); }
+  };
 
   const enable = async () => {
     if (!publicKey || busy) return;
@@ -106,6 +154,28 @@ export default function PushControls({ onUpdated }: { onUpdated: () => void }) {
               <button type="button" disabled={busy} onClick={() => void (subscribed ? disable() : enable())} className="min-h-10 rounded-lg border border-accent/40 px-3 font-semibold text-accent disabled:opacity-50">{subscribed ? "Disable notifications" : "Enable notifications"}</button>
               {subscribed ? <button type="button" disabled={busy} onClick={() => void test()} className="min-h-10 rounded-lg border border-glass-border px-3 font-semibold text-foreground disabled:opacity-50">Send test</button> : null}
             </div>}
+      <details className="mt-3 border-t border-glass-border pt-3">
+        <summary className="min-h-10 cursor-pointer py-2 font-semibold text-foreground">Notification preferences</summary>
+        <p className="mb-2 leading-5">These choices control browser push only. In-app notifications continue to work. Security alerts stay enabled.</p>
+        <div className="divide-y divide-glass-border">
+          {preferenceOptions.map(({ key, label, detail }) => (
+            <div key={key} className="flex min-h-14 items-center justify-between gap-3 py-2">
+              <span className="min-w-0"><span className="block font-semibold text-foreground">{label}</span><span className="block text-[11px] leading-4">{detail}</span></span>
+              <button
+                type="button"
+                role="switch"
+                aria-label={`${label} push notifications`}
+                aria-checked={preferences[key]}
+                disabled={savingPreference !== null}
+                onClick={() => void updatePreference(key)}
+                className={`relative h-7 w-12 shrink-0 rounded-full border transition-colors disabled:opacity-60 ${preferences[key] ? "border-accent bg-accent" : "border-glass-border bg-surface-elevated"}`}
+              >
+                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${preferences[key] ? "translate-x-[1.35rem]" : "translate-x-0.5"}`} />
+              </button>
+            </div>
+          ))}
+        </div>
+      </details>
       {message ? <p role="status" className="mt-2 leading-5">{message}</p> : null}
     </div>
   );

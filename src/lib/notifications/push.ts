@@ -2,7 +2,17 @@ import webpush from "web-push";
 
 import { prisma } from "@/lib/db";
 
-export type PushNotificationKind = "announcement" | "chat" | "update";
+export type PushNotificationKind = "announcement" | "chat" | "kkProfile" | "certificate" | "admission" | "system" | "security" | "update";
+
+const preferenceByKind = {
+  announcement: "pushAnnouncements",
+  chat: "pushChat",
+  kkProfile: "pushKkProfile",
+  certificate: "pushCertificates",
+  admission: "pushAdmissions",
+  system: "pushSystem",
+  update: "pushSystem",
+} as const;
 
 const SAFE_PUSH_PATHS = new Set([
   "/",
@@ -31,6 +41,14 @@ export async function sendPushToUser(
 ) {
   const config = getPushConfig();
   if (!config) return { sent: 0, configured: false };
+  if (notification.kind !== "security") {
+    const preferenceField = preferenceByKind[notification.kind as keyof typeof preferenceByKind];
+    const preference = await prisma.notificationPreference.findUnique({
+      where: { userId },
+      select: { pushChat: true, pushAnnouncements: true, pushKkProfile: true, pushCertificates: true, pushAdmissions: true, pushSystem: true },
+    });
+    if (preference && !preference[preferenceField]) return { sent: 0, configured: true, skipped: "preference" };
+  }
   const payload = JSON.stringify({ kind: notification.kind, url: safePushPath(notification.href) });
 
   const subscriptions = await prisma.pushSubscription.findMany({

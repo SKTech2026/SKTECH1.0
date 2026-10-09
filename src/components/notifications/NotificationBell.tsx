@@ -130,8 +130,8 @@ export default function NotificationBell({ chatHref, className }: NotificationBe
                       </button>
                       {item.unread ? <button type="button" onClick={() => void markRead(item.id)} aria-label={`Mark ${item.title} as read`} className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-accent hover:bg-surface-elevated"><CheckCheck className="h-4 w-4" /></button> : null}
                     </div>)}
+            <PushControls onUpdated={() => void load()} />
           </div>
-          <PushControls onUpdated={() => void load()} />
           {chatHref ? <Link href={chatHref} onClick={() => setIsOpen(false)} className="border-t border-glass-border px-4 py-3 text-center text-xs font-semibold text-accent hover:bg-surface-elevated">Open chats</Link> : null}
         </div>
       ) : null}

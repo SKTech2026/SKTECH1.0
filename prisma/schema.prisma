@@ -179,6 +179,7 @@ model User {
   chatMessages            ChatMessage[]                  @relation("ChatMessageSender")
   appNotifications        AppNotification[]
   pushSubscriptions       PushSubscription[]
+  notificationPreference NotificationPreference?
   feedPosts               FeedPost[]                     @relation("FeedPostAuthor")
   feedReactions           FeedReaction[]
   feedComments            FeedComment[]
@@ -907,4 +908,19 @@ model PushSubscription {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, revokedAt])
+}
+
+model NotificationPreference {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  pushChat           Boolean  @default(true)
+  pushAnnouncements  Boolean  @default(true)
+  pushKkProfile      Boolean  @default(true)
+  pushCertificates   Boolean  @default(true)
+  pushAdmissions     Boolean  @default(true)
+  pushSystem         Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

@@ -2,6 +2,11 @@
 const notificationCopy = {
   announcement: { title: "SKTECH Announcement", body: "A new announcement is available in SKTECH." },
   chat: { title: "SKTECH Chat", body: "You have a new message." },
+  kkProfile: { title: "SKTECH Profile Update", body: "A profile update is available in SKTECH." },
+  certificate: { title: "SKTECH Certificate", body: "A certificate update is available in SKTECH." },
+  admission: { title: "SKTECH Admission", body: "An admission update is available in SKTECH." },
+  system: { title: "SKTECH System Alert", body: "A system update is available in SKTECH." },
+  security: { title: "SKTECH Security Alert", body: "A security alert is available in SKTECH." },
   update: { title: "SKTECH Notification", body: "You have a new update in SKTECH." },
 };
 const notificationPaths = new Set([
