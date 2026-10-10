@@ -423,6 +423,9 @@ export default function KKLandingPage() {
               or link on the issued record. No private account details are
               required for that public check.
             </p>
+            <Link href="/verify" className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#1452d9] px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-[#0a3aa2] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#9ac0f5]">
+              Open Verification Center <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-2xl border border-[#d9e6fa] bg-[#f4f8ff] p-5">
@@ -494,6 +497,9 @@ export default function KKLandingPage() {
           <div className="flex flex-wrap content-start gap-x-6 gap-y-3 text-sm font-semibold text-[#0a3aa2]">
             <Link href="/kk/login" className="hover:underline">
               KK Member Login
+            </Link>
+            <Link href="/verify" className="hover:underline">
+              Verification Center
             </Link>
             <a href="https://sktech-ormin.com/" className="hover:underline">
               Back to SKTECH

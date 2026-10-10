@@ -24,6 +24,9 @@ const SKIPPED_PATH_PREFIXES = [
   "/role-selection",
   "/unauthorized",
   "/id",
+  "/verify",
+  "/kk/youthpass",
+  "/kk/certificates",
 ];
 
 function shouldSkipPath(pathname: string) {

@@ -830,6 +830,7 @@ export default function HomePage() {
             <a href="#platform">Platform</a>
             <a href="#features">Features</a>
             <a href="#security">Security</a>
+            <Link href="/verify">Verification Center</Link>
           </nav>
 
           <p className="mx-auto mt-7 max-w-xl text-xs leading-6 text-white/40">
