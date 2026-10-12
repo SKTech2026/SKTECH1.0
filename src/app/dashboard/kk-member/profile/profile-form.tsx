@@ -15,7 +15,7 @@ export default function ProfileForm({ initial, email, municipality, barangay, ed
   const [success, setSuccess] = useState("");
   const set = (key: string, value: Value) => setValues(previous => ({ ...previous, [key]: value }));
   const string = (key: string) => String(values[key] ?? "");
-  const textField = (key: string, label: string, required = true, type = "text") => <label className="block text-sm font-medium" key={key}>{label}<input className={inputClass} type={type} value={string(key)} onChange={event => set(key, event.target.value)} required={required} maxLength={type === "tel" ? 30 : undefined} /></label>;
+  const textField = (key: string, label: string, required = true, type = "text") => <label className="block text-sm font-medium" key={key}>{label}<input className={inputClass} type={type} value={string(key)} onChange={event => set(key, event.target.value)} required={required || key === "middleName"} maxLength={type === "tel" ? 30 : undefined} /></label>;
   const selectField = (key: string, label: string, options: readonly string[]) => <label className="block text-sm font-medium" key={key}>{label}<select className={inputClass} value={string(key)} onChange={event => set(key, event.target.value)} required><option value="">Select an answer</option>{options.map(option => <option key={option} value={option}>{option}</option>)}</select></label>;
   const yesNo = (key: string, label: string) => <label className="block text-sm font-medium" key={key}>{label}<select className={inputClass} value={string(key)} onChange={event => set(key, event.target.value)} required><option value="">Select an answer</option><option value="true">Yes</option><option value="false">No</option></select></label>;
   const birthdate = string("birthdate");

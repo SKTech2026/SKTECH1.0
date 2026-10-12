@@ -164,7 +164,7 @@ export async function getKkAnalyticsData(scope: KkAnalyticsScope, range: KkAnaly
       : { municipalityId: scope.municipalityId ?? "__none__", barangayId: scope.barangayId ?? "__none__" };
 
   const profiles = await prisma.kKMemberProfile.findMany({
-    where: baseWhere,
+    where: { ...baseWhere, status: KKProfileStatus.VERIFIED },
     select: {
       id: true,
       status: true,

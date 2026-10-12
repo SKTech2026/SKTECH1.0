@@ -351,12 +351,10 @@ export const authOptions: NextAuthOptions = {
             }
 
             if (roleInput === Role.KK_MEMBER) {
-              const member = await prisma.user.findUnique({
-                where: { email: userId.toLowerCase() },
-                select: { id: true, name: true, email: true, password: true, emailVerified: true, role: true, status: true },
-              });
+              const memberProfile = await prisma.kKMemberProfile.findFirst({ where: { email: { equals: userId.toLowerCase(), mode: "insensitive" } }, select: { user: { select: { id: true, name: true, email: true, password: true, emailVerified: true, role: true, status: true } } } });
+              const member = memberProfile?.user;
               if (!member || member.role !== Role.KK_MEMBER || member.status !== UserStatus.APPROVED || !member.emailVerified || !member.password || !await compare(password, member.password)) return null;
-              return { id: member.id, name: member.name, email: member.email, role: member.role, status: member.status };
+              return { id: member.id, name: member.name, email: userId.toLowerCase(), role: member.role, status: member.status };
             }
 
             let user = await getUserByEmployeeIdSafe(userId);

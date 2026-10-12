@@ -1,4 +1,5 @@
 import { hash } from "bcryptjs";
+import { Role } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
@@ -19,8 +20,11 @@ export async function POST(request: Request) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254 || !firstName || !lastName || firstName.length > 100 || lastName.length > 100 || password.length < 10 || password.length > 128) {
       return NextResponse.json({ error: "Enter a valid email, name, and password of 10–128 characters." }, { status: 400 });
     }
-    const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } });
-    if (existing) return NextResponse.json({ error: "This email already has an account. Please sign in." }, { status: 409 });
+    const [existing, kkProfile] = await Promise.all([
+      prisma.user.findUnique({ where: { email }, select: { role: true } }),
+      prisma.kKMemberProfile.findFirst({ where: { email: { equals: email, mode: "insensitive" } }, select: { id: true } }),
+    ]);
+    if (kkProfile || (existing && existing.role !== Role.OFFICIAL)) return NextResponse.json({ error: "This email already has a KK account. Please sign in." }, { status: 409 });
     const previous = await prisma.kKRegistrationOTP.findUnique({ where: { invitationId_email: { invitationId: invitation.id, email } }, select: { createdAt: true } });
     if (previous && Date.now() - previous.createdAt.getTime() < OTP_REQUEST_COOLDOWN_MS) return NextResponse.json({ error: "Please wait before requesting another code." }, { status: 429 });
     const otp = generateOtpCode();

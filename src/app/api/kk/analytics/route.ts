@@ -1,4 +1,4 @@
-import { Role, UserStatus } from "@prisma/client";
+import { KKProfileStatus, Role, UserStatus } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
@@ -21,6 +21,6 @@ export async function GET() {
     if (!user.municipalityPresidentId) return NextResponse.json({ error: "Forbidden." }, { status: 403 });
     where = { municipalityId: user.municipalityPresidentId };
   } else if (user.role !== Role.ADMIN) return NextResponse.json({ error: "Forbidden." }, { status: 403 });
-  const counts = await prisma.kKMemberProfile.groupBy({ by: ["status"], where, _count: { _all: true } });
+  const counts = await prisma.kKMemberProfile.groupBy({ by: ["status"], where: { ...where, status: KKProfileStatus.VERIFIED }, _count: { _all: true } });
   return NextResponse.json({ counts: counts.map(row => ({ status: row.status, count: row._count._all })) });
 }

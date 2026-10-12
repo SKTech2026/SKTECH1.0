@@ -8,7 +8,9 @@ export const dynamic = "force-dynamic";
 
 const text = (body: Record<string, unknown>, key: string, max = 120) => {
   const value = body[key];
-  return typeof value === "string" && value.trim().length <= max ? value.trim() : "";
+  if (typeof value !== "string") return "";
+  const clean = value.normalize("NFC").replace(/[\u0000-\u001F\u007F]/g, " ").trim();
+  return clean.length <= max ? clean : "";
 };
 
 const oneOf = (value: string, options: readonly string[]) => options.includes(value);
@@ -23,10 +25,11 @@ export async function POST(request: Request) {
   if (profile.status !== KKProfileStatus.DRAFT && profile.status !== KKProfileStatus.NEEDS_CORRECTION) return NextResponse.json({ error: "This profile cannot be edited now." }, { status: 409 });
 
   const firstName = text(body, "firstName", 100);
+  const middleName = text(body, "middleName", 100);
   const lastName = text(body, "lastName", 100);
   const birthInput = text(body, "birthdate", 10);
   const birthdate = /^\d{4}-\d{2}-\d{2}$/.test(birthInput) ? new Date(`${birthInput}T00:00:00.000Z`) : null;
-  if (!firstName || !lastName || !birthdate || Number.isNaN(birthdate.getTime()) || birthdate.toISOString().slice(0, 10) !== birthInput) return NextResponse.json({ error: "Valid name and birthdate are required." }, { status: 400 });
+  if (!firstName || !middleName || !lastName || !birthdate || Number.isNaN(birthdate.getTime()) || birthdate.toISOString().slice(0, 10) !== birthInput) return NextResponse.json({ error: "Valid full name and birthdate are required." }, { status: 400 });
   const age = kkAge(birthdate);
   if (age < 15 || age > 30) return NextResponse.json({ error: "KK profiling is for ages 15 through 30." }, { status: 400 });
   const civilStatus = text(body, "civilStatus");
@@ -49,12 +52,12 @@ export async function POST(request: Request) {
   const purokZone = text(body, "purokZone", 120);
   const contactNumber = text(body, "contactNumber", 30);
   if (!region || !province || !purokZone || !/^\+?[0-9 ()-]{7,30}$/.test(contactNumber)) return NextResponse.json({ error: "Complete the location and contact fields." }, { status: 400 });
-  const duplicate = await prisma.kKMemberProfile.findFirst({ where: { id: { not: profile.id }, barangayId: profile.barangayId, firstName: { equals: firstName, mode: "insensitive" }, lastName: { equals: lastName, mode: "insensitive" }, birthdate }, select: { id: true } });
-  if (duplicate) return NextResponse.json({ error: "A matching profile already exists in this barangay. Contact your SK Chairperson." }, { status: 409 });
+  const duplicate = await prisma.kKMemberProfile.findFirst({ where: { id: { not: profile.id }, status: KKProfileStatus.VERIFIED, firstName: { equals: firstName, mode: "insensitive" }, middleName: { equals: middleName, mode: "insensitive" }, lastName: { equals: lastName, mode: "insensitive" }, birthdate }, select: { id: true } });
+  if (duplicate) return NextResponse.json({ error: "You already have an approved KK registration in your designated barangay. Please contact your SK Official for corrections." }, { status: 409 });
   const updated = await prisma.kKMemberProfile.updateMany({
     where: { userId: member.id, status: { in: [KKProfileStatus.DRAFT, KKProfileStatus.NEEDS_CORRECTION] } },
     data: {
-      firstName, lastName, middleName: text(body, "middleName", 100) || null, suffix: text(body, "suffix", 30) || null,
+      firstName, lastName, middleName, suffix: text(body, "suffix", 30) || null,
       region, province, purokZone, sexAssignedAtBirth, birthdate, age, email: member.email, contactNumber,
       civilStatus, youthAgeGroup: ageGroup(age), educationalBackground, youthClassification,
       specificNeedsCategory: specificNeedsCategory || null, workStatus,

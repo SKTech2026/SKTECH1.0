@@ -19,9 +19,10 @@ export async function POST(request: Request) {
     const claimed = await prisma.kKRegistrationOTP.updateMany({ where: { id: record.id, attempts: { lt: 5 }, expiresAt: { gt: new Date() } }, data: { attempts: { increment: 1 } } });
     if (!claimed.count || !await verifyStoredOtpCode(otp, record.codeHash)) return NextResponse.json({ error: "Code invalid or expired." }, { status: 400 });
     await prisma.$transaction(async (tx) => {
-      const existing = await tx.user.findUnique({ where: { email }, select: { id: true } });
-      if (existing) throw new Error("Email already registered");
-      const user = await tx.user.create({ data: { email, name: `${record.firstName} ${record.lastName}`, password: record.passwordHash, role: Role.KK_MEMBER, status: UserStatus.APPROVED, emailVerified: new Date() }, select: { id: true } });
+      const existing = await tx.user.findUnique({ where: { email }, select: { role: true } });
+      const kkProfile = await tx.kKMemberProfile.findFirst({ where: { email: { equals: email, mode: "insensitive" } }, select: { id: true } });
+      if (kkProfile || (existing && existing.role !== Role.OFFICIAL)) throw new Error("Email already registered");
+      const user = await tx.user.create({ data: { email: existing ? null : email, name: `${record.firstName} ${record.lastName}`, password: record.passwordHash, role: Role.KK_MEMBER, status: UserStatus.APPROVED, emailVerified: new Date() }, select: { id: true } });
       await tx.kKMemberProfile.create({ data: { userId: user.id, invitationId: invitation.id, municipalityId: invitation.municipalityId, barangayId: invitation.barangayId, firstName: record.firstName, lastName: record.lastName, email } });
       await tx.kKRegistrationOTP.delete({ where: { id: record.id } });
     });

@@ -17,8 +17,8 @@ export async function getChairScope() {
 export async function getKKUser() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id || session.user.role !== Role.KK_MEMBER) return null;
-  const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { id: true, email: true, emailVerified: true, role: true, status: true } });
-  return user?.role === Role.KK_MEMBER && user.status === UserStatus.APPROVED && user.emailVerified ? user : null;
+  const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { id: true, email: true, emailVerified: true, role: true, status: true, kkProfile: { select: { email: true } } } });
+  return user?.role === Role.KK_MEMBER && user.status === UserStatus.APPROVED && user.emailVerified && user.kkProfile ? { ...user, email: user.kkProfile.email } : null;
 }
 
 export async function getActiveInvitation(code: string) {
