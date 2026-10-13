@@ -1,6 +1,6 @@
 "use client";
 
-import { OfficialPosition, SKFederationPosition, Sex } from "@prisma/client";
+import { OfficialPosition, SKFederationLevel, SKFederationPosition, Sex } from "@prisma/client";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -8,10 +8,10 @@ import { useEffect, useMemo, useState } from "react";
 import {
   OFFICIAL_POSITION_OPTIONS,
   SEX_OPTIONS,
-  SKFED_POSITION_OPTIONS,
   calculateAge,
   formatEnumLabel,
 } from "@/lib/sk-official";
+import { OFFICIAL_TYPE_OPTIONS, federationPositions } from "@/lib/sk-official-options";
 
 type MunicipalityOption = {
   id: string;
@@ -33,6 +33,7 @@ type InitialProfile = {
   sex: Sex | null;
   position: OfficialPosition;
   skFederationOfficer: boolean;
+  skFederationLevel: SKFederationLevel | null;
   skFederationPosition: SKFederationPosition | null;
   municipalityId: string;
   barangayId: string;
@@ -71,6 +72,7 @@ export default function OfficialProfileForm({ initial, municipalities }: Profile
   const [sex, setSex] = useState<Sex | null>(initial.sex);
   const [position, setPosition] = useState<OfficialPosition>(initial.position);
   const [skFederationOfficer, setSkFederationOfficer] = useState(initial.skFederationOfficer);
+  const [skFederationLevel, setSkFederationLevel] = useState<SKFederationLevel | null>(initial.skFederationOfficer ? (initial.skFederationLevel ?? SKFederationLevel.MUNICIPAL) : null);
   const [skFederationPosition, setSkFederationPosition] =
     useState<SKFederationPosition | null>(initial.skFederationPosition);
   const [municipalityId, setMunicipalityId] = useState(initial.municipalityId);
@@ -138,6 +140,7 @@ export default function OfficialProfileForm({ initial, municipalities }: Profile
       payload.set("sex", sex ?? "");
       payload.set("position", position);
       payload.set("skFederationOfficer", String(skFederationOfficer));
+      payload.set("skFederationLevel", skFederationOfficer ? (skFederationLevel ?? "") : "");
       payload.set("skFederationPosition", skFederationOfficer ? (skFederationPosition ?? "") : "");
       payload.set("municipalityId", municipalityId);
       payload.set("barangayId", barangayId);
@@ -286,16 +289,16 @@ export default function OfficialProfileForm({ initial, municipalities }: Profile
             </select>
           </label>
           <div className="rounded-lg border border-glass-border bg-surface-elevated/30 px-3 py-2">
-            <label className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-              <input
-                type="checkbox"
-                checked={skFederationOfficer}
-                onChange={(e) => {
-                  setSkFederationOfficer(e.target.checked);
-                  if (!e.target.checked) setSkFederationPosition(null);
-                }}
-              />
-              SK Federation Officer
+            <label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+              Official category
+              <select className={inputClass} value={skFederationOfficer ? skFederationLevel ?? SKFederationLevel.MUNICIPAL : "BARANGAY"} onChange={(e) => {
+                const level = e.target.value === "BARANGAY" ? null : e.target.value as SKFederationLevel;
+                setSkFederationOfficer(level !== null);
+                setSkFederationLevel(level);
+                setSkFederationPosition(null);
+              }}>
+                {OFFICIAL_TYPE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
             </label>
             {skFederationOfficer ? (
               <select
@@ -309,7 +312,7 @@ export default function OfficialProfileForm({ initial, municipalities }: Profile
                 required
               >
                 <option value="">Select SKFED position</option>
-                {SKFED_POSITION_OPTIONS.map((option) => (
+                {federationPositions(skFederationLevel ?? SKFederationLevel.MUNICIPAL).map((option) => (
                   <option key={option} value={option}>
                     {formatEnumLabel(option)}
                   </option>

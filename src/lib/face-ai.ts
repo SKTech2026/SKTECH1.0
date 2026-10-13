@@ -26,6 +26,18 @@ export type RegisterFaceResult = {
   message: string;
 };
 
+export type InspectIdPhotoResult = {
+  detectedFaces: number;
+  qualityPassed: boolean;
+  qualityMessage: string;
+  matchScore: number | null;
+  matched: boolean | null;
+};
+
+export function inspectIdPhoto(payload: { imageBase64: string; encryptedEmbedding?: string }): Promise<InspectIdPhotoResult> {
+  return postToAiService<InspectIdPhotoResult>("/inspect-id-photo", payload);
+}
+
 export type VerifyFacePayload = {
   imageBase64: string;
   livenessFrames?: string[];

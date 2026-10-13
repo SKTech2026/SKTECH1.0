@@ -1,9 +1,10 @@
-import { OfficialPosition, Role, SKFederationPosition, Sex, ProfileChangeRequestStatus } from "@prisma/client";
+import { OfficialPosition, Role, SKFederationLevel, SKFederationPosition, Sex, ProfileChangeRequestStatus } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { inspectIdPhoto, type InspectIdPhotoResult } from "@/lib/face-ai";
 import {
   getSafePhotoErrorMessage,
   MAX_OFFICIAL_PHOTO_BYTES,
@@ -62,6 +63,7 @@ export async function PATCH(request: Request) {
     const sitioRaw = String(formData.get("sitio") ?? "").trim();
     const positionValue = String(formData.get("position") ?? "").trim();
     const skFederationOfficer = String(formData.get("skFederationOfficer") ?? "") === "true";
+    const skFederationLevelValue = String(formData.get("skFederationLevel") ?? "").trim();
     const skFederationPositionValue = String(
       formData.get("skFederationPosition") ?? "",
     ).trim();
@@ -102,6 +104,12 @@ export async function PATCH(request: Request) {
     const skFederationPosition = skFederationOfficer
       ? parseSKFedPosition(skFederationPositionValue)
       : null;
+    const skFederationLevel = skFederationOfficer
+      ? (Object.values(SKFederationLevel).includes(skFederationLevelValue as SKFederationLevel) ? skFederationLevelValue as SKFederationLevel : null)
+      : null;
+    if ((skFederationOfficer && !skFederationLevel) || (!skFederationOfficer && (skFederationLevelValue || skFederationPositionValue))) {
+      return NextResponse.json({ error: "Invalid federation category." }, { status: 400 });
+    }
     if (skFederationOfficer && !skFederationPosition) {
       return NextResponse.json(
         { error: "SKFED position is required for SK Federation Officers." },
@@ -137,6 +145,7 @@ export async function PATCH(request: Request) {
           sex: true,
           position: true,
           skFederationOfficer: true,
+          skFederationLevel: true,
           skFederationPosition: true,
           municipalityId: true,
           municipality: true,
@@ -147,7 +156,7 @@ export async function PATCH(request: Request) {
           termEnd: true,
           contactNo: true,
           address: true,
-          user: { select: { image: true } },
+          user: { select: { image: true, faceEmbedding: true } },
         },
       }),
       prisma.municipality.findUnique({
@@ -179,6 +188,7 @@ export async function PATCH(request: Request) {
     }
 
     let photoUrl: string | null = null;
+    let photoInspection: InspectIdPhotoResult | null = null;
     const activePendingRequest = await prisma.officialProfileChangeRequest.findFirst({
       where: {
         officialId: officialRecord.id,
@@ -211,6 +221,17 @@ export async function PATCH(request: Request) {
       }
 
       console.info("[PHOTO] file validated");
+      try {
+        photoInspection = await inspectIdPhoto({
+          imageBase64: Buffer.from(await photo.arrayBuffer()).toString("base64"),
+          encryptedEmbedding: officialRecord.user?.faceEmbedding ?? undefined,
+        });
+      } catch {
+        photoInspection = null;
+      }
+      if (photoInspection && !photoInspection.qualityPassed) {
+        return NextResponse.json({ error: photoInspection.qualityMessage }, { status: 400 });
+      }
       const savedPhoto = await saveOfficialProfilePhoto(photo, session.user.id);
       photoUrl = savedPhoto.photoUrl;
     }
@@ -224,6 +245,7 @@ export async function PATCH(request: Request) {
       sex: officialRecord.sex,
       position: officialRecord.position,
       skFederationOfficer: officialRecord.skFederationOfficer,
+      skFederationLevel: officialRecord.skFederationLevel,
       skFederationPosition: officialRecord.skFederationPosition,
       municipalityId: officialRecord.municipalityId,
       municipality: officialRecord.municipality,
@@ -245,6 +267,7 @@ export async function PATCH(request: Request) {
       sex,
       position,
       skFederationOfficer,
+      skFederationLevel,
       skFederationPosition,
       municipalityId: municipality.id,
       municipality: municipality.name,
@@ -256,6 +279,8 @@ export async function PATCH(request: Request) {
       termEnd: parsedTermEnd?.toISOString() ?? officialRecord.termEnd?.toISOString() ?? null,
       contactNo: contactNoRaw || null,
       address: addressRaw || null,
+      photoFaceDetected: photoInspection?.detectedFaces === 1 && photoInspection.qualityPassed,
+      photoQualityChecked: photoInspection !== null,
     };
 
     const requestRecord = await prisma.officialProfileChangeRequest.create({
@@ -266,7 +291,8 @@ export async function PATCH(request: Request) {
         requestedChanges,
         currentSnapshot,
         requestedPhotoUrl: photoUrl,
-        faceCheckStatus: photoUrl ? "UNAVAILABLE" : "NOT_CHECKED",
+        faceCheckStatus: photoUrl ? (photoInspection?.matched === true ? "MATCHED" : photoInspection?.matched === false ? "MISMATCHED" : "UNAVAILABLE") : "NOT_CHECKED",
+        faceMatchScore: photoInspection?.matchScore ?? null,
       },
       select: {
         id: true,

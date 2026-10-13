@@ -2,6 +2,7 @@
 
 import { Eye, KeyRound, Pencil, RefreshCw, Search, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { FEDERATION_LEVEL_OPTIONS, SKFED_POSITION_OPTIONS } from "@/lib/sk-official-options";
 
 import {
   ASSEMBLY_FREQUENCY,
@@ -38,6 +39,7 @@ type ProfileValues = Partial<{
   barangayId: string | null;
   position: string | null;
   skFederationOfficer: boolean;
+  skFederationLevel: string | null;
   skFederationPosition: string | null;
   region: string | null;
   province: string | null;
@@ -115,6 +117,7 @@ function profileValues(account: AccountDetails): FormValues {
     barangayId: profile?.barangayId ?? "",
     position: profile?.position ?? "",
     skFederationOfficer: profile?.skFederationOfficer ?? false,
+    skFederationLevel: profile?.skFederationLevel ?? "MUNICIPAL",
     skFederationPosition: profile?.skFederationPosition ?? "",
     region: profile?.region ?? "",
     purokZone: profile?.purokZone ?? "",
@@ -212,6 +215,10 @@ export default function AccountManagementClient() {
     try {
       const payload = { ...form };
       if (details.role === "OFFICIAL") {
+        if (!payload.skFederationOfficer) {
+          payload.skFederationLevel = "";
+          payload.skFederationPosition = "";
+        }
         delete payload.region;
         delete payload.purokZone;
         delete payload.sexAssignedAtBirth;
@@ -230,6 +237,7 @@ export default function AccountManagementClient() {
         if (!details.official) {
           delete payload.contactNumber;
           delete payload.skFederationOfficer;
+          delete payload.skFederationLevel;
           delete payload.skFederationPosition;
         }
         if (!details.official?.municipalityId && !details.official?.barangayId && !form.municipalityId && !form.barangayId) {
@@ -239,6 +247,7 @@ export default function AccountManagementClient() {
       } else {
         delete payload.position;
         delete payload.skFederationOfficer;
+        delete payload.skFederationLevel;
         delete payload.skFederationPosition;
       }
       const response = await fetch(`/api/admin/account-management/${details.id}`, {
@@ -509,7 +518,8 @@ export default function AccountManagementClient() {
                   {details.role === "OFFICIAL" ? <>
                     {selectField("position", "Position", ["SK_CHAIRPERSON", "SK_SECRETARY", "SK_TREASURER", "SK_COUNCILOR"])}
                     {booleanField("skFederationOfficer", "Federation officer")}
-                    {selectField("skFederationPosition", "Federation role", ["VICE_PRESIDENT", "SECRETARY", "TREASURER", "AUDITOR", "PUBLIC_RELATIONS_OFFICER", "SERGEANT_AT_ARMS"])}
+                    {selectField("skFederationLevel", "Federation level", [...FEDERATION_LEVEL_OPTIONS])}
+                    {selectField("skFederationPosition", "Federation role", SKFED_POSITION_OPTIONS)}
                   </> : <>
                     {textField("region", "Region")}
                     {textField("purokZone", "Purok / zone")}

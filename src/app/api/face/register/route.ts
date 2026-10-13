@@ -29,6 +29,10 @@ export async function POST(request: NextRequest) {
     const livenessFrames = Array.isArray(body.livenessFrames)
       ? body.livenessFrames.filter((frame) => typeof frame === "string")
       : [];
+    if (livenessFrames.length < 2 || livenessFrames.length > 8 ||
+        [body.imageBase64, ...livenessFrames].some((frame) => frame.length > 1_000_000)) {
+      return NextResponse.json({ error: "Provide 2 to 8 clear video frames under 1 MB each." }, { status: 400 });
+    }
 
     const aiResponse = await registerFaceEmbedding({
       userId: guard.session.user.id,
@@ -66,7 +70,7 @@ export async function POST(request: NextRequest) {
     if (process.env.NODE_ENV !== "production") console.error("POST /api/face/register error:", error);
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : "Face registration failed.",
+        error: "Face registration failed. Check lighting, use one face, and show a blink or slow head movement.",
       },
       { status: 500 },
     );

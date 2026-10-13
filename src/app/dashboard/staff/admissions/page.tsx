@@ -4,6 +4,7 @@ import { AdmissionStatus, OfficialPosition } from "@prisma/client";
 import { useEffect, useMemo, useState } from "react";
 
 import ProfileChangeRequests from "./profile-change-requests";
+import { federationLevelLabel } from "@/lib/sk-official-options";
 
 type AdmissionRecord = {
   id: string;
@@ -20,6 +21,10 @@ type AdmissionRecord = {
   municipality: string | null;
   barangay: string | null;
   position: OfficialPosition | null;
+  skFederationOfficer: boolean;
+  skFederationLevel: "MUNICIPAL" | "PROVINCIAL" | null;
+  skFederationPosition: string | null;
+  user: { faceRegistered: boolean; image: string | null } | null;
   dateElected: string | null;
   termEnd: string | null;
   proofDocumentUrl: string | null;
@@ -355,6 +360,8 @@ export default function StaffAdmissionsPage() {
               <div className="rounded-lg border border-glass-border bg-surface-elevated/40 p-3">
                 <p className="text-xs uppercase tracking-[0.12em] text-muted">Position</p>
                 <p className="mt-1 text-sm text-foreground">{formatEnumLabel(selectedRecord.position)}</p>
+                <p className="mt-1 text-sm text-foreground">{federationLevelLabel(selectedRecord.skFederationLevel, selectedRecord.skFederationOfficer)}{selectedRecord.skFederationPosition ? ` · ${formatEnumLabel(selectedRecord.skFederationPosition)}` : ""}</p>
+                <p className="mt-1 text-sm text-foreground">Face registration: {selectedRecord.user?.faceRegistered ? "Complete" : "Not completed"}. ID photo: {selectedRecord.user?.image ? "Available for manual review" : "Not uploaded"}. Identity match requires staff review.</p>
               </div>
               <div className="rounded-lg border border-glass-border bg-surface-elevated/40 p-3">
                 <p className="text-xs uppercase tracking-[0.12em] text-muted">Term</p>

@@ -6,6 +6,7 @@ import {
   OfficialStatus,
   Prisma,
   Role,
+  SKFederationLevel,
   SKFederationPosition,
   Sex,
   UserStatus,
@@ -220,6 +221,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       barangayId,
       sitio,
       skFederationOfficer,
+      skFederationLevel,
       skFederationPosition,
       dateElected,
       termStart,
@@ -346,8 +348,16 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (skFederationOfficer !== undefined) {
       updateData.skFederationOfficer = skFederationOfficer === true;
       if (skFederationOfficer !== true) {
+        updateData.skFederationLevel = null;
         updateData.skFederationPosition = null;
       }
+    }
+
+    if (skFederationLevel !== undefined) {
+      if (skFederationLevel !== null && !Object.values(SKFederationLevel).includes(skFederationLevel as SKFederationLevel)) {
+        return NextResponse.json({ error: "Invalid federation level." }, { status: 400 });
+      }
+      updateData.skFederationLevel = skFederationLevel as SKFederationLevel | null;
     }
 
     if (skFederationPosition !== undefined) {
@@ -367,6 +377,18 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       } else {
         updateData.skFederationPosition = skFederationPosition as SKFederationPosition;
       }
+    }
+    const finalFederationOfficer = skFederationOfficer === undefined ? existing.skFederationOfficer : skFederationOfficer === true;
+    const finalFederationPosition = skFederationPosition === undefined ? existing.skFederationPosition : (skFederationPosition || null);
+    const finalFederationLevel = skFederationLevel === undefined ? existing.skFederationLevel : (skFederationLevel || null);
+    if (!finalFederationOfficer && (skFederationLevel || skFederationPosition)) {
+      return NextResponse.json({ error: "Federation details require a federation officer category." }, { status: 400 });
+    }
+    if (finalFederationOfficer && !finalFederationLevel) {
+      return NextResponse.json({ error: "Federation level is required." }, { status: 400 });
+    }
+    if (finalFederationOfficer && !finalFederationPosition) {
+      return NextResponse.json({ error: "Federation position is required." }, { status: 400 });
     }
 
     if (dateElected !== undefined) {

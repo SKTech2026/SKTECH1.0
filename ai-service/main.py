@@ -68,6 +68,19 @@ class RegisterFaceResponse(BaseModel):
     message: str
 
 
+class InspectIdPhotoRequest(BaseModel):
+    imageBase64: str = Field(min_length=20)
+    encryptedEmbedding: Optional[str] = None
+
+
+class InspectIdPhotoResponse(BaseModel):
+    detectedFaces: int
+    qualityPassed: bool
+    qualityMessage: str
+    matchScore: Optional[float] = None
+    matched: Optional[bool] = None
+
+
 class VerifyFacesRequest(BaseModel):
     image: Optional[str] = None
     imageBase64: Optional[str] = None
@@ -785,6 +798,8 @@ async def register_face(payload: RegisterFaceRequest, request: Request) -> Regis
     liveness_ok, _, liveness_message = await asyncio.get_running_loop().run_in_executor(
         EXECUTOR, _evaluate_liveness, liveness_payloads
     )
+
+
     if not liveness_ok:
         raise HTTPException(status_code=400, detail=liveness_message)
 
@@ -807,6 +822,41 @@ async def register_face(payload: RegisterFaceRequest, request: Request) -> Regis
         livenessPassed=True,
         message="Face embedding generated from multiple clear frames and encrypted successfully.",
     )
+
+
+@app.post("/inspect-id-photo", response_model=InspectIdPhotoResponse)
+async def inspect_id_photo(payload: InspectIdPhotoRequest, request: Request) -> InspectIdPhotoResponse:
+    _verify_service_secret(request)
+    try:
+        image = await asyncio.get_running_loop().run_in_executor(
+            EXECUTOR, _load_image_from_base64, payload.imageBase64
+        )
+        embeddings, locations = await asyncio.get_running_loop().run_in_executor(
+            EXECUTOR, _extract_face_embeddings, image
+        )
+        if len(embeddings) != 1:
+            return InspectIdPhotoResponse(
+                detectedFaces=len(embeddings), qualityPassed=False,
+                qualityMessage="Exactly one clear face is required in the ID photo.",
+            )
+        quality_message = _face_quality_message(image, locations[0])
+        if quality_message:
+            return InspectIdPhotoResponse(
+                detectedFaces=1, qualityPassed=False, qualityMessage=quality_message,
+            )
+        score = None
+        matched = None
+        if payload.encryptedEmbedding:
+            reference = _decrypt_embedding(payload.encryptedEmbedding)
+            distance = float(face_recognition.face_distance([reference], embeddings[0])[0])
+            score = round(max(0.0, 1.0 - distance), 4)
+            matched = distance <= 0.5
+        return InspectIdPhotoResponse(
+            detectedFaces=1, qualityPassed=True, qualityMessage="One clear face detected.",
+            matchScore=score, matched=matched,
+        )
+    except (ValueError, InvalidToken) as error:
+        raise HTTPException(status_code=400, detail="Unable to inspect ID photo.") from error
 
 
 @app.post("/register-face-reference", response_model=RegisterFaceResponse)

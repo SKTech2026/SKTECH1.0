@@ -3,6 +3,7 @@ import {
   OfficialPosition,
   Prisma,
   Role,
+  SKFederationLevel,
   SKFederationPosition,
 } from "@prisma/client";
 import { NextResponse } from "next/server";
@@ -92,6 +93,7 @@ const accountSelect = {
       barangayId: true,
       position: true,
       skFederationOfficer: true,
+      skFederationLevel: true,
       skFederationPosition: true,
       status: true,
       admissionStatus: true,
@@ -248,9 +250,15 @@ export async function PATCH(request: Request, context: RouteContext) {
         officialProfileData.position = position as OfficialPosition;
       }
       const federationOfficer = readBoolean(input, "skFederationOfficer");
+      const federationLevel = readText(input, "skFederationLevel", 20, true);
       const federationPosition = readText(input, "skFederationPosition", 40, true);
       if (federationOfficer !== undefined) officialData.skFederationOfficer = federationOfficer;
-      if (federationOfficer === false && federationPosition === undefined) officialData.skFederationPosition = null;
+      if (federationOfficer === false && (federationLevel || federationPosition)) throw new RequestError("Federation details require a federation officer category.");
+      if (federationOfficer === false) { officialData.skFederationLevel = null; officialData.skFederationPosition = null; }
+      if (federationLevel !== undefined) {
+        if (federationLevel !== null && !Object.values(SKFederationLevel).includes(federationLevel as SKFederationLevel)) throw new RequestError("Choose a valid federation level.");
+        officialData.skFederationLevel = federationLevel as SKFederationLevel | null;
+      }
       if (federationPosition !== undefined) {
         if (federationPosition !== null && !Object.values(SKFederationPosition).includes(federationPosition as SKFederationPosition)) {
           throw new RequestError("Choose a valid federation position.");
@@ -258,12 +266,21 @@ export async function PATCH(request: Request, context: RouteContext) {
         officialData.skFederationPosition = federationPosition as SKFederationPosition | null;
         if (federationPosition) officialData.skFederationOfficer = true;
       }
+      const finalFederationOfficer = federationOfficer ?? account.official?.skFederationOfficer ?? false;
+      const finalFederationLevel = federationLevel === undefined ? account.official?.skFederationLevel ?? null : federationLevel;
+      const finalFederationPosition = federationPosition === undefined ? account.official?.skFederationPosition ?? null : federationPosition;
+      if (finalFederationOfficer && (!finalFederationLevel || !finalFederationPosition)) {
+        throw new RequestError("Federation officers require a level and position.");
+      }
+      if (!finalFederationOfficer && (finalFederationLevel || finalFederationPosition)) {
+        throw new RequestError("Federation details require a federation officer category.");
+      }
       if (hasNameEdit) {
         officialProfileData.firstName = firstName;
         officialProfileData.middleName = middleName;
         officialProfileData.lastName = lastName;
       }
-      if (!account.official && (contact !== undefined || has(input, "skFederationOfficer") || has(input, "skFederationPosition"))) {
+      if (!account.official && (contact !== undefined || has(input, "skFederationOfficer") || has(input, "skFederationLevel") || has(input, "skFederationPosition"))) {
         throw new RequestError("This legacy Official profile does not store those fields.");
       }
       if (position === null && account.skOfficialProfile) {

@@ -24,6 +24,7 @@ type ExistingProfile = {
   sitio: string | null;
   position: SKOfficialFormPayload["position"];
   skFederationOfficer: boolean;
+  skFederationLevel: SKOfficialFormPayload["skFederationLevel"];
   skFederationPosition: SKOfficialFormPayload["skFederationPosition"];
   dateElected: string;
   termEnd: string;
@@ -131,6 +132,7 @@ export default function OfficialAdmissionForm({
                 position: initialProfile.position,
                 skFederationOfficer: initialProfile.skFederationOfficer,
                 skFederationPosition: initialProfile.skFederationPosition,
+                skFederationLevel: initialProfile.skFederationLevel,
                 dateElected: initialProfile.dateElected,
                 termEnd: initialProfile.termEnd,
                 email: initialProfile.email,

@@ -118,6 +118,9 @@ export async function GET(request: NextRequest) {
         municipality: true,
         barangay: true,
         position: true,
+        skFederationOfficer: true,
+        skFederationLevel: true,
+        skFederationPosition: true,
         dateElected: true,
         termEnd: true,
         proofDocumentUrl: true,
@@ -128,6 +131,8 @@ export async function GET(request: NextRequest) {
         user: {
           select: {
             status: true,
+            faceRegistered: true,
+            image: true,
           },
         },
       },

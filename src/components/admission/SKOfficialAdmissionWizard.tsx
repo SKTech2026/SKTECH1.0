@@ -1,7 +1,7 @@
 "use client";
 
 import { Camera, ChevronLeft, ChevronRight, FileCheck2, UserCheck, Video, VideoOff } from "lucide-react";
-import { OfficialPosition, SKFederationPosition, Sex } from "@prisma/client";
+import { OfficialPosition, SKFederationLevel, SKFederationPosition, Sex } from "@prisma/client";
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -10,13 +10,13 @@ import {
   MunicipalityOption,
   OFFICIAL_POSITION_OPTIONS,
   SEX_OPTIONS,
-  SKFED_POSITION_OPTIONS,
   SKOfficialAdmissionSubmissionPayload,
   SKOfficialFormPayload,
   calculateAge,
   formatEnumLabel,
   validateSKOfficialPayload,
 } from "@/lib/sk-official";
+import { OFFICIAL_TYPE_OPTIONS, federationPositions, federationLevelLabel } from "@/lib/sk-official-options";
 
 type WizardInitialValues = Partial<SKOfficialFormPayload> & {
   proofDocumentUrl?: string | null;
@@ -100,6 +100,9 @@ export default function SKOfficialAdmissionWizard({
   const [skFederationOfficer, setSkFederationOfficer] = useState(
     initialValues?.skFederationOfficer ?? false,
   );
+  const [skFederationLevel, setSkFederationLevel] = useState<SKFederationLevel | null>(
+    initialValues?.skFederationOfficer ? (initialValues.skFederationLevel ?? SKFederationLevel.MUNICIPAL) : null,
+  );
   const [skFederationPosition, setSkFederationPosition] =
     useState<SKFederationPosition | null>(initialValues?.skFederationPosition ?? null);
   const [dateElected, setDateElected] = useState(initialValues?.dateElected ?? "");
@@ -159,6 +162,7 @@ export default function SKOfficialAdmissionWizard({
       sitio: sitio.trim() || null,
       position,
       skFederationOfficer,
+      skFederationLevel: skFederationOfficer ? skFederationLevel : null,
       skFederationPosition: skFederationOfficer ? skFederationPosition : null,
       dateElected,
       termEnd: initialValues?.termEnd ?? null,
@@ -179,6 +183,7 @@ export default function SKOfficialAdmissionWizard({
       sitio,
       position,
       skFederationOfficer,
+      skFederationLevel,
       skFederationPosition,
       dateElected,
       initialValues?.termEnd,
@@ -520,17 +525,15 @@ export default function SKOfficialAdmissionWizard({
               </select>
             </div>
             <div>
-              <label className="flex items-center gap-3 pt-8 text-xs uppercase tracking-[0.14em] text-muted">
-                <input
-                  type="checkbox"
-                  checked={skFederationOfficer}
-                  onChange={(e) => {
-                    setSkFederationOfficer(e.target.checked);
-                    if (!e.target.checked) setSkFederationPosition(null);
-                  }}
-                />
-                SK Federation Officer
-              </label>
+              <label className="text-xs uppercase tracking-[0.14em] text-muted">Official category</label>
+              <select className={inputClass} value={skFederationOfficer ? (skFederationLevel ?? SKFederationLevel.MUNICIPAL) : "BARANGAY"} onChange={(e) => {
+                const level = e.target.value === "BARANGAY" ? null : e.target.value as SKFederationLevel;
+                setSkFederationOfficer(Boolean(level));
+                setSkFederationLevel(level);
+                setSkFederationPosition(null);
+              }}>
+                {OFFICIAL_TYPE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
             </div>
             {includeEmail ? (
               <div>
@@ -549,7 +552,7 @@ export default function SKOfficialAdmissionWizard({
 
           {skFederationOfficer ? (
             <div>
-              <label className="text-xs uppercase tracking-[0.14em] text-muted">SKFED Position</label>
+              <label className="text-xs uppercase tracking-[0.14em] text-muted">{federationLevelLabel(skFederationLevel, true)} position</label>
               <select
                 className={inputClass}
                 value={skFederationPosition ?? ""}
@@ -560,7 +563,7 @@ export default function SKOfficialAdmissionWizard({
                 }
               >
                 <option value="">Select SKFED position</option>
-                {SKFED_POSITION_OPTIONS.map((entry) => (
+                {federationPositions(skFederationLevel).map((entry) => (
                   <option key={entry} value={entry}>
                     {formatEnumLabel(entry)}
                   </option>
@@ -785,7 +788,7 @@ export default function SKOfficialAdmissionWizard({
               <p className="mt-1 text-sm text-foreground">{dateElected || "N/A"}</p>
               <p className="mt-1 text-xs text-muted">
                 {skFederationOfficer
-                  ? `SKFED: ${formatEnumLabel(skFederationPosition)}`
+                  ? `${federationLevelLabel(skFederationLevel, true)}: ${formatEnumLabel(skFederationPosition)}`
                   : "Not a SKFED officer"}
               </p>
             </div>

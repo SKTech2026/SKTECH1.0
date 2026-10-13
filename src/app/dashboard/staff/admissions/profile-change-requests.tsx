@@ -202,8 +202,9 @@ export default function ProfileChangeRequests() {
 
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
                 <span className={`rounded-full px-2.5 py-1 font-semibold ${faceCheckClass}`}>Face check: {request.faceCheckStatus}</span>
-                {request.faceMatchScore !== null ? <span className="text-slate-500">Score {request.faceMatchScore.toFixed(3)}</span> : null}
-                {request.faceCheckStatus !== "MATCHED" ? <span className="font-medium text-amber-700">Manual photo verification required</span> : null}
+                <span className="text-slate-500">ID photo face detection: {requested.photoQualityChecked ? (requested.photoFaceDetected ? "one clear face; quality passed" : "review needed") : "unavailable"}</span>
+                {request.faceMatchScore !== null ? <span className="text-slate-500">Reference similarity: {request.faceMatchScore.toFixed(3)} (advisory)</span> : null}
+                <span className="font-medium text-amber-700">Manual photo verification required before approval</span>
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
                 <button type="button" disabled={busy} onClick={() => void review(request.id, "APPROVE")} className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60">{busy ? "Saving..." : "Approve"}</button>

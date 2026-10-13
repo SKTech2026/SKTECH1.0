@@ -84,12 +84,21 @@ enum Sex {
 }
 
 enum SKFederationPosition {
+  PRESIDENT
   VICE_PRESIDENT
   SECRETARY
   TREASURER
   AUDITOR
   PUBLIC_RELATIONS_OFFICER
   SERGEANT_AT_ARMS
+  BOARD_MEMBER
+  COMMITTEE_CHAIRPERSON
+  MEMBER
+}
+
+enum SKFederationLevel {
+  MUNICIPAL
+  PROVINCIAL
 }
 
 enum OfficialOtpPurpose {
@@ -256,6 +265,7 @@ model SKOfficial {
   sitio                String?
   position             OfficialPosition?
   skFederationOfficer  Boolean               @default(false)
+  skFederationLevel    SKFederationLevel?
   skFederationPosition SKFederationPosition?
   dateElected          DateTime?
   termStart            DateTime

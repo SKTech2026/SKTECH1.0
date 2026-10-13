@@ -2,8 +2,10 @@ import {
   OfficialPosition,
   OfficialRole,
   SKFederationPosition,
+  SKFederationLevel,
   Sex,
 } from "@prisma/client";
+import { BARANGAY_POSITION_OPTIONS, SKFED_POSITION_OPTIONS } from "@/lib/sk-official-options";
 
 export type SKOfficialFormPayload = {
   firstName: string;
@@ -18,6 +20,7 @@ export type SKOfficialFormPayload = {
   sitio: string | null;
   position: OfficialPosition;
   skFederationOfficer: boolean;
+  skFederationLevel?: SKFederationLevel | null;
   skFederationPosition: SKFederationPosition | null;
   dateElected: string;
   termEnd?: string | null;
@@ -54,9 +57,9 @@ export type MunicipalityOption = {
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export const OFFICIAL_POSITION_OPTIONS = Object.values(OfficialPosition);
+export const OFFICIAL_POSITION_OPTIONS = BARANGAY_POSITION_OPTIONS;
 export const SEX_OPTIONS = Object.values(Sex);
-export const SKFED_POSITION_OPTIONS = Object.values(SKFederationPosition);
+export { SKFED_POSITION_OPTIONS };
 
 export function calculateAge(birthDate: string | Date | null | undefined): number | null {
   if (!birthDate) return null;
@@ -86,6 +89,14 @@ export function formatOfficialFullName(profile: {
 
 export function formatEnumLabel(value: string | null | undefined): string {
   if (!value) return "N/A";
+  const labels: Record<string, string> = {
+    SK_CHAIRPERSON: "SK Chairperson",
+    SK_COUNCILOR: "SK Kagawad",
+    SK_SECRETARY: "SK Secretary",
+    SK_TREASURER: "SK Treasurer",
+    SERGEANT_AT_ARMS: "Sergeant-at-Arms",
+  };
+  if (labels[value]) return labels[value];
   return value
     .toLowerCase()
     .split("_")
@@ -134,6 +145,12 @@ export function validateSKOfficialPayload(
   if (!payload.municipalityId.trim()) return "Municipality is required.";
   if (!payload.barangayId.trim()) return "Barangay is required.";
   if (!OFFICIAL_POSITION_OPTIONS.includes(payload.position)) return "Invalid position.";
+  if (payload.skFederationOfficer) {
+    if (!payload.skFederationLevel) return "SK Federation level is required for Federation Officers.";
+    if (!Object.values(SKFederationLevel).includes(payload.skFederationLevel)) return "Invalid SK Federation level.";
+  } else if (payload.skFederationLevel || payload.skFederationPosition) {
+    return "Federation level and position require a federation officer category.";
+  }
   if (payload.skFederationOfficer && !payload.skFederationPosition) {
     return "SKFED position is required for SK Federation Officers.";
   }

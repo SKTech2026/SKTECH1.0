@@ -2,6 +2,7 @@ import {
   OfficialPosition,
   ProfileChangeRequestStatus,
   Role,
+  SKFederationLevel,
   SKFederationPosition,
   Sex,
   UserStatus,
@@ -24,6 +25,7 @@ type RequestedChanges = {
   sex: Sex;
   position: OfficialPosition;
   skFederationOfficer: boolean;
+  skFederationLevel: SKFederationLevel | null;
   skFederationPosition: SKFederationPosition | null;
   municipalityId: string;
   municipality: string;
@@ -186,6 +188,7 @@ export async function PATCH(request: NextRequest) {
           position: changes.position,
           role: positionToLegacyRole(changes.position),
           skFederationOfficer: changes.skFederationOfficer,
+          skFederationLevel: changes.skFederationLevel,
           skFederationPosition: changes.skFederationPosition,
           dateElected: new Date(changes.dateElected),
           termStart: new Date(changes.dateElected),
