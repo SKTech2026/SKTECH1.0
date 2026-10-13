@@ -3,28 +3,90 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 
+type CameraDevice = { deviceId: string; label: string };
+
 export default function FacialRegistrationClient() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const [cameraDevices, setCameraDevices] = useState<CameraDevice[]>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState("");
   const [status, setStatus] = useState("Ready to start the camera.");
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [frames, setFrames] = useState<string[]>([]);
   const [complete, setComplete] = useState(false);
 
-  useEffect(() => () => streamRef.current?.getTracks().forEach((track) => track.stop()), []);
+  async function refreshCameras(preferredDeviceId = "") {
+    if (!navigator.mediaDevices?.enumerateDevices) return;
+    try {
+      const cameras = (await navigator.mediaDevices.enumerateDevices())
+        .filter((device) => device.kind === "videoinput")
+        .map((device, index) => ({
+          deviceId: device.deviceId,
+          label: device.label || `Camera ${index + 1}`,
+        }));
+      setCameraDevices(cameras);
+      setSelectedCameraId((current) => {
+        if (preferredDeviceId && cameras.some((camera) => camera.deviceId === preferredDeviceId)) {
+          return preferredDeviceId;
+        }
+        return current && cameras.some((camera) => camera.deviceId === current)
+          ? current
+          : cameras[0]?.deviceId ?? "";
+      });
+    } catch {
+      setCameraDevices([]);
+    }
+  }
+
+  useEffect(() => {
+    void refreshCameras();
+    const mediaDevices = navigator.mediaDevices;
+    if (!mediaDevices) return () => streamRef.current?.getTracks().forEach((track) => track.stop());
+    const handleDeviceChange = () => void refreshCameras();
+    mediaDevices.addEventListener?.("devicechange", handleDeviceChange);
+    return () => {
+      mediaDevices.removeEventListener?.("devicechange", handleDeviceChange);
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+    };
+  }, []);
 
   async function startCamera() {
     setStatus("Requesting camera access…");
     setPreview(null);
     setFrames([]);
     streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    setBusy(true);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: 640, height: 480 }, audio: false });
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error("Camera access is unavailable in this browser.");
+      }
+      const videoConstraints: MediaTrackConstraints = {
+        width: { ideal: 640 },
+        height: { ideal: 480 },
+        ...(selectedCameraId
+          ? { deviceId: { exact: selectedCameraId } }
+          : { facingMode: { ideal: "user" } }),
+      };
+      const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: false });
       streamRef.current = stream;
       if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play(); }
+      const activeDeviceId = stream.getVideoTracks()[0]?.getSettings().deviceId ?? "";
+      await refreshCameras(activeDeviceId);
       setStatus("Center your face. Blink and slowly turn your head during capture.");
-    } catch { setStatus("Camera unavailable or permission denied. Retry, or select a short video recorded on this device."); }
+    } catch (error) {
+      const name = error instanceof DOMException ? error.name : "";
+      if (name === "NotFoundError" || name === "OverconstrainedError") {
+        setStatus("Selected camera is unavailable. Choose another camera or upload a short video.");
+      } else if (name === "NotAllowedError" || name === "SecurityError") {
+        setStatus("Camera permission was denied. Allow camera access or upload a short video.");
+      } else {
+        setStatus("Camera unavailable. Retry, choose another camera, or upload a short video.");
+      }
+    } finally {
+      setBusy(false);
+    }
   }
 
   function capture(video: HTMLVideoElement) {
@@ -94,13 +156,24 @@ export default function FacialRegistrationClient() {
   return <main className="mx-auto max-w-2xl space-y-5 p-6">
     <h1 className="text-2xl font-semibold">Face registration</h1>
     <p>Use the camera or upload a short video of yourself blinking and slowly turning your head.</p>
-    <video ref={videoRef} autoPlay muted playsInline className="w-full rounded-lg bg-black" aria-label="Live camera preview" />
+    <video ref={videoRef} autoPlay muted playsInline style={{ transform: "none" }} className="w-full rounded-lg bg-black" aria-label="Live camera preview" />
     {preview && <Image src={preview} alt="Captured face preview" width={640} height={480} unoptimized className="max-h-64 rounded-lg" />}
     <p role="status" aria-live="polite">{status}</p>
     {!complete && <div className="flex flex-wrap gap-3">
+      <label className="block min-w-0 max-w-full text-sm">Camera
+        <select value={selectedCameraId} disabled={busy} onChange={(event) => {
+          streamRef.current?.getTracks().forEach((track) => track.stop());
+          streamRef.current = null;
+          setSelectedCameraId(event.target.value);
+          setStatus("Camera selection changed. Start the camera to apply it.");
+        }} className="mt-1 block min-h-10 w-full min-w-0 max-w-full rounded border border-slate-400 bg-white px-2 text-slate-900">
+          <option value="">Default camera</option>
+          {cameraDevices.map((camera) => <option key={camera.deviceId} value={camera.deviceId}>{camera.label}</option>)}
+        </select>
+      </label>
       <button type="button" disabled={busy} onClick={startCamera} className="rounded bg-blue-700 px-4 py-2 text-white">Start or retry camera</button>
       <button type="button" disabled={busy || !streamRef.current} onClick={captureCamera} className="rounded bg-blue-700 px-4 py-2 text-white">Capture movement</button>
-      <label className="rounded border px-4 py-2">Upload short video<input type="file" accept="video/*" className="block text-sm" disabled={busy} onChange={(event) => { const file = event.target.files?.[0]; if (file) void loadVideo(file); }} /></label>
+      <label className="block min-w-0 max-w-full rounded border px-4 py-2">Upload short video<input type="file" accept="video/*" className="block w-full min-w-0 max-w-full text-sm" disabled={busy} onChange={(event) => { const file = event.target.files?.[0]; if (file) void loadVideo(file); }} /></label>
       <button type="button" disabled={busy || frames.length < 2} onClick={submit} className="rounded bg-green-700 px-4 py-2 text-white">Submit face registration</button>
     </div>}
     <p className="text-sm">Keep your face centered in good light. Blurry, dark, multiple-face, and static recordings are rejected. Your preview clears when you leave.</p>
