@@ -42,12 +42,20 @@ RATE_LIMIT_WINDOW_SECONDS = 60
 MAX_FAILED_ATTEMPTS_PER_WINDOW = 3
 
 SERVICE_DIR = Path(__file__).resolve().parent
-# Load project env first, then allow ai-service/.env to override service-specific values.
-load_dotenv(SERVICE_DIR.parent / ".env")
-load_dotenv(SERVICE_DIR / ".env", override=True)
+# The service reads only its own local file; deployed variables always win.
+load_dotenv(SERVICE_DIR / ".env")
+
+DEPLOYED = bool(
+    os.getenv("RAILWAY_ENVIRONMENT_ID")
+    or os.getenv("RAILWAY_PROJECT_ID")
+    or os.getenv("RENDER")
+    or os.getenv("NODE_ENV") == "production"
+)
 
 FACE_DETECTION_MODEL = os.getenv("AI_FACE_MODEL", "hog")
 FACE_SECRET = (os.getenv("FACE_SECRET") or "").strip()
+if DEPLOYED and not FACE_SECRET:
+    sys.exit("FACE_SECRET is required in production.")
 MATCH_MARGIN = float(os.getenv("AI_MATCH_MARGIN", str(DEFAULT_MATCH_MARGIN)))
 MIN_FACE_AREA_RATIO = float(
     os.getenv("AI_MIN_FACE_AREA_RATIO", str(DEFAULT_MIN_FACE_AREA_RATIO))
@@ -158,7 +166,7 @@ LOGGER = setup_logger()
 
 FERNET_KEY = os.getenv("AI_EMBEDDING_FERNET_KEY")
 if not FERNET_KEY:
-    if os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RENDER") or os.getenv("NODE_ENV") == "production":
+    if DEPLOYED:
         LOGGER.error("AI_EMBEDDING_FERNET_KEY is required in production.")
         sys.exit("AI_EMBEDDING_FERNET_KEY is required in production.")
     FERNET_KEY = Fernet.generate_key().decode("utf-8")
@@ -166,6 +174,8 @@ if not FERNET_KEY:
 
 FERNET = Fernet(FERNET_KEY.encode("utf-8"))
 DATABASE_URL = os.getenv("DATABASE_URL")
+if DEPLOYED and not DATABASE_URL:
+    sys.exit("DATABASE_URL is required in production.")
 LOGGER.info("[FACE] database configured: %s", "yes" if DATABASE_URL else "no")
 
 MAX_WORKERS = int(os.getenv("AI_MAX_WORKERS", "4"))

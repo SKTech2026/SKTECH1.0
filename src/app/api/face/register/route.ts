@@ -68,11 +68,15 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     if (process.env.NODE_ENV !== "production") console.error("POST /api/face/register error:", error);
+    const unavailable = error instanceof Error &&
+      /AI service URL is not configured|Unable to reach AI facial service|AI facial service authentication failed|AI facial service is temporarily unavailable|endpoint was not found|abort/i.test(error.message);
     return NextResponse.json(
       {
-        error: "Face registration failed. Check lighting, use one face, and show a blink or slow head movement.",
+        error: unavailable
+          ? "Face verification is temporarily unavailable. Please try again later."
+          : "Face registration failed. Check lighting, use one face, and show a blink or slow head movement.",
       },
-      { status: 500 },
+      { status: unavailable ? 503 : 422 },
     );
   }
 }

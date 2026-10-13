@@ -110,6 +110,12 @@ async function postToAiService<T>(
         };
 
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        throw new Error("AI facial service authentication failed.");
+      }
+      if (response.status >= 500) {
+        throw new Error("AI facial service is temporarily unavailable.");
+      }
       const detail = (body.detail ?? body.message ?? "").trim();
       const notFoundMessage =
         response.status === 404

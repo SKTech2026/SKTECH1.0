@@ -148,14 +148,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const [proofFile, aiResponse] = await Promise.all([
-      saveAdmissionProof(payload.proofUpload, session.user.id),
-      registerFaceEmbedding({
-        userId: session.user.id,
-        imageBase64: payload.faceCapture.imageBase64,
-        livenessFrames: payload.faceCapture.livenessFrames,
-      }),
-    ]);
+    const aiResponse = await registerFaceEmbedding({
+      userId: session.user.id,
+      imageBase64: payload.faceCapture.imageBase64,
+      livenessFrames: payload.faceCapture.livenessFrames,
+    });
+    const proofFile = await saveAdmissionProof(payload.proofUpload, session.user.id);
 
     const now = new Date();
 
@@ -271,12 +269,15 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     if (process.env.NODE_ENV !== "production") console.error("POST /api/official-admission error:", error);
+    const unavailable = error instanceof Error &&
+      /AI service URL is not configured|Unable to reach AI facial service|AI facial service authentication failed|AI facial service is temporarily unavailable|endpoint was not found|abort/i.test(error.message);
     return NextResponse.json(
       {
-        error:
-          error instanceof Error ? error.message : "Failed to submit admission profile.",
+        error: unavailable
+          ? "Face verification is temporarily unavailable. Please try submitting again later."
+          : "Failed to submit admission profile. Please retry or contact support.",
       },
-      { status: 500 },
+      { status: unavailable ? 503 : 500 },
     );
   }
 }

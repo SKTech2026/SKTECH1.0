@@ -367,7 +367,6 @@ export async function POST(request: NextRequest) {
           data: {
             name: formatOfficialFullName(payload),
             role: Role.OFFICIAL,
-            status: UserStatus.APPROVED,
             municipalityOfficerId: municipality.id,
           },
           select: { id: true },
@@ -379,21 +378,19 @@ export async function POST(request: NextRequest) {
           name: formatOfficialFullName(payload),
           email: normalizedEmail || null,
           role: Role.OFFICIAL,
-          status: UserStatus.APPROVED,
+          status: UserStatus.PENDING,
           municipalityOfficerId: municipality.id,
         },
         select: { id: true },
       });
     });
 
-    const [proofFile, aiResponse] = await Promise.all([
-      saveAdmissionProof(payload.proofUpload, linkedUser.id),
-      registerFaceEmbedding({
-        userId: linkedUser.id,
-        imageBase64: payload.faceCapture.imageBase64,
-        livenessFrames: payload.faceCapture.livenessFrames,
-      }),
-    ]);
+    const aiResponse = await registerFaceEmbedding({
+      userId: linkedUser.id,
+      imageBase64: payload.faceCapture.imageBase64,
+      livenessFrames: payload.faceCapture.livenessFrames,
+    });
+    const proofFile = await saveAdmissionProof(payload.proofUpload, linkedUser.id);
 
     const now = new Date();
 
@@ -505,8 +502,12 @@ export async function POST(request: NextRequest) {
       { status: 201 },
     );
   } catch (error) {
+    if (error instanceof Error &&
+        /AI service URL is not configured|Unable to reach AI facial service|AI facial service authentication failed|AI facial service is temporarily unavailable|endpoint was not found|abort/i.test(error.message)) {
+      return NextResponse.json({ error: "Face verification is temporarily unavailable. Please try again later." }, { status: 503 });
+    }
     if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ error: process.env.NODE_ENV === "production" ? "Unable to create official." : error.message }, { status: 400 });
     }
 
     if (process.env.NODE_ENV !== "production") console.error("POST /api/officials error:", error);
