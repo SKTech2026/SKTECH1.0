@@ -8,6 +8,7 @@ type CameraDevice = { deviceId: string; label: string };
 export default function FacialRegistrationClient() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const previewUrlRef = useRef<string | null>(null);
   const [cameraDevices, setCameraDevices] = useState<CameraDevice[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState("");
   const [status, setStatus] = useState("Ready to start the camera.");
@@ -48,12 +49,30 @@ export default function FacialRegistrationClient() {
     return () => {
       mediaDevices.removeEventListener?.("devicechange", handleDeviceChange);
       streamRef.current?.getTracks().forEach((track) => track.stop());
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
     };
   }, []);
 
+  function clearPreview() {
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    previewUrlRef.current = null;
+    setPreview(null);
+  }
+
+  function showPreview(dataUrl: string) {
+    clearPreview();
+    const [metadata, encoded] = dataUrl.split(",", 2);
+    const mimeType = metadata.match(/^data:([^;]+)/)?.[1] ?? "image/jpeg";
+    const binary = atob(encoded ?? "");
+    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    const previewUrl = URL.createObjectURL(new Blob([bytes], { type: mimeType }));
+    previewUrlRef.current = previewUrl;
+    setPreview(previewUrl);
+  }
+
   async function startCamera() {
     setStatus("Requesting camera access…");
-    setPreview(null);
+    clearPreview();
     setFrames([]);
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
@@ -108,7 +127,7 @@ export default function FacialRegistrationClient() {
       await new Promise((resolve) => setTimeout(resolve, 450));
     }
     setFrames(samples);
-    setPreview(samples[0]);
+    showPreview(samples[0]);
     setBusy(false);
     setStatus("Review the preview, then submit. Retake if your face is unclear.");
   }
@@ -132,7 +151,7 @@ export default function FacialRegistrationClient() {
         samples.push(capture(video));
       }
       setFrames(samples);
-      setPreview(samples[0]);
+      showPreview(samples[0]);
       setStatus("Review the preview, then submit. Blink or head movement must be visible in the video.");
     } catch (error) { setStatus(error instanceof Error ? error.message : "Could not read video."); }
     finally { URL.revokeObjectURL(url); setBusy(false); }
