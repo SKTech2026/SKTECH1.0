@@ -32,7 +32,8 @@ export async function getActiveInvitation(code: string) {
       createdBy: { select: { role: true, status: true, official: { select: { role: true, position: true, status: true, admissionStatus: true, municipalityId: true, barangayId: true } } } },
     },
   });
-  const official = invitation?.createdBy.official;
-  if (!invitation?.active || invitation.expiresAt <= new Date() || invitation.createdBy.role !== Role.OFFICIAL || invitation.createdBy.status !== UserStatus.APPROVED || !official || official.role !== OfficialRole.CHAIRPERSON || official.position !== OfficialPosition.SK_CHAIRPERSON || official.status !== OfficialStatus.ACTIVE || official.admissionStatus !== AdmissionStatus.APPROVED || official.municipalityId !== invitation.municipalityId || official.barangayId !== invitation.barangayId || invitation.barangay.municipalityId !== invitation.municipalityId) return null;
+  if (!invitation?.active || !invitation.createdBy || invitation.expiresAt <= new Date()) return null;
+  const official = invitation.createdBy.official;
+  if (invitation.createdBy.role !== Role.OFFICIAL || invitation.createdBy.status !== UserStatus.APPROVED || !official || official.role !== OfficialRole.CHAIRPERSON || official.position !== OfficialPosition.SK_CHAIRPERSON || official.status !== OfficialStatus.ACTIVE || official.admissionStatus !== AdmissionStatus.APPROVED || official.municipalityId !== invitation.municipalityId || official.barangayId !== invitation.barangayId || invitation.barangay.municipalityId !== invitation.municipalityId) return null;
   return invitation;
 }

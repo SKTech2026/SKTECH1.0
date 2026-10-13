@@ -32,11 +32,18 @@ export function buildResetPasswordUrl(token: string) {
   return `${getAppBaseUrl()}/reset-password?token=${encodeURIComponent(token)}`;
 }
 
-export async function sendPasswordResetEmail(email: string, resetUrl: string) {
+export async function sendPasswordResetEmail(
+  email: string,
+  resetUrl: string,
+  requestedByAdmin = false,
+) {
+  const introduction = requestedByAdmin
+    ? "An administrator updated the access settings for your SKTECH account. Set a new password using the secure link below."
+    : "Use this secure link to set a new password for your SKTECH account.";
   await sendEmail({
     to: email,
-    subject: "Reset your SKTECH Official password",
-    text: `Hello,\n\nUse this link to reset your SKTECH Official password:\n${resetUrl}\n\nThis link expires in 1 hour and can only be used once. If you did not request this reset, you can ignore this email.\n\nSKTECH is a capstone project prototype system.`,
+    subject: "Set a new password for your SKTECH account",
+    text: `Hello,\n\n${introduction}\n${resetUrl}\n\nThis link expires in 1 hour and can only be used once. If you did not expect this email, contact SKTECH support.`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; color: #0f172a;">
         <div style="background: linear-gradient(135deg, #0b2b6a, #1452d9); color: #ffffff; padding: 20px; border-radius: 12px 12px 0 0;">
@@ -45,10 +52,10 @@ export async function sendPasswordResetEmail(email: string, resetUrl: string) {
         </div>
         <div style="border: 1px solid #dbe4ff; border-top: 0; padding: 20px; border-radius: 0 0 12px 12px; background: #f8fbff;">
           <p style="margin: 0 0 16px;">Hello,</p>
-          <p style="margin: 0 0 16px;">Use the button below to create a new password for your SKTECH Official account.</p>
+          <p style="margin: 0 0 16px;">${introduction}</p>
           <p style="margin: 0 0 20px;"><a href="${resetUrl}" style="display: inline-block; border-radius: 8px; background: #1452d9; color: #ffffff; padding: 12px 18px; text-decoration: none; font-weight: 700;">Reset Password</a></p>
           <p style="margin: 0 0 10px; font-size: 13px; color: #334155;">This link expires in 1 hour and can only be used once.</p>
-          <p style="margin: 0; font-size: 13px; color: #334155;">If you did not request this reset, ignore this email. SKTECH is a capstone project prototype system.</p>
+          <p style="margin: 0; font-size: 13px; color: #334155;">If you did not expect this email, contact SKTECH support.</p>
         </div>
       </div>
     `,

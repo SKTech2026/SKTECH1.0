@@ -193,8 +193,8 @@ export async function getAuditTrail(query: AuditQuery) {
       id: log.id,
       timestamp: log.timestamp,
       ...describeAuditAction(log.action, log.model),
-      currentRole: log.user.role,
-      currentMunicipality: log.user.municipalityAsOfficer?.name ?? log.user.municipalityAsPresident?.name ?? null,
+      currentRole: log.user?.role ?? "DELETED",
+      currentMunicipality: log.user?.municipalityAsOfficer?.name ?? log.user?.municipalityAsPresident?.name ?? null,
     })),
   };
 }

@@ -386,13 +386,13 @@ model KKInvitation {
   code           String   @unique
   municipalityId String
   barangayId     String
-  createdById    String
+  createdById    String?
   active         Boolean  @default(true)
   expiresAt      DateTime
   createdAt      DateTime @default(now())
   municipality   Municipality @relation(fields: [municipalityId], references: [id])
   barangay       Barangay @relation(fields: [barangayId], references: [id])
-  createdBy      User @relation(fields: [createdById], references: [id])
+  createdBy      User? @relation(fields: [createdById], references: [id], onDelete: SetNull)
   profiles       KKMemberProfile[]
   otps           KKRegistrationOTP[]
 
@@ -474,7 +474,7 @@ model KKCertificate {
   title             String
   certificateType   KKCertificateType
   description       String?
-  issuedByUserId    String
+  issuedByUserId    String?
   issuedAt          DateTime           @default(now())
   status            KKCertificateStatus @default(ISSUED)
   verificationCode  String             @unique
@@ -483,7 +483,7 @@ model KKCertificate {
 
   kkMemberProfile KKMemberProfile @relation(fields: [kkMemberProfileId], references: [id], onDelete: Cascade)
   event           Event?          @relation(fields: [eventId], references: [id], onDelete: SetNull)
-  issuedBy        User            @relation("IssuedCertificates", fields: [issuedByUserId], references: [id], onDelete: Restrict)
+  issuedBy        User?           @relation("IssuedCertificates", fields: [issuedByUserId], references: [id], onDelete: SetNull)
 
   @@index([kkMemberProfileId, issuedAt])
   @@index([status, issuedAt])
@@ -722,10 +722,10 @@ model AuditLog {
   action    String
   model     String
   recordId  String
-  userId    String
+  userId    String?
   timestamp DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id])
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
 
 model Dataset {

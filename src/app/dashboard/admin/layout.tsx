@@ -44,6 +44,12 @@ const adminItems: RoleShellItem[] = [
     icon: "userCog",
   },
   {
+    href: "/dashboard/admin/account-management",
+    label: "Account Management",
+    description: "SK Official and KK Member accounts",
+    icon: "users",
+  },
+  {
     href: "/dashboard/admin/archive",
     label: "Archive Bin",
     description: "Review terminated records",
@@ -121,6 +127,7 @@ const desktopItems: RoleShellItem[] = [
   { href: "/dashboard/admin", label: "Dashboard", description: "System overview", icon: "layoutDashboard" },
   { href: "/dashboard/admin/analytics", label: "Overall Analytics", description: "Reports and insights", icon: "barChart3", activePaths: ["/dashboard/admin/kk-analytics"] },
   { href: "/dashboard/admin/user-access", label: "User & Access Management", description: "Staff and municipalities", icon: "userCog", activePaths: ["/dashboard/admin/staff-admission", "/dashboard/admin/staff-access", "/dashboard/admin/municipalities", "/dashboard/admin/archive"] },
+  { href: "/dashboard/admin/account-management", label: "Account Management", description: "SK Official and KK Member accounts", icon: "users" },
   { href: "/dashboard/admin/profiling", label: "SK Profiling", description: "Official records", icon: "users" },
   { href: "/dashboard/admin/id-management", label: "ID Management", description: "Production and scanning", icon: "badgeCheck", activePaths: ["/dashboard/admin/id-production", "/dashboard/admin/id-template", "/dashboard/admin/id-scanning"] },
   { href: "/dashboard/admin/events-attendance", label: "Events & Attendance", description: "Events and feeds", icon: "calendarDays", activePaths: ["/dashboard/admin/events", "/dashboard/admin/feed", "/dashboard/admin/public-news"] },

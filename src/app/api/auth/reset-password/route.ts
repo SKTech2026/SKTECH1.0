@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       !resetToken ||
       resetToken.usedAt ||
       resetToken.expiresAt <= new Date() ||
-      resetToken.user.role !== Role.OFFICIAL
+      resetToken.user.role !== Role.OFFICIAL && resetToken.user.role !== Role.KK_MEMBER
     ) {
       return NextResponse.json({ error: "This reset link is invalid or expired." }, { status: 400 });
     }
