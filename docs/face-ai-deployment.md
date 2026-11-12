@@ -13,7 +13,7 @@ Set secrets in Railway service variables. Do not commit `.env` files. Railway en
 | Next.js | `NEXTAUTH_SECRET` | Stable, independent authentication secret. |
 | Next.js | `AI_SERVICE_URL` | URL of the deployed FastAPI service, preferably its Railway private address when both services share a project. |
 | Next.js | `FACE_SECRET` | Shared request secret, identical to the AI service's value. |
-| Next.js | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Private admission proof and Official photo storage. Keep the service role key server side. |
+| Next.js | `RAILWAY_BUCKET_ENDPOINT`, `RAILWAY_BUCKET_S3_NAME`, `RAILWAY_BUCKET_ACCESS_KEY_ID`, `RAILWAY_BUCKET_SECRET_ACCESS_KEY`, `RAILWAY_BUCKET_REGION` | Private S3-compatible object storage. Map `RAILWAY_BUCKET_S3_NAME` from the Railway Bucket's `BUCKET` variable, not its display name. Keep credentials server side. |
 | Next.js | Email provider variables | Configure one provider below for registration OTP and review email. |
 | AI service | `DATABASE_URL` | Production PostgreSQL connection for registered face lookup. |
 | AI service | `FACE_SECRET` | Required in production; must match the Next.js value. |
@@ -30,7 +30,7 @@ The app also accepts `FACE_AI_BASE_URL` as a fallback when `AI_SERVICE_URL` is a
 ## Release order and failure behavior
 
 1. Verify both services have the required variables, and that `AI_SERVICE_URL` resolves from the Next.js service to the FastAPI service. Keep `FACE_SECRET` and the encryption key private and stable. The AI Docker build excludes `.env`, virtual environments, logs, and cached bytecode.
-2. Configure the Next.js service's single controlled pre-deploy step as `npm run prisma:migrate:deploy`. This runs `prisma migrate deploy` with that service's deployment environment. Confirm migration `20261013010000_add_sk_federation_levels` is included. Do not run a database reset or apply SQL manually to production. The AI service does not run migrations.
+2. The repository has no automatic pre-deploy migration step. Before separately approved manual migrations, verify that `DATABASE_URL` targets the isolated `sktech-fresh` Railway PostgreSQL service and not the production Supabase database. Confirm migration `20261013010000_add_sk_federation_levels` is included. Do not run a database reset or apply SQL manually to production. The AI service does not run migrations.
 3. Deploy the AI service and check `/health`. Then deploy the Next.js app. If either deployment fails, inspect service logs and variables without copying secret values into tickets or chat.
 4. If the AI service is unreachable, face registration returns a safe temporary-unavailable message and does not mark the face registered. ID photo inspection records an unavailable advisory result; Staff review remains available and requires a human decision. A similarity result never auto-approves an admission or profile change.
 

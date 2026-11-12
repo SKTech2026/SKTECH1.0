@@ -741,7 +741,7 @@ export default function HomePage() {
                 <ShieldCheck className="h-7 w-7 shrink-0 text-[#1452d9]" />
               </div>
               <div className="mt-7 flex flex-wrap gap-3">
-                {["Next.js", "PostgreSQL", "Supabase", "AWS Rekognition", "PWA", "QR Technology"].map(
+                {["Next.js", "PostgreSQL", "Railway Buckets", "AWS Rekognition", "PWA", "QR Technology"].map(
                   (technology) => (
                     <span
                       key={technology}

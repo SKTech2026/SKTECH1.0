@@ -1,12 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
 
 import { AdmissionProofUploadPayload } from "@/lib/sk-official";
-import {
-  createSupabaseAdminClient,
-  hasSupabaseAdminConfig,
-} from "@/utils/supabase/admin";
+import { hasFileSignature } from "@/lib/file-signatures";
+import { uploadObject } from "@/lib/object-storage";
 
 export const ADMISSION_PROOFS_BUCKET = "admission-proofs";
 
@@ -40,34 +36,13 @@ function normalizePrefix(prefix: string): string {
   return prefix.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 50);
 }
 
-async function ensureAdmissionProofsBucket() {
-  const supabase = createSupabaseAdminClient();
-  const { error } = await supabase.storage.getBucket(ADMISSION_PROOFS_BUCKET);
-
-  if (!error) {
-    return supabase;
-  }
-
-  const { error: createError } = await supabase.storage.createBucket(
-    ADMISSION_PROOFS_BUCKET,
-    {
-      public: false,
-    },
-  );
-
-  if (createError && !createError.message.toLowerCase().includes("already exists")) {
-    throw new Error(`Unable to prepare admission proof storage: ${createError.message}`);
-  }
-
-  return supabase;
-}
-
 export async function saveAdmissionProof(
   upload: AdmissionProofUploadPayload,
   prefix: string,
 ): Promise<{ proofDocumentUrl: string; proofDocumentName: string; proofDocumentType: string }> {
   const parsed = parseProofDataUrl(upload.dataUrl);
-  const mimeType = upload.mimeType || parsed.mimeType;
+  const mimeType = parsed.mimeType;
+  if (upload.mimeType && upload.mimeType !== mimeType) throw new Error("Proof file type does not match its encoding.");
 
   if (!ALLOWED_PROOF_MIME_TYPES.has(mimeType)) {
     throw new Error("Unsupported proof file type. Use JPG, PNG, WEBP, or PDF.");
@@ -80,43 +55,19 @@ export async function saveAdmissionProof(
   if (buffer.length > MAX_PROOF_BYTES) {
     throw new Error("Proof file is too large. Maximum size is 6MB.");
   }
+  if (!hasFileSignature(buffer, mimeType)) {
+    throw new Error("Proof file content does not match its declared type.");
+  }
 
   const extension = MIME_EXTENSION_MAP[mimeType] ?? "bin";
   const cleanPrefix = normalizePrefix(prefix);
   const sourceName = sanitizeFileName(upload.fileName);
   const fileName = `${cleanPrefix}-${Date.now()}-${randomUUID().slice(0, 8)}.${extension}`;
 
-  if (hasSupabaseAdminConfig()) {
-    const supabase = await ensureAdmissionProofsBucket();
-    const objectPath = `${cleanPrefix}/${fileName}`;
-    const { error } = await supabase.storage
-      .from(ADMISSION_PROOFS_BUCKET)
-      .upload(objectPath, buffer, {
-        contentType: mimeType,
-        upsert: false,
-      });
-
-    if (error) {
-      throw new Error(`Unable to upload proof of office: ${error.message}`);
-    }
-
-    return {
-      proofDocumentUrl: `/api/admission-proofs?path=${encodeURIComponent(objectPath)}`,
-      proofDocumentName: sourceName,
-      proofDocumentType: mimeType,
-    };
-  }
-
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("Supabase Storage is not configured for admission proof uploads.");
-  }
-
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "admission-proofs");
-  await mkdir(uploadDir, { recursive: true });
-  await writeFile(path.join(uploadDir, fileName), buffer);
-
+  const objectPath = `${cleanPrefix}/${fileName}`;
+  await uploadObject(ADMISSION_PROOFS_BUCKET, objectPath, buffer, mimeType);
   return {
-    proofDocumentUrl: `/uploads/admission-proofs/${fileName}`,
+    proofDocumentUrl: `/api/admission-proofs?path=${encodeURIComponent(objectPath)}`,
     proofDocumentName: sourceName,
     proofDocumentType: mimeType,
   };

@@ -10,8 +10,11 @@ This project deploys as:
 Set these in the **Next.js app service** environment variables:
 
 - `DATABASE_URL` (PostgreSQL connection string)
-- `SUPABASE_URL` (Supabase project URL for server-side Storage uploads)
-- `SUPABASE_SERVICE_ROLE_KEY` (server-only key for private admission proof uploads)
+- `RAILWAY_BUCKET_ENDPOINT` (HTTPS S3-compatible endpoint)
+- `RAILWAY_BUCKET_S3_NAME` (actual S3 bucket name; map from the Railway Bucket `BUCKET` variable, not its display name)
+- `RAILWAY_BUCKET_ACCESS_KEY_ID` (server-only bucket access key)
+- `RAILWAY_BUCKET_SECRET_ACCESS_KEY` (server-only bucket secret)
+- `RAILWAY_BUCKET_REGION` (bucket region; optional when the provider accepts `auto`)
 - `NEXTAUTH_URL` (your public app URL, e.g. `https://sktech10-production.up.railway.app`)
 - `NEXTAUTH_SECRET` (long random secret)
 - `GOOGLE_CLIENT_ID`
@@ -19,6 +22,8 @@ Set these in the **Next.js app service** environment variables:
 - `AI_SERVICE_URL` (public URL of the deployed FastAPI AI service, e.g. `https://sktech-ai-production.up.railway.app`)
 - `FACE_SECRET` (shared secret, must match AI service)
 - Optional: `NEXT_PUBLIC_BASE_URL` (public base URL; if omitted, app resolves from request host)
+
+Create one private Railway Bucket for uploaded objects. Map the app's `RAILWAY_BUCKET_S3_NAME` to the bucket service's `BUCKET` variable; Railway's `RAILWAY_BUCKET_NAME` is a display name and must not be used for S3 requests. Copy the actual S3 endpoint, region, and credentials into the other variables above. The application separates proofs, official photos, feed images, public news, chat attachments, and ID template assets by key prefix. Objects remain private; the existing application routes check database references and access rights before serving them. Public news images are served through the published-news route. Do not use Railway container storage for uploads.
 
 Set these in the **AI service** environment variables:
 
@@ -30,6 +35,8 @@ Set these in the **AI service** environment variables:
 ## 2) Prisma Migration (Production-Safe)
 
 Never use `prisma migrate dev` in production.
+
+This repository does not run migrations automatically during Railway deployment. Before any manual migration, verify that the selected environment is `sktech-fresh` and `DATABASE_URL` points to its isolated Railway PostgreSQL service, not the existing production Supabase database. Run migrations only after separate approval.
 
 Use:
 

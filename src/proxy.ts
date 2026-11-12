@@ -4,7 +4,6 @@ import { getToken } from "next-auth/jwt";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { createClient as createSupabaseMiddlewareClient } from "@/utils/supabase/middleware";
 import { KK_PORTAL_PUBLIC_URL, MAIN_PUBLIC_URL } from "@/lib/public-domains";
 
 type AppRole = "ADMIN" | "STAFF" | "OFFICIAL" | "KK_MEMBER";
@@ -81,12 +80,8 @@ export async function proxy(request: NextRequest) {
   }
 
   const roleRule = matchRoleRule(pathname);
-  const { supabase, getResponse } = createSupabaseMiddlewareClient(request);
-
-  await supabase.auth.getUser();
-
   if (!roleRule) {
-    return getResponse();
+    return NextResponse.next();
   }
 
   const token = await getToken({
@@ -149,7 +144,7 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL(roleRule.prefix, request.url));
     }
 
-    return getResponse();
+    return NextResponse.next();
   }
 
   if (roleRule.requiresApproved && status !== "APPROVED") {
@@ -157,7 +152,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(`/login?error=${errorCode}`, request.url));
   }
 
-  return getResponse();
+  return NextResponse.next();
 }
 
 export const config = {

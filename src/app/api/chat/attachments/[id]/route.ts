@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { ChatAuthError, requireChatUser, requireConversationAccess } from "@/lib/chat-auth";
 import { CHAT_ATTACHMENTS_BUCKET } from "@/lib/chat-storage";
 import { prisma } from "@/lib/db";
-import { createSupabaseAdminClient } from "@/utils/supabase/admin";
+import { downloadObject } from "@/lib/object-storage";
 
 export const dynamic = "force-dynamic";
 
@@ -52,12 +52,10 @@ export async function GET(_request: Request, context: RouteContext) {
       throw new ChatAuthError("Attachment is not available.", 403);
     }
 
-    const supabase = createSupabaseAdminClient();
-    const { data, error } = await supabase.storage
-      .from(CHAT_ATTACHMENTS_BUCKET)
-      .download(attachment.objectPath);
-
-    if (error || !data) {
+    let data: Blob;
+    try {
+      data = await downloadObject(CHAT_ATTACHMENTS_BUCKET, attachment.objectPath);
+    } catch {
       return NextResponse.json({ error: "Attachment not found." }, { status: 404 });
     }
 

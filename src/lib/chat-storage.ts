@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
-import { createSupabaseAdminClient } from "@/utils/supabase/admin";
+import { uploadObject, deleteObject } from "@/lib/object-storage";
+import { hasFileSignature, hasOfficeContainerSignature } from "@/lib/file-signatures";
 
 export const CHAT_ATTACHMENTS_BUCKET = "sktech-chat-documents";
 export const MAX_CHAT_ATTACHMENT_BYTES = 10 * 1024 * 1024;
@@ -49,11 +50,9 @@ function assertAllowedAttachment(file: File) {
     throw new Error("Unsupported attachment type.");
   }
 
-  if (
-    file.type &&
-    !allowedMimeTypes.includes(file.type) &&
-    !OFFICE_EXTENSIONS_WITH_UNRELIABLE_MIME.has(extension)
-  ) {
+  const isOffice = OFFICE_EXTENSIONS_WITH_UNRELIABLE_MIME.has(extension);
+  if (file.type && !allowedMimeTypes.includes(file.type) &&
+      !(isOffice && file.type === "application/octet-stream")) {
     throw new Error("Attachment type does not match the file extension.");
   }
 
@@ -68,37 +67,8 @@ function assertAllowedAttachment(file: File) {
   return {
     fileName,
     extension,
-    mimeType: file.type || allowedMimeTypes[0],
+    mimeType: allowedMimeTypes[0],
   };
-}
-
-async function ensureChatAttachmentsBucket() {
-  const supabase = createSupabaseAdminClient();
-  const { data: bucket, error } = await supabase.storage.getBucket(CHAT_ATTACHMENTS_BUCKET);
-
-  if (!error && bucket) {
-    if (bucket.public) {
-      throw new Error("Chat attachment storage must use a private bucket.");
-    }
-    return supabase;
-  }
-
-  const { error: createError } = await supabase.storage.createBucket(
-    CHAT_ATTACHMENTS_BUCKET,
-    {
-      public: false,
-      fileSizeLimit: MAX_CHAT_ATTACHMENT_BYTES,
-      allowedMimeTypes: Array.from(
-        new Set(Object.values(CHAT_ATTACHMENT_MIME_TYPES).flat()),
-      ),
-    },
-  );
-
-  if (createError && !createError.message.toLowerCase().includes("already exists")) {
-    throw new Error(`Unable to prepare chat attachment storage: ${createError.message}`);
-  }
-
-  return supabase;
 }
 
 export async function uploadChatAttachment(
@@ -109,6 +79,12 @@ export async function uploadChatAttachment(
 ) {
   const metadata = assertAllowedAttachment(file);
   const fileBuffer = Buffer.from(await file.arrayBuffer());
+  const signatureMatches = OFFICE_EXTENSIONS_WITH_UNRELIABLE_MIME.has(metadata.extension)
+    ? hasOfficeContainerSignature(fileBuffer, metadata.extension)
+    : hasFileSignature(fileBuffer, metadata.mimeType);
+  if (!signatureMatches) {
+    throw new Error("Attachment content does not match its file type.");
+  }
   const objectPath = [
     normalizePathSegment(municipalityId),
     normalizePathSegment(conversationId),
@@ -116,17 +92,7 @@ export async function uploadChatAttachment(
     `${randomUUID()}-${metadata.fileName}`,
   ].join("/");
 
-  const supabase = await ensureChatAttachmentsBucket();
-  const { error } = await supabase.storage
-    .from(CHAT_ATTACHMENTS_BUCKET)
-    .upload(objectPath, fileBuffer, {
-      contentType: metadata.mimeType,
-      upsert: false,
-    });
-
-  if (error) {
-    throw new Error(`Unable to upload chat attachment: ${error.message}`);
-  }
+  await uploadObject(CHAT_ATTACHMENTS_BUCKET, objectPath, fileBuffer, metadata.mimeType);
 
   return {
     objectPath,
@@ -137,6 +103,5 @@ export async function uploadChatAttachment(
 }
 
 export async function deleteChatAttachmentObject(objectPath: string) {
-  const supabase = createSupabaseAdminClient();
-  await supabase.storage.from(CHAT_ATTACHMENTS_BUCKET).remove([objectPath]);
+  await deleteObject(CHAT_ATTACHMENTS_BUCKET, objectPath);
 }

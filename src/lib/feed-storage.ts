@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
-import { createSupabaseAdminClient } from "@/utils/supabase/admin";
+import { uploadObject, downloadObject, deleteObject } from "@/lib/object-storage";
+import { hasFileSignature } from "@/lib/file-signatures";
 
 export const INTERNAL_FEED_BUCKET = "sktech-feed-images";
 export const PUBLIC_NEWS_BUCKET = "sktech-public-news";
@@ -37,54 +38,23 @@ export function resolveFeedImageMimeType(storedMimeType: string | null, objectPa
   return null;
 }
 
-async function ensureBucket(bucketName: string, isPublic: boolean) {
-  const supabase = createSupabaseAdminClient();
-  const { data: bucket, error } = await supabase.storage.getBucket(bucketName);
-  if (!error && bucket) {
-    if (bucket.public !== isPublic) {
-      throw new Error(`Storage bucket ${bucketName} has an unsafe visibility setting.`);
-    }
-    const { error: updateError } = await supabase.storage.updateBucket(bucketName, {
-      public: isPublic,
-      fileSizeLimit: MAX_FEED_IMAGE_BYTES,
-      allowedMimeTypes: Array.from(ALLOWED_IMAGE_TYPES),
-    });
-    if (updateError) throw new Error(`Unable to prepare image storage: ${updateError.message}`);
-    return supabase;
-  }
-  const { error: createError } = await supabase.storage.createBucket(bucketName, {
-    public: isPublic,
-    fileSizeLimit: MAX_FEED_IMAGE_BYTES,
-    allowedMimeTypes: Array.from(ALLOWED_IMAGE_TYPES),
-  });
-  if (createError && !createError.message.toLowerCase().includes("already exists")) {
-    throw new Error(`Unable to prepare image storage: ${createError.message}`);
-  }
-  return supabase;
-}
-
 export async function uploadFeedImage(file: File, bucketName: string, prefix: string) {
   assertFeedImage(file);
   const safePrefix = prefix.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 80);
   const fileName = `${randomUUID()}-${cleanName(file.name)}`;
   const objectPath = `${safePrefix}/${fileName}`;
-  const supabase = await ensureBucket(bucketName, bucketName === PUBLIC_NEWS_BUCKET);
-  const { error } = await supabase.storage.from(bucketName).upload(objectPath, Buffer.from(await file.arrayBuffer()), {
-    contentType: file.type,
-    upsert: false,
-  });
-  if (error) throw new Error(`Unable to upload image: ${error.message}`);
+  const bytes = Buffer.from(await file.arrayBuffer());
+  if (!hasFileSignature(bytes, file.type)) {
+    throw new Error("Image content does not match its declared type.");
+  }
+  await uploadObject(bucketName, objectPath, bytes, file.type);
   return { objectPath, mimeType: file.type, extension: extensionForMimeType(file.type) };
 }
 
 export async function downloadFeedImage(bucketName: string, objectPath: string) {
-  const supabase = createSupabaseAdminClient();
-  const { data, error } = await supabase.storage.from(bucketName).download(objectPath);
-  if (error || !data) throw new Error("Image not found.");
-  return data;
+  return downloadObject(bucketName, objectPath);
 }
 
 export async function deleteFeedImage(bucketName: string, objectPath: string) {
-  const supabase = createSupabaseAdminClient();
-  await supabase.storage.from(bucketName).remove([objectPath]);
+  await deleteObject(bucketName, objectPath);
 }

@@ -91,7 +91,7 @@ const objectives = [
 
 const technologies = [
   "Next.js",
-  "PostgreSQL / Supabase",
+  "PostgreSQL / Railway Buckets",
   "QR Technology",
   "Facial Recognition / Liveness",
   "Mobile PWA",

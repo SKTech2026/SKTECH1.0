@@ -11,7 +11,7 @@ import {
   isOfficialPhotoObjectPath,
   OFFICIAL_PROFILE_PHOTOS_BUCKET,
 } from "@/lib/official-photo-storage";
-import { createSupabaseAdminClient } from "@/utils/supabase/admin";
+import { downloadObject } from "@/lib/object-storage";
 
 export const dynamic = "force-dynamic";
 
@@ -103,19 +103,15 @@ export async function GET(request: NextRequest) {
       return imageErrorResponse("Invalid official photo type.", 400);
     }
 
-    const supabase = createSupabaseAdminClient();
-    const { data, error } = await supabase.storage
-      .from(OFFICIAL_PROFILE_PHOTOS_BUCKET)
-      .download(objectPath);
-
-    if (error || !data) {
-      return imageErrorResponse(
-        error ? getSafePhotoErrorMessage(error) : "Supabase returned no photo data.",
-      );
+    let data: Blob;
+    try {
+      data = await downloadObject(OFFICIAL_PROFILE_PHOTOS_BUCKET, objectPath);
+    } catch {
+      return imageErrorResponse("Photo not found.");
     }
     const imageBytes = await data.arrayBuffer();
     if (imageBytes.byteLength === 0) {
-      return imageErrorResponse("Supabase returned an empty photo object.");
+      return imageErrorResponse("Photo object is empty.");
     }
 
     return new NextResponse(Buffer.from(imageBytes), {

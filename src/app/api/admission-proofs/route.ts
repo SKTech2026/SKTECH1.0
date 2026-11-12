@@ -5,11 +5,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { ADMISSION_PROOFS_BUCKET } from "@/lib/proof-storage";
 import { prisma } from "@/lib/db";
-import { createSupabaseAdminClient } from "@/utils/supabase/admin";
+import { downloadObject } from "@/lib/object-storage";
 
 export const dynamic = "force-dynamic";
-
-const SIGNED_URL_EXPIRES_SECONDS = 60;
 
 export async function GET(request: NextRequest) {
   try {
@@ -45,16 +43,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Proof document is unavailable." }, { status: 404 });
     }
 
-    const supabase = createSupabaseAdminClient();
-    const { data, error } = await supabase.storage
-      .from(ADMISSION_PROOFS_BUCKET)
-      .createSignedUrl(objectPath, SIGNED_URL_EXPIRES_SECONDS);
-
-    if (error || !data?.signedUrl) {
+    let data: Blob;
+    try {
+      data = await downloadObject(ADMISSION_PROOFS_BUCKET, objectPath);
+    } catch {
       return NextResponse.json({ error: "Proof document is unavailable." }, { status: 404 });
     }
-
-    return NextResponse.redirect(data.signedUrl);
+    return new NextResponse(Buffer.from(await data.arrayBuffer()), { headers: {
+      "Content-Type": data.type || "application/octet-stream",
+      "Content-Disposition": "attachment",
+      "Cache-Control": "private, no-store",
+      "X-Content-Type-Options": "nosniff",
+    } });
   } catch {
     return NextResponse.json({ error: "Unable to open proof document." }, { status: 500 });
   }
