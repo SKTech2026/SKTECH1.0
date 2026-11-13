@@ -14,7 +14,7 @@ const DEFAULT_USERS = [
     email: "admin001@skdg.local",
     role: Role.ADMIN,
     status: UserStatus.APPROVED,
-    password: process.env.SEED_ADMIN_PASSWORD || "Admin@12345",
+    password: process.env.SEED_ADMIN_PASSWORD,
   },
   {
     employeeId: process.env.SEED_STAFF_USER_ID || "staff001",
@@ -22,7 +22,7 @@ const DEFAULT_USERS = [
     email: "staff001@skdg.local",
     role: Role.STAFF,
     status: UserStatus.APPROVED,
-    password: process.env.SEED_STAFF_PASSWORD || "Staff@12345",
+    password: process.env.SEED_STAFF_PASSWORD,
   },
   {
     employeeId: null,
@@ -30,7 +30,7 @@ const DEFAULT_USERS = [
     email: process.env.SEED_OFFICIAL_EMAIL || "official001@skdg.local",
     role: Role.OFFICIAL,
     status: UserStatus.APPROVED,
-    password: process.env.SEED_OFFICIAL_PASSWORD || "Official@12345",
+    password: process.env.SEED_OFFICIAL_PASSWORD,
   },
 ];
 
@@ -425,9 +425,19 @@ async function upsertSeedUser(prisma, user) {
 }
 
 async function main() {
+  if (process.env.ALLOW_LEGACY_USER_SEED !== "yes") {
+    throw new Error("Legacy user seeding is disabled. Use the geography-only importer.");
+  }
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
     throw new Error("DATABASE_URL is not set.");
+  }
+  const target = new URL(databaseUrl);
+  if (databaseUrl !== process.env.RAILWAY_FRESH_DATABASE_URL ||
+      !/^[a-z0-9-]+\.proxy\.rlwy\.net$/i.test(target.hostname) ||
+      target.pathname !== "/railway" || /supabase/i.test(databaseUrl) ||
+      DEFAULT_USERS.some((user) => !user.password)) {
+    throw new Error("Legacy seed requires a Railway target and explicit account passwords.");
   }
   const allowSelfSignedTls =
     process.env.PGSSL_ALLOW_SELF_SIGNED === "true" ||
@@ -476,7 +486,7 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error("Seeding failed:", error);
+main().catch(() => {
+  console.error("Seeding failed. Connection details are suppressed.");
   process.exit(1);
 });
