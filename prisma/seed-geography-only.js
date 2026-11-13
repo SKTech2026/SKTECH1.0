@@ -47,15 +47,45 @@ function aliasKey(name) {
     .replace(/^(villa|barangay) /, "").replace(/[^a-z0-9]/g, "");
 }
 
-function possibleAlias(name, existing, canonicalNames) {
-  const canonical = key(name);
-  if (canonicalNames.some((other) => key(other) !== canonical && aliasKey(other) === aliasKey(name))) {
-    return undefined;
+function classifyBarangays(lgu, existing) {
+  const exactMatches = [];
+  const aliasMatches = [];
+  const missingCanonicalNames = [];
+  const blockedCanonicalNames = [];
+  const matchedRows = new Set();
+
+  for (const name of lgu.barangays) {
+    const exact = existing.filter((row) => key(row.name) === key(name));
+    if (exact.length === 1) {
+      exactMatches.push({ canonical: name, existing: exact[0].name });
+      matchedRows.add(exact[0]);
+      continue;
+    }
+    if (exact.length > 1) {
+      blockedCanonicalNames.push(name);
+      continue;
+    }
+
+    const hasCanonicalAliasCollision = lgu.barangays.some((other) =>
+      key(other) !== key(name) && aliasKey(other) === aliasKey(name));
+    const aliases = hasCanonicalAliasCollision ? [] : existing.filter((row) => aliasKey(row.name) === aliasKey(name));
+    if (aliases.length === 1) {
+      aliasMatches.push({ canonical: name, existing: aliases[0].name });
+      matchedRows.add(aliases[0]);
+    } else if (aliases.length > 1) {
+      blockedCanonicalNames.push(name);
+    } else {
+      missingCanonicalNames.push(name);
+    }
   }
-  return existing.find((row) => {
-    const candidate = key(row.name);
-    return candidate !== canonical && aliasKey(candidate) === aliasKey(canonical);
-  });
+
+  return {
+    exactMatches,
+    aliasMatches,
+    missingCanonicalNames,
+    blockedCanonicalNames,
+    legacyOnlyRecords: existing.filter((row) => !matchedRows.has(row)).map((row) => row.name),
+  };
 }
 
 async function syncGeography(prisma, data, apply) {
@@ -64,9 +94,13 @@ async function syncGeography(prisma, data, apply) {
     barangays: await prisma.barangay.count({ where: { municipality: { province: "Oriental Mindoro" } } }),
   });
   const summary = { dryRun: !apply, targetMunicipalities: 15, targetBarangays: 426,
-    before: await counts(), after: {}, municipalitiesCreated: 0, barangaysCreated: 0,
-    canonicalBarangaysPresent: 0, completeLgus: 0, incompleteLgus: [],
-    possibleAliases: [], conflicts: [], perLgu: [] };
+    before: await counts(), after: {}, municipalitiesToCreate: 0, municipalitiesCreated: 0,
+    barangaysToCreate: 0, barangaysCreated: 0,
+    canonicalExactMatches: 0, canonicalAliasMatches: 0, canonicalBarangaysPresent: 0,
+    canonicalBarangaysMissing: 0, canonicalBarangaysBlocked: 0, legacyOnlyBarangays: 0,
+    exactMatchesByLgu: [], aliasMatches: [], missingCanonicalNames: [],
+    blockedCanonicalNames: [], legacyOnlyRecords: [], completeLgus: 0,
+    incompleteLgus: [], conflicts: [], perLgu: [] };
   for (const lgu of data.lgus) {
     const names = [lgu.name, ...(lgu.aliases || [])];
     const matches = await prisma.municipality.findMany({
@@ -75,53 +109,82 @@ async function syncGeography(prisma, data, apply) {
     });
     if (matches.length > 1) {
       summary.conflicts.push({ lgu: lgu.name, reason: "Multiple city/municipality alias rows exist" });
-      summary.incompleteLgus.push({ name: lgu.name, missing: lgu.barangays.length });
+      summary.canonicalBarangaysBlocked += lgu.barangays.length;
+      summary.blockedCanonicalNames.push(...lgu.barangays.map((name) => ({ lgu: lgu.name, name })));
+      summary.incompleteLgus.push({ name: lgu.name, missing: 0, blocked: lgu.barangays.length });
       summary.perLgu.push({ name: lgu.name, expected: lgu.barangays.length,
-        present: 0, pendingInsert: 0, blocked: true });
+        exactMatches: 0, aliasMatches: 0, present: 0, missingCanonical: 0,
+        blockedCanonical: lgu.barangays.length, legacyOnly: 0, pendingInsert: 0 });
       continue;
     }
     let municipality = matches[0];
     if (!municipality) {
-      summary.municipalitiesCreated++;
-      if (apply) municipality = await prisma.municipality.create({
-        data: { name: lgu.name, province: "Oriental Mindoro" }, select: { id: true, name: true, province: true },
-      });
+      summary.municipalitiesToCreate++;
+      if (apply) {
+        municipality = await prisma.municipality.create({
+          data: { name: lgu.name, province: "Oriental Mindoro" }, select: { id: true, name: true, province: true },
+        });
+        summary.municipalitiesCreated++;
+      }
     } else if (municipality.province !== "Oriental Mindoro") {
       summary.conflicts.push({ lgu: lgu.name, reason: "Existing alias belongs to another province" });
-      summary.incompleteLgus.push({ name: lgu.name, missing: lgu.barangays.length });
+      summary.canonicalBarangaysBlocked += lgu.barangays.length;
+      summary.blockedCanonicalNames.push(...lgu.barangays.map((name) => ({ lgu: lgu.name, name })));
+      summary.incompleteLgus.push({ name: lgu.name, missing: 0, blocked: lgu.barangays.length });
       summary.perLgu.push({ name: lgu.name, expected: lgu.barangays.length,
-        present: 0, pendingInsert: 0, blocked: true });
+        exactMatches: 0, aliasMatches: 0, present: 0, missingCanonical: 0,
+        blockedCanonical: lgu.barangays.length, legacyOnly: 0, pendingInsert: 0 });
       continue;
     }
     const existing = municipality ? await prisma.barangay.findMany({
       where: { municipalityId: municipality.id }, select: { name: true },
     }) : [];
-    const existingNames = new Set(existing.map((row) => key(row.name)));
-    const missing = lgu.barangays.filter((name) => !existingNames.has(key(name)) &&
-      !possibleAlias(name, existing, lgu.barangays));
-    for (const name of lgu.barangays) {
-      if (existingNames.has(key(name))) continue;
-      const alias = possibleAlias(name, existing, lgu.barangays);
-      if (alias) summary.possibleAliases.push({ lgu: lgu.name, requested: name, existing: alias.name });
+    const initialClassification = classifyBarangays(lgu, existing);
+    for (const name of initialClassification.blockedCanonicalNames) {
+      summary.conflicts.push({ lgu: lgu.name, requested: name, reason: "Multiple existing barangay records match this canonical name" });
     }
-    summary.barangaysCreated += missing.length;
-    if (apply && missing.length) await prisma.barangay.createMany({
-      data: missing.map((name) => ({ name, municipalityId: municipality.id })), skipDuplicates: true,
-    });
+    const missing = initialClassification.missingCanonicalNames;
+    summary.barangaysToCreate += missing.length;
+    if (apply && missing.length) {
+      const created = await prisma.barangay.createMany({
+        data: missing.map((name) => ({ name, municipalityId: municipality.id })), skipDuplicates: true,
+      });
+      summary.barangaysCreated += created.count;
+    }
     const finalRows = apply ? await prisma.barangay.findMany({
       where: { municipalityId: municipality.id }, select: { name: true },
     }) : existing;
-    const finalNames = new Set(finalRows.map((row) => key(row.name)));
-    const stillMissing = lgu.barangays.filter((name) => !finalNames.has(key(name)));
-    summary.canonicalBarangaysPresent += lgu.barangays.length - stillMissing.length;
+    const classification = classifyBarangays(lgu, finalRows);
+    const present = classification.exactMatches.length + classification.aliasMatches.length;
+    summary.canonicalExactMatches += classification.exactMatches.length;
+    summary.canonicalAliasMatches += classification.aliasMatches.length;
+    summary.canonicalBarangaysPresent += present;
+    summary.canonicalBarangaysMissing += classification.missingCanonicalNames.length;
+    summary.canonicalBarangaysBlocked += classification.blockedCanonicalNames.length;
+    summary.legacyOnlyBarangays += classification.legacyOnlyRecords.length;
+    summary.exactMatchesByLgu.push({ name: lgu.name, count: classification.exactMatches.length });
+    summary.aliasMatches.push(...classification.aliasMatches.map((match) => ({
+      lgu: lgu.name, requested: match.canonical, existing: match.existing,
+    })));
+    summary.missingCanonicalNames.push(...classification.missingCanonicalNames.map((name) => ({ lgu: lgu.name, name })));
+    summary.blockedCanonicalNames.push(...classification.blockedCanonicalNames.map((name) => ({ lgu: lgu.name, name })));
+    summary.legacyOnlyRecords.push(...classification.legacyOnlyRecords.map((name) => ({ lgu: lgu.name, name })));
     summary.perLgu.push({ name: lgu.name, expected: lgu.barangays.length,
-      present: lgu.barangays.length - stillMissing.length, pendingInsert: missing.length });
-    if (stillMissing.length === 0) summary.completeLgus++;
-    else summary.incompleteLgus.push({ name: lgu.name, missing: stillMissing.length });
+      exactMatches: classification.exactMatches.length, aliasMatches: classification.aliasMatches.length,
+      present, missingCanonical: classification.missingCanonicalNames.length,
+      blockedCanonical: classification.blockedCanonicalNames.length,
+      legacyOnly: classification.legacyOnlyRecords.length, barangaysToCreate: missing.length });
+    if (classification.missingCanonicalNames.length === 0 && classification.blockedCanonicalNames.length === 0) {
+      summary.completeLgus++;
+    } else {
+      summary.incompleteLgus.push({ name: lgu.name,
+        missing: classification.missingCanonicalNames.length,
+        blocked: classification.blockedCanonicalNames.length });
+    }
   }
   summary.after = apply ? await counts() : {
-    municipalities: summary.before.municipalities + summary.municipalitiesCreated,
-    barangays: summary.before.barangays + summary.barangaysCreated,
+    municipalities: summary.before.municipalities + summary.municipalitiesToCreate,
+    barangays: summary.before.barangays + summary.barangaysToCreate,
   };
   if (apply && summary.conflicts.length) throw new Error("Geography conflicts require review before applying.");
   return summary;
