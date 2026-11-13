@@ -273,7 +273,7 @@ export default function SKOfficialForm({
             }}
           >
             {filteredMunicipalities.map((entry) => (
-              <option key={entry.id} value={entry.id}>
+              <option key={entry.id} value={entry.id} disabled={entry.legacy || entry.unavailable}>
                 {entry.name}
               </option>
             ))}
@@ -297,7 +297,7 @@ export default function SKOfficialForm({
             disabled={!selectedMunicipality}
           >
             {filteredBarangays.map((entry) => (
-              <option key={entry.id} value={entry.id}>
+              <option key={entry.id} value={entry.id} disabled={entry.legacy || entry.unavailable}>
                 {entry.name}
               </option>
             ))}

@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { DEFAULT_ID_TEMPLATE, type IdTemplate } from "@/components/id-template/default-template";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { canonicalLocationOptions } from "@/lib/locations/canonical-options";
 import { requireRole } from "@/lib/roleGuard";
 import { loadActiveIdTemplate } from "@/lib/id-template/load-active-id-template";
 import { convertDbTemplateToRendererTemplate } from "@/lib/id-template/db-to-renderer-converter";
@@ -116,7 +117,7 @@ export default async function AdminIdProductionPage() {
           userStatus: official.user?.status ?? null,
           photoUrl: official.user?.image ?? null,
         }))}
-        municipalities={municipalities}
+        municipalities={canonicalLocationOptions(municipalities)}
       />
     </div>
   );

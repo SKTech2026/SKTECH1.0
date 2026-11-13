@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { registerFaceEmbedding } from "@/lib/face-ai";
+import { canonicalLocationOptions } from "@/lib/locations/canonical-options";
 import { saveAdmissionProof } from "@/lib/proof-storage";
 import {
   formatOfficialFullName,
@@ -233,7 +234,7 @@ export async function GET(request: NextRequest) {
       {
         data: officials,
         viewerRole: currentSession.user.role,
-        municipalities,
+        municipalities: canonicalLocationOptions(municipalities),
         pagination: {
           total,
           take,

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { canonicalLocationOptions } from "@/lib/locations/canonical-options";
 import { requireOfficialFeatureAccess } from "@/lib/roleGuard";
 
 import OfficialProfileForm from "./profile-form";
@@ -164,7 +165,10 @@ export default async function OfficialProfilePage() {
           address: user.official.address ?? "",
           photoUrl: user.image && user.image.startsWith("/") ? user.image : "/images/default-official.svg",
         }}
-        municipalities={municipalities}
+        municipalities={canonicalLocationOptions(municipalities, {
+          municipalityId: user.official.municipalityId,
+          barangayId: user.official.barangayId,
+        })}
       />
     </div>
   );

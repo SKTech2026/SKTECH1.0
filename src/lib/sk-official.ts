@@ -49,9 +49,13 @@ export type MunicipalityOption = {
   id: string;
   name: string;
   province: string;
+  legacy?: boolean;
+  unavailable?: boolean;
   barangays: {
     id: string;
     name: string;
+    legacy?: boolean;
+    unavailable?: boolean;
   }[];
 };
 

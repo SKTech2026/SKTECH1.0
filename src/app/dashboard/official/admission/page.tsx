@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { canonicalLocationOptions } from "@/lib/locations/canonical-options";
 import { requireDashboardRole } from "@/lib/roleGuard";
 
 import OfficialAdmissionForm from "./OfficialAdmissionForm";
@@ -132,7 +133,10 @@ export default async function OfficialAdmissionPage({
 
       <OfficialAdmissionForm
         initialProfile={existingProfile}
-        municipalities={municipalities}
+        municipalities={canonicalLocationOptions(municipalities, {
+          municipalityId: user.official?.municipalityId,
+          barangayId: user.official?.barangayId,
+        })}
         initialStep={initialStep}
       />
     </div>

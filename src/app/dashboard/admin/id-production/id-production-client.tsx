@@ -33,9 +33,13 @@ type MunicipalityOption = {
   id: string;
   name: string;
   province: string;
+  legacy?: boolean;
+  unavailable?: boolean;
   barangays: {
     id: string;
     name: string;
+    legacy?: boolean;
+    unavailable?: boolean;
   }[];
 };
 
@@ -142,7 +146,7 @@ export default function IdProductionClient({
             >
               <option value="">All municipalities</option>
               {municipalities.map((entry) => (
-                <option key={entry.id} value={entry.id}>
+                <option key={entry.id} value={entry.id} disabled={entry.legacy || entry.unavailable}>
                   {entry.name}
                 </option>
               ))}
@@ -160,7 +164,7 @@ export default function IdProductionClient({
                 {selectedMunicipality ? "All barangays" : "Select city or municipality first"}
               </option>
               {filteredBarangays.map((entry) => (
-                <option key={entry.id} value={entry.id}>
+                <option key={entry.id} value={entry.id} disabled={entry.legacy || entry.unavailable}>
                   {entry.name}
                 </option>
               ))}

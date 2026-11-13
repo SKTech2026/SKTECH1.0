@@ -7,6 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import OfficialProfileForm from "@/app/dashboard/official/profile/profile-form";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { canonicalLocationOptions } from "@/lib/locations/canonical-options";
 import { requireDashboardRole } from "@/lib/roleGuard";
 
 export const dynamic = "force-dynamic";
@@ -171,7 +172,10 @@ export default async function MobileOfficialProfilePage() {
           address: user.official.address ?? "",
           photoUrl: user.image && user.image.startsWith("/") ? user.image : "/images/default-official.svg",
         }}
-        municipalities={municipalities}
+        municipalities={canonicalLocationOptions(municipalities, {
+          municipalityId: user.official.municipalityId,
+          barangayId: user.official.barangayId,
+        })}
       />
     </div>
   );

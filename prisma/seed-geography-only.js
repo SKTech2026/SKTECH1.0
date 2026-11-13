@@ -47,8 +47,11 @@ function aliasKey(name) {
     .replace(/^(villa|barangay) /, "").replace(/[^a-z0-9]/g, "");
 }
 
-function possibleAlias(name, existing) {
+function possibleAlias(name, existing, canonicalNames) {
   const canonical = key(name);
+  if (canonicalNames.some((other) => key(other) !== canonical && aliasKey(other) === aliasKey(name))) {
+    return undefined;
+  }
   return existing.find((row) => {
     const candidate = key(row.name);
     return candidate !== canonical && aliasKey(candidate) === aliasKey(canonical);
@@ -94,10 +97,11 @@ async function syncGeography(prisma, data, apply) {
       where: { municipalityId: municipality.id }, select: { name: true },
     }) : [];
     const existingNames = new Set(existing.map((row) => key(row.name)));
-    const missing = lgu.barangays.filter((name) => !existingNames.has(key(name)) && !possibleAlias(name, existing));
+    const missing = lgu.barangays.filter((name) => !existingNames.has(key(name)) &&
+      !possibleAlias(name, existing, lgu.barangays));
     for (const name of lgu.barangays) {
       if (existingNames.has(key(name))) continue;
-      const alias = possibleAlias(name, existing);
+      const alias = possibleAlias(name, existing, lgu.barangays);
       if (alias) summary.possibleAliases.push({ lgu: lgu.name, requested: name, existing: alias.name });
     }
     summary.barangaysCreated += missing.length;

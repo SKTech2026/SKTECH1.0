@@ -5,9 +5,12 @@ The canonical dropdown dataset is the user-provided
 and 426 barangays. The names have not been independently verified against PSA.
 The old `prisma/seed.js`
 contains only 14 LGUs and 264 barangays and must not be used for geography.
-The supplied Naujan list has 70 names and includes neither `Magsaysay` nor
-`Villa Magsaysay`. Treat those as possible existing aliases for review; do not
-add both or rename referenced records automatically.
+Forms use the canonical names and counts even when some barangay rows are still
+missing. A missing or ambiguous database match appears as a disabled
+`(pending import)` option; it cannot be submitted until it has a real database
+ID. Existing selections keep their database IDs, and saved non-canonical values
+remain available as disabled legacy options. The distinct Bansud choices
+`Pag-Asa` and `Villa Pag-Asa` must remain separate.
 
 Only the fresh Railway PostgreSQL public proxy is accepted. Provide these
 variables in a protected process environment, without committing or printing
@@ -17,16 +20,29 @@ the URL:
 - `RAILWAY_FRESH_DATABASE_HOST`: exact public proxy hostname for the fresh `Postgres` service
 - `RAILWAY_FRESH_DATABASE_URL`: current public PostgreSQL connection URL for that service
 
-After the code is approved, deployed, and the fresh Railway target is verified,
-run `npm run seed` for a read-only preview of missing geography. Review the
-per-LGU counts, `possibleAliases`, and conflicts. Only after resolving these
-reports, run `npm run seed:geography:apply` to add missing
-municipalities and barangays in one transaction. The importer never creates,
-updates, or deletes users. It does not delete any existing geography records.
-It uses the existing `Calapan City` row when present; it does not create a
-second `City of Calapan` row or change foreign keys.
-Run `npm run seed` again to confirm `canonicalBarangaysPresent: 426`,
-`completeLgus: 15`, and an empty `incompleteLgus` list.
+Rollout sequence:
+
+1. Deploy the application code to the fresh Railway environment and verify the
+  running service is the intended `sktech-fresh` deployment. No database
+  migration is required for these dropdown changes.
+2. In a protected local PowerShell session, set
+  `$env:RAILWAY_ENVIRONMENT_NAME`, `$env:RAILWAY_FRESH_DATABASE_HOST`, and
+  `$env:RAILWAY_FRESH_DATABASE_URL` to the verified fresh PostgreSQL service
+  values. Do not put the URL in source control or command logs.
+3. Run `npm run seed`. This is a read-only preview. Review the per-LGU counts,
+  `possibleAliases`, conflicts, and all proposed additions before proceeding.
+4. Only after the preview has been reviewed and approved, run
+  `npm run seed:geography:apply`. This adds missing municipalities and
+  barangays in one transaction. The importer never creates, updates, or
+  deletes users, never deletes geography records, reuses `Calapan City` when
+  present, and does not change existing IDs or foreign keys.
+5. Run `npm run seed` again and confirm `canonicalBarangaysPresent: 426`,
+  `completeLgus: 15`, and an empty `incompleteLgus` list. Run the read-only
+  verification SQL below against the same fresh database.
+
+The form labels and counts do not depend on step 4, but pending names remain
+disabled until their corresponding database rows exist. Only real database
+IDs are accepted by the submission endpoints.
 
 Existing historical names can leave the raw database count above 426. The
 important completion check is that all 426 canonical names are present under
@@ -56,5 +72,5 @@ WHERE m.province = 'Oriental Mindoro'
   AND lower(b.name) IN ('magsaysay', 'villa magsaysay');
 ```
 
-The currently deployed admission form reads these database rows directly. A
+The deployed application and database import are separate rollout steps. A
 local test passing does not establish that the Railway database has 426 rows.

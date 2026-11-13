@@ -150,3 +150,79 @@ test("Naujan spelling alias is reported and never inserted as a duplicate", asyn
   await syncGeography(store, data, true);
   assert.equal(barangays.length, 1);
 });
+
+test("distinct Pag-Asa and Villa Pag-Asa remain separate Bansud choices", async () => {
+  const row = { id: "bansud", name: "Bansud", province: "Oriental Mindoro" };
+  const barangays = [{ municipalityId: row.id, id: "one", name: "Pag-Asa" }];
+  const store = {
+    municipality: { count: async () => 1, findMany: async () => [row] },
+    barangay: {
+      count: async () => barangays.length,
+      findMany: async () => barangays,
+      createMany: async ({ data }) => { barangays.push(...data); return { count: data.length }; },
+    },
+  };
+  const data = { lgus: [{ name: "Bansud", barangays: ["Pag-Asa", "Villa Pag-Asa"] }] };
+  const preview = await syncGeography(store, data, false);
+  assert.equal(preview.barangaysCreated, 1);
+  assert.deepEqual(preview.possibleAliases, []);
+});
+
+test("canonical dropdown projection excludes legacy rows and retains saved legacy labels", () => {
+  const source = readFileSync(new URL("../src/lib/locations/canonical-options.ts", import.meta.url), "utf8")
+    .replace('import { ORIENTAL_MINDORO_LOCATIONS } from "@/data/oriental-mindoro-locations";',
+      "const ORIENTAL_MINDORO_LOCATIONS = globalThis.__data;");
+  const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
+  const exports = {};
+  const data = loadData();
+  runInNewContext(code, { exports, __data: data });
+  const rows = data.lgus.map((lgu, index) => ({
+    id: String(index), name: lgu.name === "City of Calapan" ? "Calapan City" : lgu.name,
+    province: "Oriental Mindoro",
+    barangays: lgu.barangays.map((name, i) => ({ id: `${index}-${i}`, name })),
+  }));
+  const naujan = rows.find((row) => row.name === "Naujan");
+  naujan.barangays.push({ id: "legacy", name: "Villa Magsaysay" });
+  const options = exports.canonicalLocationOptions(rows);
+  assert.equal(options.length, 15);
+  assert.equal(options.reduce((total, lgu) => total + lgu.barangays.length, 0), 426);
+  assert.equal(options.find((lgu) => lgu.name === "Naujan").barangays.length, 70);
+  assert.equal(options.find((lgu) => lgu.name === "City of Calapan").barangays.length, 62);
+  assert.equal(options.find((lgu) => lgu.name === "Naujan").barangays.some((b) => b.id === "legacy"), false);
+  const saved = exports.canonicalLocationOptions(rows, { municipalityId: naujan.id, barangayId: "legacy" });
+  assert.equal(saved.find((lgu) => lgu.name === "Naujan").barangays.find((b) => b.id === "legacy").legacy, true);
+});
+
+test("canonical dropdowns show missing names as unavailable without inventing database IDs", () => {
+  const source = readFileSync(new URL("../src/lib/locations/canonical-options.ts", import.meta.url), "utf8")
+    .replace('import { ORIENTAL_MINDORO_LOCATIONS } from "@/data/oriental-mindoro-locations";',
+      "const ORIENTAL_MINDORO_LOCATIONS = globalThis.__data;");
+  const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
+  const exports = {};
+  const data = loadData();
+  runInNewContext(code, { exports, __data: data });
+  const rows = data.lgus.map((lgu, index) => ({
+    id: String(index), name: lgu.name, province: "Oriental Mindoro",
+    barangays: lgu.barangays.map((name, barangayIndex) => ({ id: `${index}-${barangayIndex}`, name })),
+  }));
+  const naujan = rows.find((row) => row.name === "Naujan");
+  naujan.barangays.pop();
+  const calapan = rows.find((row) => row.name === "City of Calapan");
+  calapan.barangays.splice(0, 2);
+  const bansud = rows.find((row) => row.name === "Bansud");
+  bansud.barangays = bansud.barangays.filter((barangay) => barangay.name === "Pag-Asa");
+
+  const options = exports.canonicalLocationOptions(rows);
+  const naujanOptions = options.find((lgu) => lgu.name === "Naujan").barangays;
+  const calapanOptions = options.find((lgu) => lgu.name === "City of Calapan").barangays;
+  const bansudOptions = options.find((lgu) => lgu.name === "Bansud").barangays;
+  assert.equal(naujanOptions.length, 70);
+  assert.equal(calapanOptions.length, 62);
+  assert.equal(naujanOptions.filter((option) => option.unavailable).length, 1);
+  assert.ok(calapanOptions.some((option) => option.unavailable));
+  assert.equal(bansudOptions.length, 13);
+  assert.equal(bansudOptions.filter((option) => option.name === "Pag-Asa").length, 1);
+  assert.equal(bansudOptions.filter((option) => option.name.startsWith("Villa Pag-Asa")).length, 1);
+  assert.ok(bansudOptions.find((option) => option.name.startsWith("Villa Pag-Asa"))?.unavailable);
+  assert.ok(!naujan.barangays.some((barangay) => barangay.id === naujanOptions.at(-1).id));
+});

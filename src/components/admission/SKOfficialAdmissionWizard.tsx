@@ -590,7 +590,7 @@ export default function SKOfficialAdmissionWizard({
               >
                 <option value="">Select city or municipality</option>
                 {filteredMunicipalities.map((entry) => (
-                  <option key={entry.id} value={entry.id}>
+                  <option key={entry.id} value={entry.id} disabled={entry.legacy || entry.unavailable}>
                     {entry.name}
                   </option>
                 ))}
@@ -613,7 +613,7 @@ export default function SKOfficialAdmissionWizard({
                   {selectedMunicipality ? "Select barangay" : "Select city or municipality first"}
                 </option>
                 {filteredBarangays.map((entry) => (
-                  <option key={entry.id} value={entry.id}>
+                  <option key={entry.id} value={entry.id} disabled={entry.legacy || entry.unavailable}>
                     {entry.name}
                   </option>
                 ))}
