@@ -32,10 +32,10 @@ function formatAuthError(errorCode: string | null): string | null {
     return "Google sign-in is disabled for OFFICIAL. Use Official OTP login.";
   }
   if (errorCode === "Configuration") {
-    return "Authentication is not configured in deployment yet. Check Vercel environment variables.";
+    return "Authentication is not configured. Contact the system administrator.";
   }
   if (errorCode === "DatabaseUnavailable") {
-    return "Cannot connect to the database. Check DATABASE_URL, then run npm run -s seed.";
+    return "Authentication is temporarily unavailable. Please try again later.";
   }
   return "Unable to sign in. Please try again.";
 }

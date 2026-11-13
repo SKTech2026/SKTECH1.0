@@ -7,13 +7,12 @@ import GoogleProvider from "next-auth/providers/google";
 
 import { prisma } from "@/lib/db";
 import { verifyStoredOtpCode } from "@/lib/otp";
+import { validInternalCredentials } from "@/lib/internal-credential-policy";
+import { resolveAuthSecret } from "@/lib/auth-config";
 
 const CREDENTIAL_ROLES = new Set<Role>([Role.ADMIN, Role.STAFF]);
 const OTP_PATTERN = /^\d{6}$/;
-const AUTH_SECRET =
-  process.env.NEXTAUTH_SECRET?.trim() ||
-  process.env.AUTH_SECRET?.trim() ||
-  process.env.FACE_SECRET?.trim();
+const AUTH_SECRET = resolveAuthSecret(process.env);
 
 if (!process.env.NEXTAUTH_URL) {
   const derivedBaseUrl =
@@ -362,20 +361,7 @@ export const authOptions: NextAuthOptions = {
               user = await getUserByEmailSafe(userId.toLowerCase());
             }
 
-            if (!user?.password) {
-              return null;
-            }
-
-            if (!CREDENTIAL_ROLES.has(user.role)) {
-              return null;
-            }
-
-            if (roleInput && roleInput !== user.role) {
-              return null;
-            }
-
-            const passwordMatches = await compare(password, user.password);
-            if (!passwordMatches) {
+            if (!user || !await validInternalCredentials(user, password, roleInput)) {
               return null;
             }
 
@@ -493,6 +479,14 @@ export const authOptions: NextAuthOptions = {
       if (user && "municipalityOfficerId" in user) {
         token.municipalityOfficerId =
           (user.municipalityOfficerId as string | null | undefined) ?? null;
+      }
+
+      // Refresh privileged claims on each server session read so a revoked or
+      // demoted administrator cannot keep using an otherwise valid JWT.
+      if (!user && token.id && token.role === Role.ADMIN) {
+        const currentAdmin = await getUserTokenFieldsByIdSafe(token.id);
+        token.role = currentAdmin?.role ?? Role.OFFICIAL;
+        token.status = currentAdmin?.status ?? UserStatus.INACTIVE;
       }
 
       if ((!token.id || !token.role) && token.email) {

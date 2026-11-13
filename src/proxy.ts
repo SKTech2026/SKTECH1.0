@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { KK_PORTAL_PUBLIC_URL, MAIN_PUBLIC_URL } from "@/lib/public-domains";
+import { resolveAuthSecret } from "@/lib/auth-config";
 
 type AppRole = "ADMIN" | "STAFF" | "OFFICIAL" | "KK_MEMBER";
 type AppStatus = "PENDING" | "APPROVED" | "REJECTED" | "INACTIVE" | "TERMINATED";
@@ -86,10 +87,7 @@ export async function proxy(request: NextRequest) {
 
   const token = await getToken({
     req: request,
-    secret:
-      process.env.NEXTAUTH_SECRET?.trim() ||
-      process.env.AUTH_SECRET?.trim() ||
-      process.env.FACE_SECRET?.trim(),
+    secret: resolveAuthSecret(process.env),
   });
 
   if (!token) {
