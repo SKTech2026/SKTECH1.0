@@ -66,7 +66,7 @@ function isValidFieldDimensions(field: IdTemplateField): boolean {
 /**
  * Check if a source key is in the allowlist
  */
-function isAllowedSourceKey(key: string | undefined): boolean {
+export function isAllowedTemplateSourceKey(key: string | undefined): boolean {
   if (!key) return true; // No sourceKey is fine (e.g., staticText, shape)
   return VALID_SOURCE_KEYS.has(key);
 }
@@ -88,7 +88,7 @@ function validateField(field: IdTemplateField): IdTemplateField | null {
   }
 
   // Validate sourceKey if present
-  if (field.sourceKey && !isAllowedSourceKey(field.sourceKey)) {
+  if (field.sourceKey && !isAllowedTemplateSourceKey(field.sourceKey)) {
     console.warn(`Field ${field.id} has disallowed sourceKey: ${field.sourceKey}`);
     // Remove the sourceKey to prevent rendering from accessing non-whitelisted data
     const sanitized = { ...field };

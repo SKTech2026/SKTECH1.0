@@ -115,3 +115,60 @@ test("provincial draft creation is inactive, stable-ID, and never overwrites an 
   await assert.rejects(helper.createProvincialIdTemplateDraft(tx, "admin-3"), /non-draft template/);
   assert.equal(createCount, 1);
 });
+
+test("field dimension clamp enforces the API minimum for existing and newly added elements", () => {
+  const dimensionSource = readFileSync(
+    new URL("../src/lib/id-template/field-dimensions.ts", import.meta.url), "utf8",
+  );
+  const dimensions = loadTypeScriptModule(dimensionSource);
+
+  for (const belowMinimum of [0, 0.05, -2]) {
+    assert.equal(dimensions.clampFieldDimensionPercent(belowMinimum, 12.5), 0.1);
+  }
+  assert.equal(dimensions.clampFieldDimensionPercent(Number.NaN, 12.5), 12.5);
+  assert.equal(dimensions.clampFieldDimensionPercent(Number.NaN, 0.05), 0.1);
+  assert.equal(dimensions.clampFieldDimensionPercent(0, 12.5), 0.1);
+  assert.equal(dimensions.clampFieldDimensionPercent(0.05, 12.5), 0.1);
+  assert.equal(dimensions.clampFieldDimensionPercent(101, 12.5), 100);
+  assert.equal(dimensions.clampFieldDimensionPercent(17.25, 12.5), 17.25);
+
+  for (const invalid of [0, 0.05, Number.NaN, Number.POSITIVE_INFINITY, 100.1]) {
+    assert.throws(
+      () => dimensions.validateFieldDimensionPercent(invalid, "name-value", "FRONT", "heightPercent"),
+      /front field "name-value" heightPercent must be a finite number from 0\.1 to 100; received/,
+    );
+  }
+  assert.throws(
+    () => dimensions.validateFieldDimensionPercent(0, "local-image-new", "BACK", "heightPercent"),
+    /back field "local-image-new" heightPercent .*received 0\./,
+  );
+});
+
+test("valid manually edited front and back fields keep precise dimensions and styles", () => {
+  const dimensionSource = readFileSync(
+    new URL("../src/lib/id-template/field-dimensions.ts", import.meta.url), "utf8",
+  );
+  const dimensions = loadTypeScriptModule(dimensionSource);
+  const manuallyEditedFields = [
+    {
+      id: "front-name", side: "FRONT", xPercent: 18.25, yPercent: 32.5,
+      widthPercent: 68.75, heightPercent: 12.35, staticValue: "EDITED NAME",
+      styleJson: { fontSize: 14, fontWeight: 700, color: "#123456" },
+    },
+    {
+      id: "back-qr", side: "BACK", xPercent: 7.5, yPercent: 24,
+      widthPercent: 31.25, heightPercent: 45.5, assetId: "qr-asset-id",
+      styleJson: { imageZoom: 1.25, objectPositionX: 48, objectPositionY: 52 },
+    },
+    {
+      id: "local-shape-new", side: "BACK", xPercent: 42, yPercent: 79,
+      widthPercent: 49.5, heightPercent: 8.25, styleJson: { background: "#13579B" },
+    },
+  ];
+  const snapshot = structuredClone(manuallyEditedFields);
+  for (const field of manuallyEditedFields) {
+    dimensions.validateFieldDimensionPercent(field.widthPercent, field.id, field.side, "widthPercent");
+    dimensions.validateFieldDimensionPercent(field.heightPercent, field.id, field.side, "heightPercent");
+  }
+  assert.deepEqual(manuallyEditedFields, snapshot);
+});

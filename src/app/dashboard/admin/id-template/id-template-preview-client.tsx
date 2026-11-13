@@ -14,6 +14,10 @@ import type {
   IdTemplateSide,
 } from "@/components/id-template/default-template";
 import type { OfficialIdTemplateData } from "@/lib/id-template/resolve-official-id-data";
+import {
+  clampFieldDimensionPercent,
+  validateFieldDimensionPercent,
+} from "@/lib/id-template/field-dimensions";
 
 const DEMO_DATA: OfficialIdTemplateData = {
   fullName: "SAMPLE OFFICIAL",
@@ -63,6 +67,8 @@ type IdTemplatePreviewClientProps = {
   backFields: number;
   hasQr: boolean;
   templateId?: string;
+  activeTemplateId?: string;
+  templateUpdatedAt?: string;
   draftPreview?: boolean;
   sourcePreview?: boolean;
 };
@@ -71,10 +77,21 @@ type AdminTemplateResponse = {
   success?: boolean;
   id?: string;
   templateId?: string;
+  updatedAt?: string;
   template?: IdTemplate;
   templateName?: string;
   created?: boolean;
   error?: string;
+};
+
+type SavedTemplateOption = {
+  id: string;
+  name: string;
+  status: "ACTIVE" | "DRAFT";
+  isActive: boolean;
+  version: number;
+  updatedAt: string;
+  _count: { fields: number; assets: number };
 };
 
 type AssetUploadResponse = {
@@ -120,6 +137,8 @@ export default function IdTemplatePreviewClient({
   backFields,
   hasQr,
   templateId,
+  activeTemplateId,
+  templateUpdatedAt,
   draftPreview = false,
   sourcePreview = false,
 }: IdTemplatePreviewClientProps) {
@@ -137,6 +156,12 @@ export default function IdTemplatePreviewClient({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [isLoading, setIsLoading] = useState(!sourcePreview);
+  const [loadedTemplateId, setLoadedTemplateId] = useState(templateId ?? activeTemplateId ?? null);
+  const [loadedTemplateUpdatedAt, setLoadedTemplateUpdatedAt] = useState(templateUpdatedAt ?? null);
+  const [savedTemplateOptions, setSavedTemplateOptions] = useState<SavedTemplateOption[]>([]);
+  const [selectedSavedTemplateId, setSelectedSavedTemplateId] = useState("");
+  const [isActivating, setIsActivating] = useState(false);
+  const [activationError, setActivationError] = useState<string | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const [backgroundDrafts, setBackgroundDrafts] = useState<Record<IdTemplateSide, string>>({
     front: "",
@@ -168,12 +193,14 @@ export default function IdTemplatePreviewClient({
   useEffect(() => {
     let isMounted = true;
 
-    const applyTemplate = (value: IdTemplate) => {
+    const applyTemplate = (value: IdTemplate, metadata?: AdminTemplateResponse) => {
       const editableTemplate = cloneTemplate(value);
       setTemplateState(editableTemplate);
       setSavedTemplateState(cloneTemplate(editableTemplate));
       setSavedSnapshot(serializeTemplate(editableTemplate));
       setSelectedId(editableTemplate.sides.front.fields[0]?.id ?? null);
+      setLoadedTemplateId(metadata?.templateId ?? templateId ?? activeTemplateId ?? null);
+      setLoadedTemplateUpdatedAt(metadata?.updatedAt ?? templateUpdatedAt ?? null);
       setBackgroundDrafts({
         front: resolveShapeBackgroundColor(findBackgroundField(editableTemplate, "front") ?? undefined),
         back: resolveShapeBackgroundColor(findBackgroundField(editableTemplate, "back") ?? undefined),
@@ -194,7 +221,7 @@ export default function IdTemplatePreviewClient({
 
         const result = (await response.json()) as AdminTemplateResponse;
         if (!isMounted || !result.template) return;
-        applyTemplate(result.template);
+        applyTemplate(result.template, result);
       } catch {
         if (isMounted) {
           setSaveError("Unable to load the editable template. Showing the server preview.");
@@ -214,7 +241,26 @@ export default function IdTemplatePreviewClient({
     return () => {
       isMounted = false;
     };
-  }, [sourcePreview, templateId, template]);
+  }, [sourcePreview, templateId, activeTemplateId, templateUpdatedAt, template]);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetch("/api/admin/id-template/activate", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return (await response.json()) as { templates?: SavedTemplateOption[] };
+      })
+      .then((result) => {
+        if (!isMounted || !result?.templates) return;
+        setSavedTemplateOptions(result.templates);
+        setSelectedSavedTemplateId((current) => current || result.templates?.find((item) =>
+          item.status === "DRAFT" && item.id !== templateId)?.id || "");
+      })
+      .catch(() => {
+        if (isMounted) setActivationError("Unable to load saved template versions.");
+      });
+    return () => { isMounted = false; };
+  }, [templateId, activeTemplateId]);
 
   const beginDragField = (fieldId: string, event: ReactPointerEvent<HTMLDivElement>) => {
     if (isLoading || isSaving || event.button !== 0) return;
@@ -336,6 +382,18 @@ export default function IdTemplatePreviewClient({
   const saveTemplate = async () => {
     if (!hasSaveableChanges || isSaving || isLoading) return;
 
+    try {
+      for (const templateSide of ["front", "back"] as const) {
+        for (const field of templateState.sides[templateSide].fields) {
+          validateFieldDimensionPercent(field.widthPercent, field.id, templateSide, "widthPercent");
+          validateFieldDimensionPercent(field.heightPercent, field.id, templateSide, "heightPercent");
+        }
+      }
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "A field has invalid dimensions.");
+      return;
+    }
+
     setDragState(null);
     setIsSaving(true);
     setSaveMessage(null);
@@ -355,7 +413,11 @@ export default function IdTemplatePreviewClient({
         }),
       });
 
-      const result = (await response.json().catch(() => null)) as { error?: string; createdFieldIdMap?: Record<string, string> } | null;
+      const result = (await response.json().catch(() => null)) as {
+        error?: string;
+        createdFieldIdMap?: Record<string, string>;
+        updatedAt?: string;
+      } | null;
 
       if (!response.ok) {
         throw new Error(result?.error ?? "Unable to save ID template.");
@@ -367,6 +429,7 @@ export default function IdTemplatePreviewClient({
       setSavedTemplateState(cloneTemplate(savedTemplate));
       setSavedSnapshot(nextSnapshot);
       setTemplateState(savedTemplate);
+      if (result?.updatedAt) setLoadedTemplateUpdatedAt(result.updatedAt);
       setBackgroundDrafts({
         front: resolveShapeBackgroundColor(findBackgroundField(savedTemplate, "front") ?? undefined),
         back: resolveShapeBackgroundColor(findBackgroundField(savedTemplate, "back") ?? undefined),
@@ -381,6 +444,68 @@ export default function IdTemplatePreviewClient({
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const activateTemplate = async () => {
+    if (!draftPreview || !templateId || !loadedTemplateUpdatedAt || isDirty || hasSaveableChanges || isLoading || isSaving || isUploadingImage || isActivating) {
+      return;
+    }
+    const confirmed = window.confirm(
+      `Activate "${templateName}" for SK official ID production? The currently active template will be retained as an inactive draft for rollback.`,
+    );
+    if (!confirmed) return;
+
+    setIsActivating(true);
+    setActivationError(null);
+    setSaveMessage(null);
+    try {
+      const response = await fetch("/api/admin/id-template/activate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ templateId, expectedUpdatedAt: loadedTemplateUpdatedAt }),
+      });
+      const result = await response.json().catch(() => null) as { error?: string } | null;
+      if (!response.ok) throw new Error(result?.error ?? "Unable to activate this template.");
+      router.replace("/dashboard/admin/id-template");
+      router.refresh();
+    } catch (error) {
+      setActivationError(error instanceof Error ? error.message : "Unable to activate this template.");
+    } finally {
+      setIsActivating(false);
+    }
+  };
+
+  const returnToCodeDefault = async () => {
+    if (!loadedTemplateId || !loadedTemplateUpdatedAt || isDirty || hasSaveableChanges || isSaving || isUploadingImage || isActivating) return;
+    if (!window.confirm("Stop using the active database template and return ID Production to the built-in code default? The saved template will remain as an inactive draft.")) {
+      return;
+    }
+
+    setIsActivating(true);
+    setActivationError(null);
+    try {
+      const response = await fetch("/api/admin/id-template/activate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          useCodeDefault: true,
+          expectedActiveTemplateId: loadedTemplateId,
+          expectedUpdatedAt: loadedTemplateUpdatedAt,
+        }),
+      });
+      const result = await response.json().catch(() => null) as { error?: string } | null;
+      if (!response.ok) throw new Error(result?.error ?? "Unable to return to the built-in default.");
+      router.refresh();
+    } catch (error) {
+      setActivationError(error instanceof Error ? error.message : "Unable to return to the built-in default.");
+    } finally {
+      setIsActivating(false);
+    }
+  };
+
+  const openSelectedSavedTemplate = () => {
+    if (!selectedSavedTemplateId || isDirty || hasSaveableChanges) return;
+    router.push(`/dashboard/admin/id-template?templateId=${encodeURIComponent(selectedSavedTemplateId)}`);
   };
 
   const createDraft = async () => {
@@ -597,6 +722,26 @@ export default function IdTemplatePreviewClient({
             >
               {isSaving ? "Saving..." : sourcePreview ? "Create Editable Draft" : draftPreview ? "Save Draft" : "Save Template"}
             </button>
+            {draftPreview ? (
+              <button
+                type="button"
+                onClick={activateTemplate}
+                disabled={!loadedTemplateUpdatedAt || isDirty || hasSaveableChanges || isLoading || isSaving || isUploadingImage || isActivating}
+                className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isActivating ? "Activating..." : "Activate Template"}
+              </button>
+            ) : null}
+            {!draftPreview && !sourcePreview && loadedTemplateId && savedTemplateOptions.some((item) => item.id === loadedTemplateId && item.isActive) ? (
+              <button
+                type="button"
+                onClick={returnToCodeDefault}
+                disabled={isDirty || hasSaveableChanges || isLoading || isSaving || isUploadingImage || isActivating}
+                className="rounded-lg border border-amber-400/40 px-4 py-2 text-sm font-semibold text-amber-200 transition hover:bg-amber-400/10 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Return to Built-in Default
+              </button>
+            ) : null}
             {!sourcePreview && !templateId ? (
               <Link
                 href="/dashboard/admin/id-template?design=provincial"
@@ -620,7 +765,12 @@ export default function IdTemplatePreviewClient({
         ) : null}
         {draftPreview ? (
           <p role="status" className="mt-3 text-sm text-muted">
-            Changes save to this inactive draft only. Existing active templates and ID Production remain unchanged.
+            Changes save to this inactive draft only. Activation requires a clean saved version; the previous template remains available for rollback.
+          </p>
+        ) : null}
+        {activationError ? (
+          <p role="alert" className="mt-4 rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm font-semibold text-rose-200">
+            {activationError}
           </p>
         ) : null}
         {localFields.length > 0 ? <p role="status" className="mt-3 text-sm text-amber-200">New elements, including uploaded images, will be saved when you click Save Template.</p> : null}
@@ -641,6 +791,38 @@ export default function IdTemplatePreviewClient({
           </p>
         ) : null}
       </section>
+
+      {!sourcePreview && savedTemplateOptions.some((item) => item.status === "DRAFT" && item.id !== templateId) ? (
+        <section className="flex flex-wrap items-end gap-3 rounded-xl border border-glass-border bg-surface p-4">
+          <div className="min-w-[220px] flex-1">
+            <label htmlFor="saved-id-template" className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+              Saved versions · rollback
+            </label>
+            <select
+              id="saved-id-template"
+              value={selectedSavedTemplateId}
+              onChange={(event) => setSelectedSavedTemplateId(event.target.value)}
+              disabled={isDirty || hasSaveableChanges || isSaving || isActivating}
+              className="mt-1.5 w-full rounded-lg border border-glass-border bg-surface-elevated px-3 py-2 text-sm text-foreground disabled:opacity-50"
+            >
+              <option value="">Select a saved draft</option>
+              {savedTemplateOptions.filter((item) => item.status === "DRAFT" && item.id !== templateId).map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name} · v{item.version} · {item._count.fields} fields
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            type="button"
+            onClick={openSelectedSavedTemplate}
+            disabled={!selectedSavedTemplateId || isDirty || hasSaveableChanges || isSaving || isActivating}
+            className="rounded-lg border border-glass-border px-4 py-2 text-sm font-semibold text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Open Saved Draft
+          </button>
+        </section>
+      ) : null}
 
       <section className="min-w-0 overflow-hidden rounded-2xl border border-glass-border bg-surface p-4 shadow-[0_24px_48px_-24px_var(--shadow-color)] backdrop-blur-md sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -921,9 +1103,10 @@ export default function IdTemplatePreviewClient({
                         inputMode="decimal"
                         type="number"
                         value={selectedField.widthPercent}
-                        min={0}
+                        min={0.1}
                         max={100}
-                        onChange={(event) => updateSelectedField({ widthPercent: clampPositivePercent(event.target.valueAsNumber, selectedField.widthPercent) })}
+                        step={0.1}
+                        onChange={(event) => updateSelectedField({ widthPercent: clampFieldDimensionPercent(event.target.valueAsNumber, selectedField.widthPercent) })}
                       />
                     </label>
                     <label className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
@@ -933,9 +1116,10 @@ export default function IdTemplatePreviewClient({
                         inputMode="decimal"
                         type="number"
                         value={selectedField.heightPercent}
-                        min={0}
+                        min={0.1}
                         max={100}
-                        onChange={(event) => updateSelectedField({ heightPercent: clampPositivePercent(event.target.valueAsNumber, selectedField.heightPercent) })}
+                        step={0.1}
+                        onChange={(event) => updateSelectedField({ heightPercent: clampFieldDimensionPercent(event.target.valueAsNumber, selectedField.heightPercent) })}
                       />
                     </label>
                   </div>
@@ -1339,13 +1523,6 @@ function sanitizeTextStyle(style: IdTemplateField["style"]) {
 }
 
 function clampPercent(value: number, fallback: number) {
-  if (!Number.isFinite(value)) return fallback;
-  if (value < 0) return 0;
-  if (value > 100) return 100;
-  return value;
-}
-
-function clampPositivePercent(value: number, fallback: number) {
   if (!Number.isFinite(value)) return fallback;
   if (value < 0) return 0;
   if (value > 100) return 100;

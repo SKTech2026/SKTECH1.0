@@ -25,6 +25,8 @@ export default async function AdminIdTemplatePreviewPage({ searchParams }: Admin
 
   let template: IdTemplate = DEFAULT_ID_TEMPLATE;
   let templateName: string | null = null;
+  let activeTemplateId: string | undefined;
+  let templateUpdatedAt: string | undefined;
   let sourcePreview = false;
 
   if (templateId) {
@@ -37,6 +39,7 @@ export default async function AdminIdTemplatePreviewPage({ searchParams }: Admin
     });
     if (!draft) notFound();
     templateName = draft.name;
+    templateUpdatedAt = draft.updatedAt.toISOString();
     const rendererTemplate = convertDbTemplateToRendererTemplate(draft as DbIdTemplate);
     if (!rendererTemplate) notFound();
     template = validateIdTemplateOrDefault(rendererTemplate);
@@ -49,6 +52,8 @@ export default async function AdminIdTemplatePreviewPage({ searchParams }: Admin
       const dbTemplate = await loadActiveIdTemplate();
       if (dbTemplate) {
         templateName = dbTemplate.name;
+        activeTemplateId = dbTemplate.id;
+        templateUpdatedAt = dbTemplate.updatedAt.toISOString();
         const rendererTemplate = convertDbTemplateToRendererTemplate(dbTemplate);
         if (rendererTemplate) {
           template = validateIdTemplateOrDefault(rendererTemplate);
@@ -75,6 +80,8 @@ export default async function AdminIdTemplatePreviewPage({ searchParams }: Admin
       backFields={backFields.length}
       hasQr={hasQr}
       templateId={templateId}
+      activeTemplateId={activeTemplateId}
+      templateUpdatedAt={templateUpdatedAt}
       draftPreview={Boolean(templateId)}
       sourcePreview={sourcePreview}
     />

@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { requireApiRole } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { createProvincialIdTemplateDraft } from "@/lib/id-template/create-provincial-id-template-draft";
+import { validateFieldDimensionPercent } from "@/lib/id-template/field-dimensions";
 import { convertDbTemplateToRendererTemplate } from "@/lib/id-template/db-to-renderer-converter";
 import type { DbIdTemplate, DbIdTemplateField } from "@/lib/id-template/load-active-id-template";
 import { validateIdTemplateOrDefault } from "@/lib/id-template/validate-template";
@@ -396,8 +397,8 @@ function validateFields(payloadFields: unknown, dbFields: DbIdTemplateField[]) {
       id,
       xPercent: readFiniteNumber(input.xPercent, "xPercent", 0, 100),
       yPercent: readFiniteNumber(input.yPercent, "yPercent", 0, 100),
-      widthPercent: readFiniteNumber(input.widthPercent, "widthPercent", 0.1, 100),
-      heightPercent: readFiniteNumber(input.heightPercent, "heightPercent", 0.1, 100),
+      widthPercent: validateFieldDimensionPercent(input.widthPercent, id, dbField.side, "widthPercent"),
+      heightPercent: validateFieldDimensionPercent(input.heightPercent, id, dbField.side, "heightPercent"),
       zIndex: readZIndex(input.zIndex),
       visible: readVisible(input.visible),
     };
@@ -517,8 +518,8 @@ function validateCreateFields(payloadCreates: unknown, template: DbIdTemplate) {
       type,
       xPercent: readFiniteNumber(input.xPercent, "xPercent", 0, 100),
       yPercent: readFiniteNumber(input.yPercent, "yPercent", 0, 100),
-      widthPercent: readFiniteNumber(input.widthPercent, "widthPercent", 0.1, 100),
-      heightPercent: readFiniteNumber(input.heightPercent, "heightPercent", 0.1, 100),
+      widthPercent: validateFieldDimensionPercent(input.widthPercent, tempId, side, "widthPercent"),
+      heightPercent: validateFieldDimensionPercent(input.heightPercent, tempId, side, "heightPercent"),
       zIndex: readZIndex(input.zIndex),
       visible: input.visible === undefined ? true : readVisible(input.visible),
       radius: input.radius === undefined || input.radius === null ? null : readFiniteNumber(input.radius, "radius", 0, 100),
@@ -748,6 +749,7 @@ function buildTemplateResponse(template: DbIdTemplate) {
     template: validateIdTemplateOrDefault(rendererTemplate),
     templateId: template.id,
     templateName: template.name,
+    updatedAt: template.updatedAt.toISOString(),
     canvasWidth: template.canvasWidth,
     canvasHeight: template.canvasHeight,
     totalFields: template.fields.length,
