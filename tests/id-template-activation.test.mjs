@@ -285,7 +285,9 @@ test("activation lock returns an integer rather than PostgreSQL void", async () 
   const database = makeTransaction([makeTemplate()]);
   database.tx.$queryRaw = async (segments) => {
     const sql = Array.from(segments).join("?");
-    if (/SELECT pg_advisory_xact_lock/.test(sql)) throw new Error("Prisma cannot decode void");
+    if (/SELECT pg_advisory_xact_lock/.test(sql)) {
+      throw new Error("Raw query failed. Code: `N/A`. Message: `Failed to deserialize column of type 'void'.`");
+    }
     assert.match(sql, /SELECT 1 FROM pg_advisory_xact_lock/);
     return [{ "?column?": 1 }];
   };

@@ -5,6 +5,12 @@ database with all saved fields and assets. Do not recreate, reseed, or overwrite
 it while diagnosing activation. The activation transaction changes only template
 status, active flags, updater, and timestamps after validation succeeds.
 
+The Railway deploy log on 13 November 2026 at 17:02:38 and 17:02:47 UTC
+confirmed `prisma.$queryRaw()` failed while deserializing PostgreSQL type
+`void`. The original `SELECT pg_advisory_xact_lock(...)` returned `void`; the
+fixed query returns integer `1` while acquiring the same transaction lock.
+This failure occurred before the saved template was queried or modified.
+
 Before deploying a fix, inspect the failed `POST /api/admin/id-template/activate`
 request in the `sktech-fresh` / `SKTECH1.0` Railway service logs. Record the
 timestamp, exception class, Prisma code, and failing operation privately. The
