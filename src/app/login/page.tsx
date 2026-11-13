@@ -140,7 +140,7 @@ function LoginContent() {
         className="space-y-3"
         aria-busy={submittingRole !== null}
       >
-        <label htmlFor="credential-user-id" className="block text-sm font-semibold text-slate-700">User ID</label>
+        <label htmlFor="credential-user-id" className="block text-sm font-semibold text-slate-700">{isAdminView ? "Admin username" : "User ID"}</label>
         <input
           id="credential-user-id"
           value={userId}
@@ -150,7 +150,7 @@ function LoginContent() {
               : setStaffUserId(event.target.value)
           }
           className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-          placeholder="Enter your user ID"
+          placeholder={isAdminView ? "Enter your admin username" : "Enter your user ID"}
           autoComplete="username"
           required
         />

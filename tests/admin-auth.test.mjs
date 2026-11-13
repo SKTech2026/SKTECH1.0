@@ -22,29 +22,27 @@ test("admin credential policy accepts only approved admin with valid password an
   assert.equal(await validInternalCredentials({ ...user, role: Role.STAFF }, "Example-passphrase-2026!", "STAFF"), true);
 });
 
-test("admin bootstrap requires explicit identity, strong password, confirmation, and exact Railway target", () => {
+test("admin bootstrap requires username, strong password, confirmation, and fresh Railway target", () => {
   const env = {
     SKTECH_ADMIN_BOOTSTRAP_CONFIRM: "CREATE_FIRST_ADMIN_ON_SKTECH_FRESH",
+    RAILWAY_ENVIRONMENT_NAME: "sktech-fresh",
     DATABASE_URL: "postgresql://user:placeholder@fresh.proxy.rlwy.net/railway",
     RAILWAY_FRESH_DATABASE_URL: "postgresql://user:placeholder@fresh.proxy.rlwy.net/railway",
     RAILWAY_FRESH_DATABASE_HOST: "fresh.proxy.rlwy.net",
-    RAILWAY_FRESH_DATABASE_NAME: "railway",
-    SKTECH_BOOTSTRAP_ADMIN_ID: "admin2026",
-    SKTECH_BOOTSTRAP_ADMIN_EMAIL: "admin@example.org",
-    SKTECH_BOOTSTRAP_ADMIN_NAME: "Example Administrator",
+    SKTECH_BOOTSTRAP_ADMIN_USERNAME: "ADMIN",
     SKTECH_BOOTSTRAP_ADMIN_PASSWORD: "Example-passphrase-2026!",
   };
-  assert.equal(validateConfig(env).employeeId, "admin2026");
+  assert.equal(validateConfig(env).username, "ADMIN");
   assert.throws(() => validateConfig({ ...env, SKTECH_ADMIN_BOOTSTRAP_CONFIRM: "" }));
   assert.throws(() => validateConfig({ ...env, SKTECH_BOOTSTRAP_ADMIN_PASSWORD: "short" }));
+  assert.throws(() => validateConfig({ ...env, RAILWAY_ENVIRONMENT_NAME: "production" }));
   assert.throws(() => validateConfig({ ...env, RAILWAY_FRESH_DATABASE_HOST: "other.proxy.rlwy.net" }));
-  assert.throws(() => validateConfig({ ...env, RAILWAY_FRESH_DATABASE_NAME: "other" }));
+  assert.throws(() => validateConfig({ ...env, SKTECH_BOOTSTRAP_ADMIN_USERNAME: "a" }));
   assert.throws(() => validateConfig({ ...env, DATABASE_URL: "postgresql://user:placeholder@db.supabase.co/postgres" }));
   assert.equal(validateConfig({ ...env,
     DATABASE_URL: "postgresql://user:placeholder@fresh.proxy.rlwy.net/custom",
     RAILWAY_FRESH_DATABASE_URL: "postgresql://user:placeholder@fresh.proxy.rlwy.net/custom",
-    RAILWAY_FRESH_DATABASE_NAME: "custom",
-  }).employeeId, "admin2026");
+  }).username, "ADMIN");
 });
 
 test("bootstrap errors are actionable categories without error details", () => {
@@ -53,6 +51,8 @@ test("bootstrap errors are actionable categories without error details", () => {
   assert.equal(classifyError({ code: "28P01", message: "password authentication failed for user secret" }), "DATABASE_AUTH");
   assert.equal(classifyError({ code: "P2010", meta: { code: "42P01" } }), "SCHEMA");
   assert.equal(classifyError({ code: "ENOTFOUND" }), "CONNECTION");
+  assert.equal(classifyError(new AggregateError([{ code: "ECONNREFUSED" }], "failed")), "CONNECTION");
+  assert.equal(classifyError({ code: "42501" }), "DATABASE_PERMISSION");
   assert.equal(classifyError({ message: "self signed certificate" }), "TLS");
   assert.equal(classifyError(new Error("secret URL")), "UNKNOWN");
   for (const value of Object.values(guidance)) {
@@ -72,7 +72,7 @@ test("bootstrap never changes an existing OFFICIAL account or creates a second a
       update: async (record) => writes.push(record),
     },
   };
-  const config = { employeeId: "admin2026", email: "official@example.org", name: "Admin" };
+  const config = { username: "ADMIN" };
   await assert.rejects(writeFirstAdmin(tx, config, "hashed", Role, UserStatus),
     (error) => error.code === "IDENTITY_EXISTS");
   assert.deepEqual(writes, []);
@@ -93,12 +93,15 @@ test("bootstrap creates only one approved admin after checks pass", async () => 
     },
   };
   await writeFirstAdmin(tx,
-    { employeeId: "admin2026", email: "admin@example.org", name: "Admin" },
+    { username: "ADMIN" },
     "hashed", Role, UserStatus);
   assert.equal(writes.length, 1);
   assert.equal(writes[0].data.role, Role.ADMIN);
   assert.equal(writes[0].data.status, UserStatus.APPROVED);
   assert.equal(writes[0].data.password, "hashed");
+  assert.equal(writes[0].data.employeeId, "ADMIN");
+  assert.equal(writes[0].data.name, "ADMIN");
+  assert.equal(writes[0].data.email, null);
 });
 
 test("bootstrap stops without writes when the transaction lock is busy", async () => {
