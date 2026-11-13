@@ -2,7 +2,7 @@ import { KKProfileStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getKKUser } from "@/lib/kk";
-import { ageGroup, ASSEMBLY_FREQUENCY, CIVIL_STATUS, CLASSIFICATION, EDUCATION, kkAge, NO_ASSEMBLY_REASON, SPECIFIC_NEEDS, WORK_STATUS } from "@/lib/kk-survey";
+import { ageGroup, ASSEMBLY_FREQUENCY, CIVIL_STATUS, CLASSIFICATION, EDUCATION, kkAge, NO_ASSEMBLY_REASON, PWD_CLASSIFICATION, resolveSpecificNeeds, SPECIFIC_NEEDS, WORK_STATUS } from "@/lib/kk-survey";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
   const lastName = text(body, "lastName", 100);
   const birthInput = text(body, "birthdate", 10);
   const birthdate = /^\d{4}-\d{2}-\d{2}$/.test(birthInput) ? new Date(`${birthInput}T00:00:00.000Z`) : null;
-  if (!firstName || !middleName || !lastName || !birthdate || Number.isNaN(birthdate.getTime()) || birthdate.toISOString().slice(0, 10) !== birthInput) return NextResponse.json({ error: "Valid full name and birthdate are required." }, { status: 400 });
+  if (!firstName || !lastName || !birthdate || Number.isNaN(birthdate.getTime()) || birthdate.toISOString().slice(0, 10) !== birthInput) return NextResponse.json({ error: "Valid name and birthdate are required." }, { status: 400 });
   const age = kkAge(birthdate);
   if (age < 15 || age > 30) return NextResponse.json({ error: "KK profiling is for ages 15 through 30." }, { status: 400 });
   const civilStatus = text(body, "civilStatus");
@@ -41,7 +41,9 @@ export async function POST(request: Request) {
   const kkAssemblyAttendanceFrequency = text(body, "kkAssemblyAttendanceFrequency");
   const noKkAssemblyReason = text(body, "noKkAssemblyReason");
   if (!oneOf(sexAssignedAtBirth, ["Male", "Female"]) || !oneOf(civilStatus, CIVIL_STATUS) || !oneOf(educationalBackground, EDUCATION) || !oneOf(youthClassification, CLASSIFICATION) || !oneOf(workStatus, WORK_STATUS)) return NextResponse.json({ error: "Choose valid demographic answers." }, { status: 400 });
-  if (youthClassification === "Youth with Specific Needs" ? !oneOf(specificNeedsCategory, SPECIFIC_NEEDS) : Boolean(specificNeedsCategory)) return NextResponse.json({ error: "Choose a valid specific needs category." }, { status: 400 });
+  if (youthClassification === "Youth with Specific Needs" ? !oneOf(specificNeedsCategory, SPECIFIC_NEEDS) :
+      youthClassification === PWD_CLASSIFICATION ? Boolean(specificNeedsCategory && specificNeedsCategory !== "Person with Disability") :
+      Boolean(specificNeedsCategory)) return NextResponse.json({ error: "Choose a valid specific needs category." }, { status: 400 });
   const attendedKkAssembly = body.attendedKkAssembly;
   if (attendedKkAssembly === true ? !oneOf(kkAssemblyAttendanceFrequency, ASSEMBLY_FREQUENCY) || Boolean(noKkAssemblyReason) : attendedKkAssembly === false ? !oneOf(noKkAssemblyReason, NO_ASSEMBLY_REASON) || Boolean(kkAssemblyAttendanceFrequency) : true) return NextResponse.json({ error: "Complete the KK assembly answers." }, { status: 400 });
   const voterFields = ["registeredSkVoter", "registeredNationalVoter", "votedLastElection"] as const;
@@ -52,15 +54,15 @@ export async function POST(request: Request) {
   const purokZone = text(body, "purokZone", 120);
   const contactNumber = text(body, "contactNumber", 30);
   if (!region || !province || !purokZone || !/^\+?[0-9 ()-]{7,30}$/.test(contactNumber)) return NextResponse.json({ error: "Complete the location and contact fields." }, { status: 400 });
-  const duplicate = await prisma.kKMemberProfile.findFirst({ where: { id: { not: profile.id }, status: KKProfileStatus.VERIFIED, firstName: { equals: firstName, mode: "insensitive" }, middleName: { equals: middleName, mode: "insensitive" }, lastName: { equals: lastName, mode: "insensitive" }, birthdate }, select: { id: true } });
+  const duplicate = await prisma.kKMemberProfile.findFirst({ where: { id: { not: profile.id }, status: KKProfileStatus.VERIFIED, firstName: { equals: firstName, mode: "insensitive" }, middleName: middleName ? { equals: middleName, mode: "insensitive" } : null, lastName: { equals: lastName, mode: "insensitive" }, birthdate }, select: { id: true } });
   if (duplicate) return NextResponse.json({ error: "You already have an approved KK registration in your designated barangay. Please contact your SK Official for corrections." }, { status: 409 });
   const updated = await prisma.kKMemberProfile.updateMany({
     where: { userId: member.id, status: { in: [KKProfileStatus.DRAFT, KKProfileStatus.NEEDS_CORRECTION] } },
     data: {
-      firstName, lastName, middleName, suffix: text(body, "suffix", 30) || null,
+      firstName, lastName, middleName: middleName || null, suffix: text(body, "suffix", 30) || null,
       region, province, purokZone, sexAssignedAtBirth, birthdate, age, email: member.email, contactNumber,
       civilStatus, youthAgeGroup: ageGroup(age), educationalBackground, youthClassification,
-      specificNeedsCategory: specificNeedsCategory || null, workStatus,
+      specificNeedsCategory: resolveSpecificNeeds(youthClassification, specificNeedsCategory), workStatus,
       registeredSkVoter: body.registeredSkVoter as boolean, registeredNationalVoter: body.registeredNationalVoter as boolean,
       votedLastElection: body.votedLastElection as boolean, attendedKkAssembly: attendedKkAssembly as boolean,
       kkAssemblyAttendanceFrequency: kkAssemblyAttendanceFrequency || null, noKkAssemblyReason: noKkAssemblyReason || null,

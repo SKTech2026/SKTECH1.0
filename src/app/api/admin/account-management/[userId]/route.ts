@@ -20,6 +20,7 @@ import {
   ageGroup,
   kkAge,
   NO_ASSEMBLY_REASON,
+  PWD_CLASSIFICATION,
   SPECIFIC_NEEDS,
   WORK_STATUS,
 } from "@/lib/kk-survey";
@@ -331,9 +332,8 @@ export async function PATCH(request: Request, context: RouteContext) {
       }
       if (kkData.attendedKkAssembly === true) kkData.noKkAssemblyReason = null;
       if (kkData.attendedKkAssembly === false) kkData.kkAssemblyAttendanceFrequency = null;
-      if (kkData.youthClassification && kkData.youthClassification !== "Youth with Specific Needs") {
-        kkData.specificNeedsCategory = null;
-      }
+      if (kkData.youthClassification === PWD_CLASSIFICATION) kkData.specificNeedsCategory = "Person with Disability";
+      else if (kkData.youthClassification && kkData.youthClassification !== "Youth with Specific Needs") kkData.specificNeedsCategory = null;
     }
 
     const hasProfileEdits = Object.keys(officialData).length > 0 || Object.keys(officialProfileData).length > 0 || Object.keys(kkData).length > 0;
