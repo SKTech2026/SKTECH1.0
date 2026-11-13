@@ -16,7 +16,8 @@ Run `npm run seed` for a read-only preview of missing geography. Review the
 counts and conflicts, then run `npm run seed:geography:apply` to add missing
 municipalities and barangays in one transaction. The importer never creates,
 updates, or deletes users. It does not delete any existing geography records.
-Run `npm run seed` again to confirm zero missing barangays and 15 complete LGUs.
+Run `npm run seed` again to confirm `canonicalBarangaysPresent: 426`,
+`completeLgus: 15`, and an empty `incompleteLgus` list.
 
 Existing historical names can leave the raw database count above 426. The
 important completion check is that all 426 canonical names are present under

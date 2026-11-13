@@ -10,6 +10,8 @@ test("validated geography contains Calapan and all 426 barangays", () => {
   assert.equal(data.lgus.length, 15);
   assert.equal(data.lgus.reduce((count, lgu) => count + lgu.barangays.length, 0), 426);
   assert.equal(data.lgus.find((lgu) => lgu.name === "City of Calapan").barangays.length, 62);
+  const expectedCounts = [27, 13, 36, 15, 62, 27, 17, 70, 37, 23, 13, 20, 8, 26, 32];
+  assert.deepEqual(Array.from(data.lgus, (lgu) => lgu.barangays.length), expectedCounts);
 });
 
 test("geography importer refuses non Railway targets", () => {
@@ -50,6 +52,7 @@ test("geography sync inserts the complete reference dataset without touching use
   assert.equal(applied.after.municipalities, 15);
   assert.equal(applied.after.barangays, 426);
   assert.equal(applied.completeLgus, 15);
+  assert.equal(applied.canonicalBarangaysPresent, 426);
   const repeated = await syncGeography(store, data, true);
   assert.equal(repeated.barangaysCreated, 0);
   assert.equal(repeated.after.barangays, 426);

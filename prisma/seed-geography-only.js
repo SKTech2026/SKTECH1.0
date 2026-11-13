@@ -38,7 +38,7 @@ async function syncGeography(prisma, data, apply) {
   });
   const summary = { dryRun: !apply, targetMunicipalities: 15, targetBarangays: 426,
     before: await counts(), after: {}, municipalitiesCreated: 0, barangaysCreated: 0,
-    completeLgus: 0, incompleteLgus: [] };
+    canonicalBarangaysPresent: 0, completeLgus: 0, incompleteLgus: [] };
   for (const lgu of data.lgus) {
     const names = [lgu.name, ...(lgu.aliases || [])];
     const matches = await prisma.municipality.findMany({
@@ -64,8 +64,14 @@ async function syncGeography(prisma, data, apply) {
     if (apply && missing.length) await prisma.barangay.createMany({
       data: missing.map((name) => ({ name, municipalityId: municipality.id })), skipDuplicates: true,
     });
-    if (apply || missing.length === 0) summary.completeLgus++;
-    else summary.incompleteLgus.push({ name: lgu.name, missing: missing.length });
+    const finalRows = apply ? await prisma.barangay.findMany({
+      where: { municipalityId: municipality.id }, select: { name: true },
+    }) : existing;
+    const finalNames = new Set(finalRows.map((row) => row.name.trim().toLowerCase()));
+    const stillMissing = lgu.barangays.filter((name) => !finalNames.has(name.trim().toLowerCase()));
+    summary.canonicalBarangaysPresent += lgu.barangays.length - stillMissing.length;
+    if (stillMissing.length === 0) summary.completeLgus++;
+    else summary.incompleteLgus.push({ name: lgu.name, missing: stillMissing.length });
   }
   summary.after = apply ? await counts() : {
     municipalities: summary.before.municipalities + summary.municipalitiesCreated,
