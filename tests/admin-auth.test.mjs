@@ -7,7 +7,7 @@ import { validInternalCredentials } from "../src/lib/internal-credential-policy.
 import { resolveAuthSecret } from "../src/lib/auth-config.ts";
 
 const require = createRequire(import.meta.url);
-const { validateConfig } = require("../scripts/bootstrap-fresh-admin.cjs");
+const { validateConfig, classifyError, BootstrapError, guidance, writeFirstAdmin } = require("../scripts/bootstrap-fresh-admin.cjs");
 
 test("admin credential policy accepts only approved admin with valid password and role", async () => {
   const user = { role: Role.ADMIN, status: UserStatus.APPROVED,
@@ -28,6 +28,7 @@ test("admin bootstrap requires explicit identity, strong password, confirmation,
     DATABASE_URL: "postgresql://user:placeholder@fresh.proxy.rlwy.net/railway",
     RAILWAY_FRESH_DATABASE_URL: "postgresql://user:placeholder@fresh.proxy.rlwy.net/railway",
     RAILWAY_FRESH_DATABASE_HOST: "fresh.proxy.rlwy.net",
+    RAILWAY_FRESH_DATABASE_NAME: "railway",
     SKTECH_BOOTSTRAP_ADMIN_ID: "admin2026",
     SKTECH_BOOTSTRAP_ADMIN_EMAIL: "admin@example.org",
     SKTECH_BOOTSTRAP_ADMIN_NAME: "Example Administrator",
@@ -37,7 +38,78 @@ test("admin bootstrap requires explicit identity, strong password, confirmation,
   assert.throws(() => validateConfig({ ...env, SKTECH_ADMIN_BOOTSTRAP_CONFIRM: "" }));
   assert.throws(() => validateConfig({ ...env, SKTECH_BOOTSTRAP_ADMIN_PASSWORD: "short" }));
   assert.throws(() => validateConfig({ ...env, RAILWAY_FRESH_DATABASE_HOST: "other.proxy.rlwy.net" }));
+  assert.throws(() => validateConfig({ ...env, RAILWAY_FRESH_DATABASE_NAME: "other" }));
   assert.throws(() => validateConfig({ ...env, DATABASE_URL: "postgresql://user:placeholder@db.supabase.co/postgres" }));
+  assert.equal(validateConfig({ ...env,
+    DATABASE_URL: "postgresql://user:placeholder@fresh.proxy.rlwy.net/custom",
+    RAILWAY_FRESH_DATABASE_URL: "postgresql://user:placeholder@fresh.proxy.rlwy.net/custom",
+    RAILWAY_FRESH_DATABASE_NAME: "custom",
+  }).employeeId, "admin2026");
+});
+
+test("bootstrap errors are actionable categories without error details", () => {
+  assert.equal(classifyError(new BootstrapError("ADMIN_EXISTS")), "ADMIN_EXISTS");
+  assert.equal(classifyError(new BootstrapError("IDENTITY_EXISTS")), "IDENTITY_EXISTS");
+  assert.equal(classifyError({ code: "28P01", message: "password authentication failed for user secret" }), "DATABASE_AUTH");
+  assert.equal(classifyError({ code: "P2010", meta: { code: "42P01" } }), "SCHEMA");
+  assert.equal(classifyError({ code: "ENOTFOUND" }), "CONNECTION");
+  assert.equal(classifyError({ message: "self signed certificate" }), "TLS");
+  assert.equal(classifyError(new Error("secret URL")), "UNKNOWN");
+  for (const value of Object.values(guidance)) {
+    assert.doesNotMatch(value, /secret URL|password authentication failed for user secret/);
+  }
+});
+
+test("bootstrap never changes an existing OFFICIAL account or creates a second admin", async () => {
+  const existingOfficial = { id: "official-1", role: Role.OFFICIAL, email: "official@example.org" };
+  const writes = [];
+  const tx = {
+    $queryRaw: async () => [{ acquired: true }],
+    user: {
+      count: async () => 0,
+      findFirst: async () => existingOfficial,
+      create: async (record) => writes.push(record),
+      update: async (record) => writes.push(record),
+    },
+  };
+  const config = { employeeId: "admin2026", email: "official@example.org", name: "Admin" };
+  await assert.rejects(writeFirstAdmin(tx, config, "hashed", Role, UserStatus),
+    (error) => error.code === "IDENTITY_EXISTS");
+  assert.deepEqual(writes, []);
+  tx.user.count = async () => 1;
+  await assert.rejects(writeFirstAdmin(tx, config, "hashed", Role, UserStatus),
+    (error) => error.code === "ADMIN_EXISTS");
+  assert.deepEqual(writes, []);
+});
+
+test("bootstrap creates only one approved admin after checks pass", async () => {
+  const writes = [];
+  const tx = {
+    $queryRaw: async () => [{ acquired: true }],
+    user: {
+      count: async () => 0,
+      findFirst: async () => null,
+      create: async (record) => writes.push(record),
+    },
+  };
+  await writeFirstAdmin(tx,
+    { employeeId: "admin2026", email: "admin@example.org", name: "Admin" },
+    "hashed", Role, UserStatus);
+  assert.equal(writes.length, 1);
+  assert.equal(writes[0].data.role, Role.ADMIN);
+  assert.equal(writes[0].data.status, UserStatus.APPROVED);
+  assert.equal(writes[0].data.password, "hashed");
+});
+
+test("bootstrap stops without writes when the transaction lock is busy", async () => {
+  let queriedUsers = false;
+  const tx = {
+    $queryRaw: async () => [{ acquired: false }],
+    user: { count: async () => { queriedUsers = true; return 0; } },
+  };
+  await assert.rejects(writeFirstAdmin(tx, {}, "hashed", Role, UserStatus),
+    (error) => error.code === "LOCK_BUSY");
+  assert.equal(queriedUsers, false);
 });
 
 test("authentication secret cannot fall back to the Face AI shared secret", () => {
