@@ -255,7 +255,7 @@ export default function SKOfficialForm({
 
       <div className="grid gap-4 md:grid-cols-2">
         <div>
-          <label className="text-xs uppercase tracking-[0.14em] text-muted">Search Municipality</label>
+          <label className="text-xs uppercase tracking-[0.14em] text-muted">Search City / Municipality</label>
           <input
             className={inputClass}
             value={municipalitySearch}
@@ -286,7 +286,7 @@ export default function SKOfficialForm({
             className={inputClass}
             value={barangaySearch}
             onChange={(e) => setBarangaySearch(e.target.value)}
-            placeholder={selectedMunicipality ? "Type barangay..." : "Select municipality first"}
+            placeholder={selectedMunicipality ? "Type barangay..." : "Select city or municipality first"}
             disabled={!selectedMunicipality}
           />
           <select

@@ -334,7 +334,7 @@ export default function OfficialProfileForm({ initial, municipalities }: Profile
               onChange={(e) => handleMunicipalityChange(e.target.value)}
               required
             >
-              <option value="">Select municipality</option>
+              <option value="">Select city or municipality</option>
               {municipalities.map((entry) => (
                 <option key={entry.id} value={entry.id}>
                   {entry.name}

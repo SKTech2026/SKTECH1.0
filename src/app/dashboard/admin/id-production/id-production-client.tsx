@@ -131,7 +131,7 @@ export default function IdProductionClient({
             />
           </div>
           <div>
-            <label className="text-xs uppercase tracking-[0.14em] text-muted">Municipality</label>
+            <label className="text-xs uppercase tracking-[0.14em] text-muted">City / Municipality</label>
             <select
               value={municipalityId}
               onChange={(event) => {
@@ -157,7 +157,7 @@ export default function IdProductionClient({
               className="mt-1.5 w-full rounded-lg border border-glass-border bg-surface-elevated/60 px-3 py-2 text-sm text-foreground outline-none transition focus:border-accent/40 disabled:opacity-60"
             >
               <option value="">
-                {selectedMunicipality ? "All barangays" : "Select municipality first"}
+                {selectedMunicipality ? "All barangays" : "Select city or municipality first"}
               </option>
               {filteredBarangays.map((entry) => (
                 <option key={entry.id} value={entry.id}>

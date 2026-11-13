@@ -17,6 +17,7 @@ import {
   validateSKOfficialPayload,
 } from "@/lib/sk-official";
 import { OFFICIAL_TYPE_OPTIONS, federationPositions, federationLevelLabel } from "@/lib/sk-official-options";
+import { validBarangaySelection } from "@/lib/locations/dropdown-selection";
 
 type WizardInitialValues = Partial<SKOfficialFormPayload> & {
   proofDocumentUrl?: string | null;
@@ -92,7 +93,9 @@ export default function SKOfficialAdmissionWizard({
   const [sex, setSex] = useState<Sex | null>(initialValues?.sex ?? null);
   const [province, setProvince] = useState(initialValues?.province ?? "Oriental Mindoro");
   const [municipalityId, setMunicipalityId] = useState(initialValues?.municipalityId ?? "");
-  const [barangayId, setBarangayId] = useState(initialValues?.barangayId ?? "");
+  const [barangayId, setBarangayId] = useState(() => validBarangaySelection(
+    initialValues?.municipalityId ?? "", initialValues?.barangayId ?? "", municipalities,
+  ));
   const [sitio, setSitio] = useState(initialValues?.sitio ?? "");
   const [position, setPosition] = useState<OfficialPosition>(
     initialValues?.position ?? "SK_CHAIRPERSON",
@@ -131,6 +134,7 @@ export default function SKOfficialAdmissionWizard({
     () => municipalities.find((entry) => entry.id === municipalityId) ?? null,
     [municipalityId, municipalities],
   );
+
 
   const filteredMunicipalities = useMemo(() => {
     return municipalities.slice().sort((a, b) => a.name.localeCompare(b.name));
@@ -574,7 +578,7 @@ export default function SKOfficialAdmissionWizard({
 
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="text-xs uppercase tracking-[0.14em] text-muted">Municipality</label>
+              <label className="text-xs uppercase tracking-[0.14em] text-muted">City / Municipality</label>
               <p className="mt-1 text-xs text-muted">{filteredMunicipalities.length} LGUs available</p>
               <select
                 className={inputClass}
@@ -584,7 +588,7 @@ export default function SKOfficialAdmissionWizard({
                   setBarangayId("");
                 }}
               >
-                <option value="">Select municipality</option>
+                <option value="">Select city or municipality</option>
                 {filteredMunicipalities.map((entry) => (
                   <option key={entry.id} value={entry.id}>
                     {entry.name}
@@ -597,7 +601,7 @@ export default function SKOfficialAdmissionWizard({
               <p className="mt-1 text-xs text-muted">
                 {selectedMunicipality
                   ? `${selectedMunicipality.barangays.length} barangays available`
-                  : "Select a municipality to load barangays"}
+                  : "Select a city or municipality to load barangays"}
               </p>
               <select
                 className={inputClass}
@@ -606,7 +610,7 @@ export default function SKOfficialAdmissionWizard({
                 disabled={!selectedMunicipality}
               >
                 <option value="">
-                  {selectedMunicipality ? "Select barangay" : "Select municipality first"}
+                  {selectedMunicipality ? "Select barangay" : "Select city or municipality first"}
                 </option>
                 {filteredBarangays.map((entry) => (
                   <option key={entry.id} value={entry.id}>
@@ -774,7 +778,7 @@ export default function SKOfficialAdmissionWizard({
               </p>
             </div>
             <div className="rounded-xl border border-glass-border bg-surface p-3">
-              <p className="text-xs uppercase tracking-[0.14em] text-muted">Municipality / Barangay</p>
+              <p className="text-xs uppercase tracking-[0.14em] text-muted">City or Municipality / Barangay</p>
               <p className="mt-1 text-sm text-foreground">
                 {selectedMunicipality?.name ?? "N/A"} / {selectedBarangay?.name ?? "N/A"}
               </p>
