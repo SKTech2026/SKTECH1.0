@@ -21,6 +21,8 @@ const VALID_SOURCE_KEYS = new Set([
   "fullName",
   "birthDate",
   "displayPosition",
+  "barangay",
+  "municipality",
   "address",
   "documentId",
   "serviceTerm",

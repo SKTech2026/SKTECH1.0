@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { requireApiRole } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
+import { createProvincialIdTemplateDraft } from "@/lib/id-template/create-provincial-id-template-draft";
 import { convertDbTemplateToRendererTemplate } from "@/lib/id-template/db-to-renderer-converter";
 import type { DbIdTemplate, DbIdTemplateField } from "@/lib/id-template/load-active-id-template";
 import { validateIdTemplateOrDefault } from "@/lib/id-template/validate-template";
@@ -722,6 +723,16 @@ async function findActiveTemplate() {
   });
 }
 
+async function findDraftTemplate(templateId: string) {
+  return prisma.idTemplate.findFirst({
+    where: { id: templateId, status: "DRAFT", isActive: false },
+    include: {
+      fields: { orderBy: [{ side: "asc" }, { zIndex: "asc" }, { createdAt: "asc" }] },
+      assets: { orderBy: { createdAt: "asc" } },
+    },
+  });
+}
+
 function buildTemplateResponse(template: DbIdTemplate) {
   const rendererTemplate = convertDbTemplateToRendererTemplate(template);
   if (!rendererTemplate) {
@@ -735,6 +746,7 @@ function buildTemplateResponse(template: DbIdTemplate) {
 
   return {
     template: validateIdTemplateOrDefault(rendererTemplate),
+    templateId: template.id,
     templateName: template.name,
     canvasWidth: template.canvasWidth,
     canvasHeight: template.canvasHeight,
@@ -745,22 +757,66 @@ function buildTemplateResponse(template: DbIdTemplate) {
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const guard = await requireApiRole([Role.ADMIN]);
   if (guard.error) return guard.error;
 
   try {
-    const activeTemplate = await findActiveTemplate();
-    if (!activeTemplate) {
-      return jsonError("No active ID template found.", 404);
+    const templateId = new URL(request.url).searchParams.get("templateId")?.trim();
+    const template = templateId ? await findDraftTemplate(templateId) : await findActiveTemplate();
+    if (!template) {
+      return jsonError(templateId ? "Editable draft template was not found." : "No active ID template found.", 404);
     }
 
     return NextResponse.json({
       success: true,
-      ...buildTemplateResponse(activeTemplate as DbIdTemplate),
+      isDraft: Boolean(templateId),
+      ...buildTemplateResponse(template as DbIdTemplate),
     });
   } catch {
     return jsonError("Unable to load ID template.", 500);
+  }
+}
+
+export async function POST(request: Request) {
+  const guard = await requireApiRole([Role.ADMIN]);
+  if (guard.error) return guard.error;
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError("Invalid JSON payload.", 400);
+  }
+
+  if (!isPlainObject(body) || body.source !== "provincial-id-v1") {
+    return jsonError("Unsupported ID template draft source.", 400);
+  }
+
+  try {
+    const draft = await prisma.$transaction(
+      (tx) => createProvincialIdTemplateDraft(tx, guard.session.user.id),
+      { timeout: 15000, maxWait: 10000 },
+    );
+    return NextResponse.json({ success: true, ...draft }, { status: draft.created ? 201 : 200 });
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("reserved provincial ID template")) {
+      return jsonError(error.message, 409);
+    }
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      const existing = await findDraftTemplate("sktech-provincial-id-modern-v1").catch(() => null);
+      if (existing) {
+        return NextResponse.json({
+          success: true,
+          id: existing.id,
+          name: existing.name,
+          status: existing.status,
+          isActive: existing.isActive,
+          created: false,
+        });
+      }
+    }
+    return jsonError("Unable to create the provincial ID template draft.", 500);
   }
 }
 
@@ -780,10 +836,15 @@ export async function PATCH(request: Request) {
       return jsonError("Payload must be an object.", 400);
     }
 
-    const activeTemplate = await findActiveTemplate();
+    if (body.templateId !== undefined && (typeof body.templateId !== "string" || !body.templateId.trim())) {
+      return jsonError("templateId must be a non-empty string.", 400);
+    }
+
+    const templateId = typeof body.templateId === "string" ? body.templateId.trim() : null;
+    const activeTemplate = templateId ? await findDraftTemplate(templateId) : await findActiveTemplate();
 
     if (!activeTemplate) {
-      return jsonError("No active ID template found.", 404);
+      return jsonError(templateId ? "Editable draft template was not found." : "No active ID template found.", 404);
     }
 
     const updates = validateFields(body.fields, activeTemplate.fields as DbIdTemplateField[]);

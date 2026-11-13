@@ -265,9 +265,9 @@ export default function IdProductionClient({
                 qrValue={buildQrValue(selectedOfficial)}
                 photoUrl={buildPhotoUrl(selectedOfficial)}
                 registryStatus={selectedOfficial.status}
-                sktechLogoUrl="/sk-tech-logo.png"
-                provincialSealUrl="/images/provincial-seal-logo.png"
-                skfedLogoUrl="/login-logo.png"
+                sktechLogoUrl="/assets/logos/sktech-logo-new.png"
+                provincialSealUrl="/assets/logos/official-seal-logo-new.png"
+                skfedLogoUrl="/assets/logos/sk-logo-new.png"
                 template={template}
               />
             </>

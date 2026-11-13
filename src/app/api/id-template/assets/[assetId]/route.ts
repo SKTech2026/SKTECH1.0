@@ -1,6 +1,7 @@
 import { IdTemplateAssetKind } from "@prisma/client";
 import { NextResponse } from "next/server";
 
+import { requireApiRole } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import {
   downloadIdTemplateImageAsset,
@@ -33,16 +34,24 @@ export async function GET(_request: Request, context: RouteContext) {
       where: {
         id: assetId,
         kind: IdTemplateAssetKind.IMAGE,
-        template: {
-          isActive: true,
-          status: "ACTIVE",
-        },
+        template: { is: {
+          OR: [
+            { isActive: true, status: "ACTIVE" },
+            { isActive: false, status: "DRAFT" },
+          ],
+        } },
       },
       select: {
         objectPath: true,
         mimeType: true,
+        template: { select: { isActive: true, status: true } },
       },
     });
+
+    if (asset?.template.status === "DRAFT" && !asset.template.isActive) {
+      const guard = await requireApiRole(["ADMIN"]);
+      if (guard.error) return imageErrorResponse();
+    }
 
     if (!asset?.objectPath || !isIdTemplateAssetObjectPath(asset.objectPath)) {
       return imageErrorResponse(404);
@@ -62,7 +71,9 @@ export async function GET(_request: Request, context: RouteContext) {
     return new NextResponse(Buffer.from(imageBytes), {
       status: 200,
       headers: {
-        "Cache-Control": "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400",
+        "Cache-Control": asset.template.isActive && asset.template.status === "ACTIVE"
+          ? "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400"
+          : "private, no-store",
         "Content-Type": contentType,
         "Content-Length": String(imageBytes.byteLength),
         "X-Content-Type-Options": "nosniff",

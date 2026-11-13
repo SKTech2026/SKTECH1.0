@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ImageIcon, Square, Trash2, Type } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
@@ -35,9 +36,9 @@ const DEMO_DATA: OfficialIdTemplateData = {
   accountStatus: "ACTIVE",
   photoUrl: "/images/default-official.svg",
   qrValue: "template-preview",
-  sktechLogoUrl: "/images/default-official.svg",
-  skfedLogoUrl: "/images/default-official.svg",
-  provincialSealUrl: "/images/default-official.svg",
+  sktechLogoUrl: "/assets/logos/sktech-logo-new.png",
+  skfedLogoUrl: "/assets/logos/sk-logo-new.png",
+  provincialSealUrl: "/assets/logos/official-seal-logo-new.png",
   contactInfo: "Not recorded",
   websiteUrl: "https://example.com",
   watermark: "CAPSTONE PROJECT - DEMO ID - NOT AN OFFICIAL GOVERNMENT ID",
@@ -61,12 +62,19 @@ type IdTemplatePreviewClientProps = {
   frontFields: number;
   backFields: number;
   hasQr: boolean;
+  templateId?: string;
+  draftPreview?: boolean;
+  sourcePreview?: boolean;
 };
 
 type AdminTemplateResponse = {
   success?: boolean;
+  id?: string;
+  templateId?: string;
   template?: IdTemplate;
   templateName?: string;
+  created?: boolean;
+  error?: string;
 };
 
 type AssetUploadResponse = {
@@ -111,7 +119,11 @@ export default function IdTemplatePreviewClient({
   frontFields,
   backFields,
   hasQr,
+  templateId,
+  draftPreview = false,
+  sourcePreview = false,
 }: IdTemplatePreviewClientProps) {
+  const router = useRouter();
   const [side, setSide] = useState<IdTemplateSide>("front");
   const [templateState, setTemplateState] = useState<IdTemplate>(() => cloneTemplate(template));
   const [savedTemplateState, setSavedTemplateState] = useState<IdTemplate>(() => cloneTemplate(template));
@@ -124,7 +136,7 @@ export default function IdTemplatePreviewClient({
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!sourcePreview);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const [backgroundDrafts, setBackgroundDrafts] = useState<Record<IdTemplateSide, string>>({
     front: "",
@@ -156,24 +168,33 @@ export default function IdTemplatePreviewClient({
   useEffect(() => {
     let isMounted = true;
 
+    const applyTemplate = (value: IdTemplate) => {
+      const editableTemplate = cloneTemplate(value);
+      setTemplateState(editableTemplate);
+      setSavedTemplateState(cloneTemplate(editableTemplate));
+      setSavedSnapshot(serializeTemplate(editableTemplate));
+      setSelectedId(editableTemplate.sides.front.fields[0]?.id ?? null);
+      setBackgroundDrafts({
+        front: resolveShapeBackgroundColor(findBackgroundField(editableTemplate, "front") ?? undefined),
+        back: resolveShapeBackgroundColor(findBackgroundField(editableTemplate, "back") ?? undefined),
+      });
+      setSide("front");
+      setSaveMessage(null);
+      setSaveError(null);
+    };
+
     const loadEditableTemplate = async () => {
+      setIsLoading(true);
       try {
-        const response = await fetch("/api/admin/id-template", { cache: "no-store" });
+        const endpoint = templateId
+          ? `/api/admin/id-template?templateId=${encodeURIComponent(templateId)}`
+          : "/api/admin/id-template";
+        const response = await fetch(endpoint, { cache: "no-store" });
         if (!response.ok) return;
 
         const result = (await response.json()) as AdminTemplateResponse;
         if (!isMounted || !result.template) return;
-
-        const editableTemplate = cloneTemplate(result.template);
-        setTemplateState(editableTemplate);
-        setSavedTemplateState(cloneTemplate(editableTemplate));
-        setSavedSnapshot(serializeTemplate(editableTemplate));
-        setSelectedId(editableTemplate.sides.front.fields[0]?.id ?? null);
-        setBackgroundDrafts({
-          front: resolveShapeBackgroundColor(findBackgroundField(editableTemplate, "front") ?? undefined),
-          back: resolveShapeBackgroundColor(findBackgroundField(editableTemplate, "back") ?? undefined),
-        });
-        setSide("front");
+        applyTemplate(result.template);
       } catch {
         if (isMounted) {
           setSaveError("Unable to load the editable template. Showing the server preview.");
@@ -183,12 +204,17 @@ export default function IdTemplatePreviewClient({
       }
     };
 
-    loadEditableTemplate();
+    if (sourcePreview) {
+      applyTemplate(template);
+      setIsLoading(false);
+    } else {
+      loadEditableTemplate();
+    }
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [sourcePreview, templateId, template]);
 
   const beginDragField = (fieldId: string, event: ReactPointerEvent<HTMLDivElement>) => {
     if (isLoading || isSaving || event.button !== 0) return;
@@ -323,6 +349,7 @@ export default function IdTemplatePreviewClient({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          ...(templateId ? { templateId } : {}),
           fields: buildSaveFields(submittedTemplate),
           creates: buildCreateFields(submittedTemplate),
         }),
@@ -356,8 +383,36 @@ export default function IdTemplatePreviewClient({
     }
   };
 
+  const createDraft = async () => {
+    if (!sourcePreview || isSaving || isLoading) return;
+    if (isDirty && !window.confirm("Create the database draft from the original design? Unsaved source-preview edits will be discarded.")) {
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveMessage(null);
+    setSaveError(null);
+    try {
+      const response = await fetch("/api/admin/id-template", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source: "provincial-id-v1" }),
+      });
+      const result = (await response.json().catch(() => null)) as AdminTemplateResponse | null;
+      const id = result?.id ?? result?.templateId;
+      if (!response.ok || !id) {
+        throw new Error(result && "error" in result ? result.error ?? "Unable to create the draft." : "Unable to create the draft.");
+      }
+      router.replace(`/dashboard/admin/id-template?templateId=${encodeURIComponent(id)}`);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Unable to create the draft.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const addElement = (type: "staticText" | "shape") => {
-    if (isLoading || isSaving || isUploadingImage) return;
+    if (sourcePreview || isLoading || isSaving || isUploadingImage) return;
     const id = `local-${type === "staticText" ? "text" : "shape"}-${crypto.randomUUID()}`;
     const field: IdTemplateField = {
       id, type, xPercent: 38, yPercent: 40, widthPercent: 24,
@@ -397,6 +452,7 @@ export default function IdTemplatePreviewClient({
       const formData = new FormData();
       formData.append("file", file);
       formData.append("side", side === "front" ? "FRONT" : "BACK");
+      if (templateId) formData.append("templateId", templateId);
 
       const response = await fetch("/api/admin/id-template/assets", {
         method: "POST",
@@ -488,6 +544,11 @@ export default function IdTemplatePreviewClient({
             <p className="mt-2 truncate text-sm text-muted">
               {templateName}
             </p>
+            {draftPreview ? (
+              <p role="status" className="mt-2 inline-flex rounded-md border border-amber-400/40 bg-amber-400/10 px-2 py-1 text-xs font-semibold text-amber-200">
+                INACTIVE DRAFT · ID Production is unchanged
+              </p>
+            ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <button type="button" onClick={() => addElement("staticText")} className="inline-flex items-center gap-2 rounded-lg border border-glass-border px-3 py-2 text-sm font-semibold">
@@ -510,7 +571,8 @@ export default function IdTemplatePreviewClient({
             <button
               type="button"
               onClick={() => imageInputRef.current?.click()}
-              disabled={isLoading || isSaving || isUploadingImage}
+              disabled={sourcePreview || isLoading || isSaving || isUploadingImage}
+              title={sourcePreview ? "Create an editable draft before uploading images." : undefined}
               className="inline-flex items-center gap-2 rounded-lg border border-glass-border px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
             >
               <ImageIcon size={16} aria-hidden="true" /> {isUploadingImage ? "Uploading..." : "Add Image"}
@@ -529,12 +591,20 @@ export default function IdTemplatePreviewClient({
             </button>
             <button
               type="button"
-              onClick={saveTemplate}
-              disabled={!hasSaveableChanges || isSaving || isLoading}
+              onClick={sourcePreview ? createDraft : saveTemplate}
+              disabled={sourcePreview ? isSaving || isLoading : !hasSaveableChanges || isSaving || isLoading}
               className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isSaving ? "Saving..." : "Save Template"}
+              {isSaving ? "Saving..." : sourcePreview ? "Create Editable Draft" : draftPreview ? "Save Draft" : "Save Template"}
             </button>
+            {!sourcePreview && !templateId ? (
+              <Link
+                href="/dashboard/admin/id-template?design=provincial"
+                className="rounded-lg border border-accent/40 px-4 py-2 text-sm font-semibold text-accent transition hover:bg-accent/10"
+              >
+                Preview New Design
+              </Link>
+            ) : null}
             <Link
               href="/dashboard/admin/id-production"
               className="rounded-lg border border-glass-border px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-surface-elevated/70"
@@ -543,6 +613,16 @@ export default function IdTemplatePreviewClient({
             </Link>
           </div>
         </div>
+        {sourcePreview ? (
+          <p role="status" className="mt-3 text-sm text-muted">
+            Source preview only. Creating a draft adds a separate inactive template; it does not change the active ID design.
+          </p>
+        ) : null}
+        {draftPreview ? (
+          <p role="status" className="mt-3 text-sm text-muted">
+            Changes save to this inactive draft only. Existing active templates and ID Production remain unchanged.
+          </p>
+        ) : null}
         {localFields.length > 0 ? <p role="status" className="mt-3 text-sm text-amber-200">New elements, including uploaded images, will be saved when you click Save Template.</p> : null}
         {uploadError ? (
           <p className="mt-4 rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm font-semibold text-rose-200">

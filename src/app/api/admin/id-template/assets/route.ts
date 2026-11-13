@@ -57,6 +57,11 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const file = formData.get("file");
     const side = readSide(formData.get("side"));
+    const templateIdValue = formData.get("templateId");
+    if (templateIdValue !== null && (typeof templateIdValue !== "string" || !templateIdValue.trim())) {
+      return jsonError("templateId must be a non-empty string.", 400);
+    }
+    const templateId = typeof templateIdValue === "string" ? templateIdValue.trim() : null;
 
     if (!isFile(file)) {
       return jsonError("Image file is required.", 400);
@@ -66,24 +71,24 @@ export async function POST(request: Request) {
       return jsonError("Image is too large. Maximum size is 2MB.", 413);
     }
 
-    const activeTemplate = await prisma.idTemplate.findFirst({
-      where: {
-        isActive: true,
-        status: "ACTIVE",
-      },
-      select: {
-        id: true,
-      },
-    });
+    const targetTemplate = templateId
+      ? await prisma.idTemplate.findFirst({
+          where: { id: templateId, isActive: false, status: "DRAFT" },
+          select: { id: true },
+        })
+      : await prisma.idTemplate.findFirst({
+          where: { isActive: true, status: "ACTIVE" },
+          select: { id: true },
+        });
 
-    if (!activeTemplate) {
-      return jsonError("No active ID template found.", 404);
+    if (!targetTemplate) {
+      return jsonError(templateId ? "Editable draft template was not found." : "No active ID template found.", 404);
     }
 
     let objectPath: string | null = null;
     const asset = await prisma.idTemplateAsset.create({
       data: {
-        templateId: activeTemplate.id,
+        templateId: targetTemplate.id,
         side,
         kind: IdTemplateAssetKind.IMAGE,
         objectPath: null,
@@ -98,7 +103,7 @@ export async function POST(request: Request) {
     });
 
     try {
-      const uploaded = await uploadIdTemplateImageAsset(file, activeTemplate.id, asset.id);
+      const uploaded = await uploadIdTemplateImageAsset(file, targetTemplate.id, asset.id);
       objectPath = uploaded.objectPath;
 
       const savedAsset = await prisma.idTemplateAsset.update({
