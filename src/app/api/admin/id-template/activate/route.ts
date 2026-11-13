@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { requireApiRole } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
+import { classifyActivationDatabaseError } from "@/lib/id-template/activation-error";
 import {
   activateSavedTemplate,
   deactivateToCodeDefault,
@@ -92,9 +93,11 @@ export async function POST(request: Request) {
     if (error instanceof TemplateActivationError) {
       return jsonError(error.message, error.status);
     }
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") {
-      return jsonError("Another template change happened concurrently. Reload the Designer and try again.", 409);
-    }
-    return jsonError("Template activation failed; no template changes were applied.", 500);
+    const failure = classifyActivationDatabaseError(error);
+    console.error("ID_TEMPLATE_ACTIVATION_FAILURE", {
+      category: failure.code,
+      errorClass: error instanceof Error ? error.constructor.name : "Unknown",
+    });
+    return jsonError(failure.message, failure.status);
   }
 }

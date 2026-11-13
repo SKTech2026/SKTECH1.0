@@ -249,7 +249,8 @@ function assertExpectedUpdatedAt(value: string, actual: Date) {
 }
 
 async function acquireActivationLock(tx: TemplateActivationTransaction) {
-  await tx.$queryRaw`SELECT pg_advisory_xact_lock(${BigInt(ACTIVATION_LOCK_ID)})`;
+  // Return a supported scalar type to Prisma; the lock function itself returns void.
+  await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(${BigInt(ACTIVATION_LOCK_ID)})`;
 }
 
 export async function activateSavedTemplate(

@@ -278,6 +278,33 @@ test("activation API checks Admin role on both saved-version listing and mutatio
   assert.match(route, /export async function POST\(request: Request\)[\s\S]*?requireApiRole\(\[Role\.ADMIN\]\)/);
   assert.match(route, /isolationLevel: Prisma\.TransactionIsolationLevel\.Serializable/);
   assert.match(activationSource, /pg_advisory_xact_lock/);
+  assert.match(activationSource, /SELECT 1 FROM pg_advisory_xact_lock/);
+});
+
+test("activation lock returns an integer rather than PostgreSQL void", async () => {
+  const database = makeTransaction([makeTemplate()]);
+  database.tx.$queryRaw = async (segments) => {
+    const sql = Array.from(segments).join("?");
+    if (/SELECT pg_advisory_xact_lock/.test(sql)) throw new Error("Prisma cannot decode void");
+    assert.match(sql, /SELECT 1 FROM pg_advisory_xact_lock/);
+    return [{ "?column?": 1 }];
+  };
+  const result = await activation.activateSavedTemplate(database.tx, {
+    templateId: "draft-id", expectedUpdatedAt: templateUpdatedAt, adminUserId: "admin-1",
+  }, async () => {});
+  assert.equal(result.activated.id, "draft-id");
+});
+
+test("activation database failures get safe actionable categories", () => {
+  const source = readFileSync(new URL("../src/lib/id-template/activation-error.ts", import.meta.url), "utf8");
+  const failures = loadModule(source);
+  assert.equal(failures.classifyActivationDatabaseError({ code: "P2010", message: "secret connection string" }).status, 503);
+  assert.equal(failures.classifyActivationDatabaseError({ code: "P2028" }).status, 503);
+  assert.equal(failures.classifyActivationDatabaseError({ code: "P2034" }).status, 409);
+  assert.equal(failures.classifyActivationDatabaseError({ code: "P2003" }).status, 409);
+  const unknown = failures.classifyActivationDatabaseError(new Error("password=secret"));
+  assert.equal(unknown.code, "UNKNOWN");
+  assert.doesNotMatch(unknown.message, /password|secret|connection string/i);
 });
 
 test("production active-template loader filters out drafts and requires both active flags", async () => {
